@@ -42,7 +42,13 @@ function Invoke-RepoCommand {
 
     Write-Host "RELEASE_STEP: $Name"
     $started = Get-Date
-    & $Command 2>&1 | ForEach-Object { Write-Host $_ }
+    $previousErrorActionPreference = $ErrorActionPreference
+    $ErrorActionPreference = "Continue"
+    try {
+        & $Command 2>&1 | ForEach-Object { Write-Host $_ }
+    } finally {
+        $ErrorActionPreference = $previousErrorActionPreference
+    }
     $exitCode = if ($null -eq $LASTEXITCODE) { 0 } else { $LASTEXITCODE }
     $finished = Get-Date
     if ($exitCode -ne 0) {

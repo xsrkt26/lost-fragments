@@ -1,8 +1,11 @@
-[gd_scene load_steps=7 format=3 uid="uid://hub_scene_01"]
+[gd_scene load_steps=11 format=3 uid="uid://hub_scene_01"]
 
 [ext_resource type="Script" path="res://src/ui/hub/hub_scene.gd" id="1_script"]
 [ext_resource type="Script" path="res://src/ui/hub/hub_player.gd" id="2_player"]
-[ext_resource type="Texture2D" uid="uid://bfqs3bvaq6f7q" path="res://assets/app/icon.svg" id="3_icon"]
+[ext_resource type="SpriteFrames" path="res://assets/characters/player/player_sprite_frames.tres" id="3_player_frames"]
+[ext_resource type="Texture2D" path="res://assets/ui/hub/hub_background.png" id="4_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/hub/hub_backpack_tab.png" id="5_backpack_tab"]
+[ext_resource type="Texture2D" path="res://assets/ui/hub/hub_exit_tab.png" id="6_exit_tab"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
 size = Vector2(60, 60)
@@ -12,13 +15,19 @@ size = Vector2(100, 200)
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldWorldBoundaryShape2D_floor"]
 
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotspot_transparent"]
+bg_color = Color(1, 1, 1, 0)
+
 [node name="HubScene" type="Node2D"]
 script = ExtResource("1_script")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 offset_right = 1280.0
 offset_bottom = 720.0
-color = Color(0.0666667, 0.105882, 0.145098, 1)
+mouse_filter = 2
+texture = ExtResource("4_background")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="Floor" type="StaticBody2D" parent="."]
 position = Vector2(640, 680)
@@ -27,12 +36,15 @@ position = Vector2(640, 680)
 shape = SubResource("WorldWorldBoundaryShape2D_floor")
 
 [node name="Player" type="CharacterBody2D" parent="."]
-position = Vector2(640, 500)
+position = Vector2(640, 455)
 script = ExtResource("2_player")
 
-[node name="Sprite2D" type="Sprite2D" parent="Player"]
-scale = Vector2(0.5, 0.5)
-texture = ExtResource("3_icon")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player"]
+position = Vector2(0, -42)
+scale = Vector2(0.3, 0.3)
+sprite_frames = ExtResource("3_player_frames")
+animation = &"idle"
+autoplay = "idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
 shape = SubResource("RectangleShape2D_player")
@@ -90,20 +102,89 @@ horizontal_alignment = 1
 
 [node name="BackpackButton" type="Button" parent="CanvasLayer"]
 z_index = 20
-offset_left = 20.0
-offset_top = 20.0
-offset_right = 140.0
-offset_bottom = 70.0
+offset_left = 24.0
+offset_top = 250.0
+offset_right = 254.0
+offset_bottom = 325.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+tooltip_text = "整理背包"
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = ""
+
+[node name="Art" type="TextureRect" parent="CanvasLayer/BackpackButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("5_backpack_tab")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="CanvasLayer/BackpackButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 72.0
+offset_right = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.16, 0.13, 0.11, 1)
+theme_override_font_sizes/font_size = 22
 text = "整理背包"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="MainMenuButton" type="Button" parent="CanvasLayer"]
 z_index = 20
-offset_left = 1140.0
-offset_top = 20.0
-offset_right = 1260.0
-offset_bottom = 70.0
+offset_left = 24.0
+offset_top = 340.0
+offset_right = 254.0
+offset_bottom = 415.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
 tooltip_text = "返回主界面"
-text = "回主界面"
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = ""
+
+[node name="Art" type="TextureRect" parent="CanvasLayer/MainMenuButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("6_exit_tab")
+expand_mode = 1
+stretch_mode = 5
+
+[node name="Caption" type="Label" parent="CanvasLayer/MainMenuButton"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 72.0
+offset_right = -12.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.16, 0.13, 0.11, 1)
+theme_override_font_sizes/font_size = 20
+text = "返回主界面"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="OverlayRoot" type="Control" parent="CanvasLayer"]
 layout_mode = 3
