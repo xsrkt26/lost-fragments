@@ -141,9 +141,13 @@ func _move_player_to_route_index(index: int):
 	if nodes and index < nodes.get_child_count():
 		var button = nodes.get_child(index)
 		target_x = button.global_position.x + button.size.x * 0.5
+	if player.has_method("play_move_animation_towards"):
+		player.play_move_animation_towards(target_x)
 	var tween = create_tween()
 	tween.tween_property(player, "global_position:x", target_x, 0.35)
 	await tween.finished
+	if player.has_method("play_idle_animation"):
+		player.play_idle_animation()
 
 # --- 区域进入/退出判定 ---
 

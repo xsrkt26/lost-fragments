@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" path="res://src/ui/hub/hub_scene.gd" id="1_script"]
 [ext_resource type="Script" path="res://src/ui/hub/hub_player.gd" id="2_player"]
-[ext_resource type="Texture2D" uid="uid://bfqs3bvaq6f7q" path="res://assets/app/icon.svg" id="3_icon"]
+[ext_resource type="SpriteFrames" path="res://assets/characters/final_player/final_player_sprite_frames.tres" id="3_player_frames"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]
 size = Vector2(60, 60)
@@ -30,9 +30,11 @@ shape = SubResource("WorldWorldBoundaryShape2D_floor")
 position = Vector2(640, 500)
 script = ExtResource("2_player")
 
-[node name="Sprite2D" type="Sprite2D" parent="Player"]
-scale = Vector2(0.5, 0.5)
-texture = ExtResource("3_icon")
+[node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player"]
+position = Vector2(0, -37)
+scale = Vector2(0.18, 0.18)
+sprite_frames = ExtResource("3_player_frames")
+animation = &"idle"
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Player"]
 shape = SubResource("RectangleShape2D_player")

@@ -66,6 +66,45 @@ func test_hub_left_click_moves_player_with_mouse():
 	assert_true(hub_player.has_move_target)
 	assert_eq(hub_player.move_target_x, 320.0)
 
+func test_hub_player_uses_final_character_animation_frames():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var hub_player = hub.get_node("Player")
+	assert_null(hub_player.get_node_or_null("Sprite2D"))
+
+	var animated_sprite := hub_player.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
+	assert_not_null(animated_sprite)
+	assert_not_null(animated_sprite.sprite_frames)
+	assert_true(animated_sprite.sprite_frames.has_animation(&"idle"))
+	assert_true(animated_sprite.sprite_frames.has_animation(&"walk"))
+	assert_eq(animated_sprite.sprite_frames.get_frame_count(&"idle"), 4)
+	assert_eq(animated_sprite.sprite_frames.get_frame_count(&"walk"), 6)
+	assert_eq(animated_sprite.animation, &"idle")
+
+func test_hub_player_animation_controls_switch_between_idle_and_walk():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var hub_player = hub.get_node("Player")
+	var animated_sprite := hub_player.get_node("AnimatedSprite2D") as AnimatedSprite2D
+
+	hub_player.play_walk_animation()
+	assert_eq(animated_sprite.animation, &"walk")
+	assert_true(animated_sprite.is_playing())
+
+	hub_player.play_move_animation_towards(hub_player.global_position.x - 100.0)
+	assert_eq(animated_sprite.animation, &"walk")
+	assert_true(animated_sprite.flip_h)
+
+	hub_player.play_move_animation_towards(hub_player.global_position.x + 100.0)
+	assert_false(animated_sprite.flip_h)
+
+	hub_player.play_idle_animation()
+	assert_eq(animated_sprite.animation, &"idle")
+
 func test_hub_exposes_mouse_return_to_main_menu_button():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)

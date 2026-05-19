@@ -1,0 +1,55 @@
+[gd_resource type="SpriteFrames" load_steps=11 format=3]
+
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/idle/idle_0000.png" id="1_idle0"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/idle/idle_0001.png" id="2_idle1"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/idle/idle_0002.png" id="3_idle2"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/idle/idle_0003.png" id="4_idle3"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0000.png" id="5_walk0"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0001.png" id="6_walk1"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0002.png" id="7_walk2"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0003.png" id="8_walk3"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0004.png" id="9_walk4"]
+[ext_resource type="Texture2D" path="res://assets/characters/final_player/walk/walk_0005.png" id="10_walk5"]
+
+[resource]
+animations = [{
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("1_idle0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("2_idle1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("3_idle2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("4_idle3")
+}],
+"loop": true,
+"name": &"idle",
+"speed": 4.0
+}, {
+"frames": [{
+"duration": 1.0,
+"texture": ExtResource("5_walk0")
+}, {
+"duration": 1.0,
+"texture": ExtResource("6_walk1")
+}, {
+"duration": 1.0,
+"texture": ExtResource("7_walk2")
+}, {
+"duration": 1.0,
+"texture": ExtResource("8_walk3")
+}, {
+"duration": 1.0,
+"texture": ExtResource("9_walk4")
+}, {
+"duration": 1.0,
+"texture": ExtResource("10_walk5")
+}],
+"loop": true,
+"name": &"walk",
+"speed": 8.0
+}]
