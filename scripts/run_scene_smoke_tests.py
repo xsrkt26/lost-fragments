@@ -19,18 +19,18 @@ import sys
 
 DEFAULT_REPO = Path(__file__).resolve().parents[1]
 DEFAULT_CONFIG = "res://scripts/scene_smoke_scenes.json"
-DEFAULT_WINDOWS_GODOT_BIN = Path(
-    r"D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
-)
+GODOT_BIN_NAMES = [
+    "godot",
+    "godot4",
+    "Godot_v4.6.2-stable_win64_console.exe",
+]
 
 
 def find_godot_bin(explicit: str) -> str:
     candidates = [
         explicit,
         os.environ.get("GODOT_BIN", ""),
-        shutil.which("godot") or "",
-        shutil.which("godot4") or "",
-        str(DEFAULT_WINDOWS_GODOT_BIN),
+        *[shutil.which(name) or "" for name in GODOT_BIN_NAMES],
     ]
     for candidate in candidates:
         if candidate and Path(candidate).exists():

@@ -12,9 +12,28 @@ param(
 $ErrorActionPreference = "Stop"
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$defaultGodotPath = "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
+function Resolve-GodotBin {
+    param([string]$ExplicitPath)
+
+    if (-not [string]::IsNullOrWhiteSpace($ExplicitPath)) {
+        return $ExplicitPath
+    }
+    if ($env:GODOT_BIN) {
+        return $env:GODOT_BIN
+    }
+
+    foreach ($name in @("godot", "godot4", "Godot_v4.6.2-stable_win64_console.exe")) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command.Source
+        }
+    }
+
+    throw "Godot executable not found. Set GODOT_BIN, pass -GodotBin, or add Godot to PATH."
+}
+
 if ([string]::IsNullOrWhiteSpace($GodotBin)) {
-    $GodotBin = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { $defaultGodotPath }
+    $GodotBin = Resolve-GodotBin -ExplicitPath $GodotBin
 }
 
 if (-not (Test-Path -LiteralPath $GodotBin)) {

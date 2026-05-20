@@ -2,6 +2,13 @@
 
 Godot 4.6.2 项目，面向 MiniGame 2026 的背包式卡牌连锁游戏原型。
 
+## 项目亮点
+
+- 背包网格、道具连锁、饰品、事件、商店和路线系统已拆成可测试模块。
+- 使用 GUT 覆盖核心玩法逻辑，并用 headless scene smoke 覆盖关键场景加载。
+- 接入 GitHub Actions：push/PR 自动跑测试，`v*` tag 自动导出 Windows release。
+- 策划配置可用 Python 工具校验和导出，便于迭代数值与卡牌内容。
+
 ## 当前入口
 
 - 主场景：`res://src/ui/main_menu/main_menu.tscn`
@@ -10,10 +17,10 @@ Godot 4.6.2 项目，面向 MiniGame 2026 的背包式卡牌连锁游戏原型�
 - 商店：`res://src/ui/shop/shop_scene.tscn`
 - 调试沙盒：`res://src/ui/debug/debug_sandbox.tscn`
 
-本机 Godot 可执行文件路径：
+命令行脚本通过 `GODOT_BIN` 环境变量或 PATH 查找 Godot 可执行文件。Windows 示例：
 
 ```powershell
-D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe
+$env:GODOT_BIN = "C:\path\to\Godot_v4.6.2-stable_win64_console.exe"
 ```
 
 ## 目录结构
@@ -38,7 +45,7 @@ res://
 用 Godot 打开仓库根目录即可。命令行运行主项目：
 
 ```powershell
-& "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --path .
+& $env:GODOT_BIN --path .
 ```
 
 调试时可直接运行 `res://src/ui/debug/debug_sandbox.tscn`，用于快速生成物品、验证背包放置、旋转、丢弃和连锁效果。
@@ -48,7 +55,7 @@ res://
 全量 GUT：
 
 ```powershell
-& "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --path . -s addons/gut/gut_cmdln.gd --headless -gexit -glog=0
+& $env:GODOT_BIN --path . -s addons/gut/gut_cmdln.gd --headless -gexit -glog=0
 ```
 
 静默测试脚本：
@@ -98,7 +105,7 @@ python -B scripts\design_config\export_design_config.py --clean
 - Godot 路径移动后如出现 class_name 缓存问题，先执行：
 
 ```powershell
-& "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe" --headless --editor --quit --path .
+& $env:GODOT_BIN --headless --editor --quit --path .
 ```
 
 ## 发布导出

@@ -3,5 +3,9 @@
 /android/
 /package/
 
+# Python helper script output
+__pycache__/
+*.py[cod]
+
 # Local Obsidian workspace state
 spec/.obsidian/workspace.json

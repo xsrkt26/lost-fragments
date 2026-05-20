@@ -2,8 +2,22 @@
 # Usage: .\tools\run_tests_silent.ps1
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
-$defaultGodotPath = "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
-$godotPath = if ($env:GODOT_BIN) { $env:GODOT_BIN } else { $defaultGodotPath }
+function Resolve-GodotBin {
+    if ($env:GODOT_BIN) {
+        return $env:GODOT_BIN
+    }
+
+    foreach ($name in @("godot", "godot4", "Godot_v4.6.2-stable_win64_console.exe")) {
+        $command = Get-Command $name -ErrorAction SilentlyContinue
+        if ($command) {
+            return $command.Source
+        }
+    }
+
+    throw "Godot executable not found. Set GODOT_BIN or add Godot to PATH."
+}
+
+$godotPath = Resolve-GodotBin
 $gutScript = "addons/gut/gut_cmdln.gd"
 $timeoutSeconds = 60
 
