@@ -922,3 +922,13 @@
 
 - `python -m unittest test.tools.test_design_config_scripts`
 - `python -B scripts/design_config/validate_design_config.py`
+
+## 2026-05-21 物品与道具逐项审计记录
+
+本轮已完成“逐个物品审计表 + 逐个直接行为测试”的闭环，范围不包含代码内 `ornament` 命名的 56 个被动物品；被动物品审计仍见 `spec/Docs/03_Log/05_Passive_Item_Audit.md`。
+
+完成项：
+- 44/44 普通物品已在 `test/unit/test_item_effect_audit.gd` 中建立显式直接行为测试映射，覆盖数据加载、固定得分、污染/净化、梦境之种、抽取/丢弃监听、变形/复制、保险契约和机械结算。
+- 15/15 道具已在 `test/unit/test_tool_effect_audit.gd` 中建立显式直接行为测试映射，覆盖目标校验后的实际效果、库存消耗、污染/净化、播种/升级、机械强化、丢弃联动和被动物品限次刷新。
+- 审计表已新增到 `spec/Docs/03_Log/06_Item_And_Tool_Audit.md`，逐项列出 id、名称、直接行为断言和测试入口。
+- 完整 GUT 当前通过 195/195；本轮提交前还需按验证矩阵继续跑 scene smoke、design config 校验和 Python 工具测试。
