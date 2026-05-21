@@ -98,6 +98,12 @@ func after_item_discarded(item_data: ItemData, old_instance: BackpackManager.Ite
 				_change_sanity(context, 1)
 				state["waste_sanity_uses"] = int(state.get("waste_sanity_uses", 0)) + 1
 
+func after_item_replaced(old_data: ItemData, new_instance: BackpackManager.ItemInstance, context: GameContext, _state: Dictionary) -> void:
+	if effect_id != "apple_wooden_tag" or old_data == null or new_instance == null or new_instance.data == null:
+		return
+	if old_data.id == "apple_core" and new_instance.data.id == "apple":
+		_add_score(context, 4)
+
 func after_impact_chain_resolved(source: BackpackManager.ItemInstance, actions: Array[GameAction], context: GameContext, state: Dictionary) -> void:
 	var hit_count = _count_impacts(actions)
 	var targets = _impact_targets(actions)

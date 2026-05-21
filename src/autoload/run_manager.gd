@@ -921,6 +921,14 @@ func is_current_battle_score_success(score: int) -> bool:
 		return true
 	return score >= int(config.get("target_score", NO_SCORE_TARGET))
 
+func has_empty_dream_trophy_reward_bonus(score: int) -> bool:
+	if not current_ornaments.has("empty_dream_trophy"):
+		return false
+	var config = get_current_battle_config()
+	if not bool(config.get("has_score_target", false)):
+		return false
+	return score > int(config.get("target_score", NO_SCORE_TARGET)) + 50
+
 func _get_boss_target_score() -> int:
 	var node = get_current_route_node()
 	var score_rule = RouteConfig.get_score_target_rule(node, current_act)

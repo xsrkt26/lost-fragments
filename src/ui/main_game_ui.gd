@@ -257,13 +257,15 @@ func _get_reward_options(rm) -> Array[Dictionary]:
 	return rm.generate_current_reward_options(item_db, ornament_db, option_count)
 
 func _has_empty_dream_trophy_bonus(rm) -> bool:
-	if rm == null or not Array(rm.current_ornaments).has("empty_dream_trophy"):
-		return false
 	var gs = get_node_or_null("/root/GameState")
-	var score_rule = _get_current_score_rule()
-	if gs == null or not bool(score_rule.get("has_target", false)):
+	if rm == null or gs == null:
 		return false
-	return gs.current_score > int(score_rule.get("target", -1)) + 50
+	if rm.has_method("has_empty_dream_trophy_reward_bonus"):
+		return rm.has_empty_dream_trophy_reward_bonus(gs.current_score)
+	if not Array(rm.current_ornaments).has("empty_dream_trophy"):
+		return false
+	var score_rule = _get_current_score_rule()
+	return bool(score_rule.get("has_target", false)) and gs.current_score > int(score_rule.get("target", -1)) + 50
 
 func _add_reward_choices(popup: Control, reward_options: Array[Dictionary], rm) -> void:
 	var panel = popup.get_node("Panel")

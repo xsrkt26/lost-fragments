@@ -436,6 +436,12 @@ func _remove_item_visual_mapping(item_data: ItemData):
 		backpack_ui.set("item_ui_map", item_ui_map)
 
 func _on_backpack_item_data_replaced(old_data: ItemData, new_instance: BackpackManager.ItemInstance) -> void:
+	for runtime in active_ornaments:
+		var ornament = runtime.get("data")
+		var state = runtime.get("state", {}) as Dictionary
+		if ornament != null and ornament.effect != null:
+			ornament.effect.after_item_replaced(old_data, new_instance, context, state)
+
 	if not is_instance_valid(backpack_ui) or old_data == null or new_instance == null:
 		return
 	var item_ui_map = backpack_ui.get("item_ui_map")

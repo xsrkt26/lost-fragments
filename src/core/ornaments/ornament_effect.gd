@@ -16,6 +16,9 @@ func after_item_placed(_instance: BackpackManager.ItemInstance, _context: GameCo
 func after_item_discarded(_item_data: ItemData, _old_instance: BackpackManager.ItemInstance, _from_backpack: bool, _context: GameContext, _state: Dictionary) -> void:
 	pass
 
+func after_item_replaced(_old_data: ItemData, _new_instance: BackpackManager.ItemInstance, _context: GameContext, _state: Dictionary) -> void:
+	pass
+
 func after_impact_chain_resolved(_source: BackpackManager.ItemInstance, _actions: Array[GameAction], _context: GameContext, _state: Dictionary) -> void:
 	pass
 
