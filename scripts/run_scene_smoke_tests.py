@@ -15,6 +15,8 @@ from pathlib import Path
 import shutil
 import subprocess
 import sys
+import tempfile
+import uuid
 
 
 DEFAULT_REPO = Path(__file__).resolve().parents[1]
@@ -24,6 +26,27 @@ GODOT_BIN_NAMES = [
     "godot4",
     "Godot_v4.6.2-stable_win64_console.exe",
 ]
+DEFAULT_WINDOWS_GODOT_BINS = [
+    Path(r"D:\Library\Software\Installers\DevTools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"),
+    Path(r"D:\Workspaces\Code\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"),
+    Path(r"D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"),
+]
+
+
+def configure_windows_error_mode() -> None:
+    if os.name != "nt":
+        return
+    try:
+        import ctypes
+
+        sem_fail_critical_errors = 0x0001
+        sem_no_gp_fault_error_box = 0x0002
+        sem_no_open_file_error_box = 0x8000
+        ctypes.windll.kernel32.SetErrorMode(
+            sem_fail_critical_errors | sem_no_gp_fault_error_box | sem_no_open_file_error_box
+        )
+    except Exception:
+        pass
 
 
 def find_godot_bin(explicit: str) -> str:
@@ -31,6 +54,7 @@ def find_godot_bin(explicit: str) -> str:
         explicit,
         os.environ.get("GODOT_BIN", ""),
         *[shutil.which(name) or "" for name in GODOT_BIN_NAMES],
+        *[str(path) for path in DEFAULT_WINDOWS_GODOT_BINS],
     ]
     for candidate in candidates:
         if candidate and Path(candidate).exists():
@@ -38,10 +62,25 @@ def find_godot_bin(explicit: str) -> str:
     raise RuntimeError("Godot executable not found. Set GODOT_BIN or pass --godot-bin.")
 
 
-def run_command(command: list[str], repo: Path, timeout_seconds: int) -> subprocess.CompletedProcess[str]:
+def make_isolated_godot_env() -> dict[str, str]:
+    env = os.environ.copy()
+    if os.name == "nt":
+        appdata = Path(tempfile.gettempdir()) / f"go_dot_game_scene_smoke_appdata_{uuid.uuid4().hex}"
+        appdata.mkdir(parents=True, exist_ok=True)
+        env["APPDATA"] = str(appdata)
+    return env
+
+
+def run_command(
+    command: list[str],
+    repo: Path,
+    timeout_seconds: int,
+    env: dict[str, str],
+) -> subprocess.CompletedProcess[str]:
     return subprocess.run(
         command,
         cwd=repo,
+        env=env,
         stdout=subprocess.PIPE,
         stderr=subprocess.STDOUT,
         encoding="utf-8",
@@ -51,10 +90,12 @@ def run_command(command: list[str], repo: Path, timeout_seconds: int) -> subproc
     )
 
 
-def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int) -> int:
+def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int, env: dict[str, str]) -> int:
     command = [
         godot_bin,
         "--headless",
+        "--rendering-driver",
+        "opengl3",
         "--editor",
         "--quit",
         "--path",
@@ -62,7 +103,7 @@ def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int) -> int:
     ]
     print("SCENE_SMOKE_IMPORT: " + " ".join(command))
     try:
-        completed = run_command(command, repo, timeout_seconds)
+        completed = run_command(command, repo, timeout_seconds, env)
     except subprocess.TimeoutExpired as exc:
         output = _timeout_output(exc)
         if output:
@@ -79,17 +120,21 @@ def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int) -> int:
 
 
 def run_smoke(args: argparse.Namespace) -> int:
+    configure_windows_error_mode()
     repo = args.repo.resolve()
     godot_bin = find_godot_bin(args.godot_bin)
+    godot_env = make_isolated_godot_env()
 
     if not args.skip_import:
-        import_code = run_import_pass(godot_bin, repo, args.import_timeout_seconds)
+        import_code = run_import_pass(godot_bin, repo, args.import_timeout_seconds, godot_env)
         if import_code != 0:
             return import_code
 
     command = [
         godot_bin,
         "--headless",
+        "--rendering-driver",
+        "opengl3",
         "--path",
         str(repo),
         "-s",
@@ -100,7 +145,7 @@ def run_smoke(args: argparse.Namespace) -> int:
 
     print("SCENE_SMOKE_RUNNER: " + " ".join(command))
     try:
-        completed = run_command(command, repo, args.timeout_seconds)
+        completed = run_command(command, repo, args.timeout_seconds, godot_env)
     except subprocess.TimeoutExpired as exc:
         output = _timeout_output(exc)
         if output:

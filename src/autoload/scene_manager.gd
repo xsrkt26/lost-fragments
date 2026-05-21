@@ -7,7 +7,6 @@ signal transition_finished(new_scene)
 
 enum SceneType {
 	MAIN_MENU,
-	NEW_GAME,
 	HUB,
 	BATTLE,
 	SHOP,
@@ -18,7 +17,6 @@ enum SceneType {
 
 const SCENE_PATHS = {
 	SceneType.MAIN_MENU: "res://src/ui/main_menu/main_menu.tscn",
-	SceneType.NEW_GAME: "res://src/ui/new_game/new_game_scene.tscn",
 	SceneType.HUB: "res://src/ui/hub/hub_scene.tscn",
 	SceneType.BATTLE: "res://src/ui/main_game_ui.tscn",
 	SceneType.SHOP: "res://src/ui/shop/shop_scene.tscn",

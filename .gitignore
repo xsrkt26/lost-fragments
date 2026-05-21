@@ -9,3 +9,7 @@ __pycache__/
 
 # Local Obsidian workspace state
 spec/.obsidian/workspace.json
+
+# AI workflow local state
+.ai-state/
+.queue/

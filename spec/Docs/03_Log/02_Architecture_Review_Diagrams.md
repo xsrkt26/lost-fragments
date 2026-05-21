@@ -7,9 +7,7 @@
 ```mermaid
 graph TD
     START((启动)) --> MENU[MainMenu]
-    MENU -->|开始| NEWGAME[NewGameScene]
-    NEWGAME -->|开始新梦| HUB[HubScene]
-    MENU -->|继续| HUB
+    MENU -->|开始/继续| HUB[HubScene]
     HUB -->|当前路线节点| ROUTE{RouteConfig 节点}
     ROUTE -->|battle / boss_battle / elite_battle| BATTLE[MainGameUI + BattleManager]
     ROUTE -->|shop| SHOP[ShopScene]

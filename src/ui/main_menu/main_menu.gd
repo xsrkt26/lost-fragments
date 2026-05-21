@@ -20,6 +20,8 @@ const HOTSPOT_RECTS := {
 @onready var continue_disabled_overlay: ColorRect = $MenuHotspots/ContinueDisabledOverlay
 @onready var settings_container: Control = $CanvasLayer/SettingsContainer
 
+var run_manager_override = null
+
 func _ready() -> void:
 	print("[MainMenu] 进入主菜单")
 	GlobalInput.set_context(GlobalInput.Context.MENU)
@@ -46,7 +48,7 @@ func _configure_hotspot_labels() -> void:
 	quit_button.tooltip_text = "退出"
 
 func _refresh_continue_state() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	var has_continue_save: bool = rm != null and rm.saver != null and rm.saver.has_save() and not rm.is_run_complete
 	continue_button.disabled = not has_continue_save
 	continue_disabled_overlay.visible = not has_continue_save
@@ -80,7 +82,21 @@ func _update_menu_hotspots() -> void:
 
 func _on_new_game_button_pressed() -> void:
 	print("[MainMenu] 点击新游戏")
-	GlobalScene.transition_to(GlobalScene.SceneType.NEW_GAME)
+	if _start_new_run():
+		GlobalScene.transition_to(GlobalScene.SceneType.HUB)
+
+func _start_new_run() -> bool:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[MainMenu] RunManager missing; cannot start a new run.")
+		return false
+	rm.start_new_run()
+	return true
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
 
 func _on_continue_button_pressed() -> void:
 	print("[MainMenu] 点击继续游戏")

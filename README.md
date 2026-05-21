@@ -55,7 +55,7 @@ res://
 全量 GUT：
 
 ```powershell
-& $env:GODOT_BIN --path . -s addons/gut/gut_cmdln.gd --headless -gexit -glog=0
+& $env:GODOT_BIN --headless --rendering-driver opengl3 --path . -s addons/gut/gut_cmdln.gd -gexit -glog=0
 ```
 
 静默测试脚本：
@@ -105,7 +105,7 @@ python -B scripts\design_config\export_design_config.py --clean
 - Godot 路径移动后如出现 class_name 缓存问题，先执行：
 
 ```powershell
-& $env:GODOT_BIN --headless --editor --quit --path .
+& $env:GODOT_BIN --headless --rendering-driver opengl3 --editor --quit --path .
 ```
 
 ## 发布导出

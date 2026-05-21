@@ -2,7 +2,6 @@ extends GutTest
 
 const SCENE_PATHS: Array[String] = [
 	"res://src/ui/main_menu/main_menu.tscn",
-	"res://src/ui/new_game/new_game_scene.tscn",
 	"res://src/ui/hub/hub_scene.tscn",
 	"res://src/ui/main_game_ui.tscn",
 	"res://src/ui/shop/shop_scene.tscn",

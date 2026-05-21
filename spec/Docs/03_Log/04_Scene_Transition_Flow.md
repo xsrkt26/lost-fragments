@@ -7,7 +7,6 @@
 `GlobalScene` 管理以下场景：
 
 - `MAIN_MENU`：`res://src/ui/main_menu/main_menu.tscn`
-- `NEW_GAME`：`res://src/ui/new_game/new_game_scene.tscn`
 - `HUB`：`res://src/ui/hub/hub_scene.tscn`
 - `BATTLE`：`res://src/ui/main_game_ui.tscn`
 - `SHOP`：`res://src/ui/shop/shop_scene.tscn`
@@ -20,10 +19,7 @@
 ```mermaid
 graph TD
     START((游戏启动)) --> MENU[主菜单]
-    MENU -->|新游戏| NEWGAME[开始游戏界面]
-    NEWGAME -->|开始新梦| HUB[Hub 路线界面]
-    NEWGAME -->|返回主界面| MENU
-    MENU -->|继续| HUB
+    MENU -->|新游戏/继续| HUB[Hub 路线界面]
     MENU -->|图鉴| GALLERY[物品图鉴]
     MENU -->|F1| DEBUG[调试沙盒]
 

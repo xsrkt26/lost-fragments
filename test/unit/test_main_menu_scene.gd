@@ -9,6 +9,17 @@ const SCROLL_TEXTURES := {
 	"QuitButton": "res://assets/ui/main_menu/main_menu_scroll_quit.png",
 }
 
+class FakeRunManager:
+	extends Node
+
+	var saver = null
+	var is_run_complete := false
+	var current_act := 1
+	var start_new_run_call_count := 0
+
+	func start_new_run() -> void:
+		start_new_run_call_count += 1
+
 func test_main_menu_uses_source_art_and_click_hotspots() -> void:
 	var menu = add_child_autofree(MainMenuScene.instantiate())
 	await get_tree().process_frame
@@ -37,3 +48,13 @@ func test_main_menu_uses_source_art_and_click_hotspots() -> void:
 
 	assert_not_null(menu.get_node_or_null("MenuHotspots/ContinueDisabledOverlay"))
 	assert_not_null(menu.get_node_or_null("CanvasLayer/SettingsContainer"))
+
+func test_new_game_action_starts_run_without_intermediate_scene() -> void:
+	var menu = add_child_autofree(MainMenuScene.instantiate())
+	var fake_run_manager = add_child_autofree(FakeRunManager.new())
+	menu.run_manager_override = fake_run_manager
+
+	assert_true(menu._start_new_run())
+	assert_eq(fake_run_manager.start_new_run_call_count, 1)
+	assert_false(GlobalScene.SceneType.keys().has("NEW_GAME"))
+	assert_false(GlobalScene.SCENE_PATHS.values().has("res://src/ui/new_game/new_game_scene.tscn"))

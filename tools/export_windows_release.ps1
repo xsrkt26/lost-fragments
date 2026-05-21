@@ -29,6 +29,16 @@ function Resolve-GodotBin {
         }
     }
 
+    foreach ($path in @(
+        "D:\Library\Software\Installers\DevTools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
+        "D:\Workspaces\Code\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
+        "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
+    )) {
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
     throw "Godot executable not found. Set GODOT_BIN, pass -GodotBin, or add Godot to PATH."
 }
 
@@ -51,6 +61,25 @@ if (-not (Test-Path -LiteralPath $exportPresetsPath)) {
 if ((Get-Content -LiteralPath $exportPresetsPath -Raw) -notmatch $presetPattern) {
     throw "Export preset not found: $Preset"
 }
+
+function Set-ChildProcessErrorMode {
+    if (-not ("GodotReleaseNativeMethods" -as [type])) {
+        Add-Type @"
+using System.Runtime.InteropServices;
+
+public static class GodotReleaseNativeMethods {
+    [DllImport("kernel32.dll")]
+    public static extern uint SetErrorMode(uint uMode);
+}
+"@
+    }
+    $semFailCriticalErrors = 0x0001
+    $semNoGpFaultErrorBox = 0x0002
+    $semNoOpenFileErrorBox = 0x8000
+    [void][GodotReleaseNativeMethods]::SetErrorMode($semFailCriticalErrors -bor $semNoGpFaultErrorBox -bor $semNoOpenFileErrorBox)
+}
+
+Set-ChildProcessErrorMode
 
 function Invoke-RepoCommand {
     param(
@@ -105,6 +134,8 @@ $buildTimeUtc = (Get-Date).ToUniversalTime()
 $timestamp = $buildTimeUtc.ToString("yyyyMMdd-HHmmss")
 $packageDir = Join-Path $repoRoot $OutputDir
 New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+$godotAppData = Join-Path ([System.IO.Path]::GetTempPath()) ("go_dot_game_release_appdata_" + [System.Guid]::NewGuid().ToString("N"))
+New-Item -ItemType Directory -Force -Path $godotAppData | Out-Null
 
 $artifactBase = "$ProductName-$timestamp-$commitShort"
 $outputPath = Join-Path $packageDir "$artifactBase.exe"
@@ -133,11 +164,19 @@ if (-not $SkipPrecheck) {
 
 $exportStatus = "skipped"
 if (-not $PrecheckOnly) {
-    $exportArgs = @("--headless", "--path", $repoRoot, "--export-release", $Preset, $outputPath)
+    $exportArgs = @("--headless", "--rendering-driver", "opengl3", "--path", $repoRoot, "--export-release", $Preset, $outputPath)
     $results += Invoke-RepoCommand `
         -Name "godot_export" `
         -CommandText "$GodotBin $($exportArgs -join ' ')" `
-        -Command { & $GodotBin @exportArgs }
+        -Command {
+            $previousAppData = $env:APPDATA
+            try {
+                $env:APPDATA = $godotAppData
+                & $GodotBin @exportArgs
+            } finally {
+                $env:APPDATA = $previousAppData
+            }
+        }
     $exportStatus = "passed"
 }
 

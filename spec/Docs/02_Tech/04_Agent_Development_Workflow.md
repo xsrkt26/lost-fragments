@@ -4,8 +4,8 @@
 
 ## 固定环境
 
-- 仓库路径：当前 Git 工作区根目录。
-- Godot 控制台路径：优先读取 `GODOT_BIN` 环境变量；否则使用 PATH 中的 `godot`、`godot4` 或 `Godot_v4.6.2-stable_win64_console.exe`。
+- 仓库路径：当前 Git 工作区根目录；本机当前为 `D:\Workspaces\Godot\go-dot-game`。
+- Godot 控制台路径：优先读取 `GODOT_BIN` 环境变量；否则使用 PATH 中的 `godot`、`godot4` 或 `Godot_v4.6.2-stable_win64_console.exe`，本机脚本也会探测 `D:\Library\Software\Installers\DevTools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe`。
 - 目标分支：`main`
 - 每次完成一个需求或一组明确改动后，必须 commit 并 push。
 - `package/`、`.godot/` 属于本地生成目录，不提交。

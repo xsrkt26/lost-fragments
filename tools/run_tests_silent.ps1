@@ -14,6 +14,16 @@ function Resolve-GodotBin {
         }
     }
 
+    foreach ($path in @(
+        "D:\Library\Software\Installers\DevTools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
+        "D:\Workspaces\Code\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe",
+        "D:\COde\Godot\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe"
+    )) {
+        if (Test-Path -LiteralPath $path) {
+            return $path
+        }
+    }
+
     throw "Godot executable not found. Set GODOT_BIN or add Godot to PATH."
 }
 
@@ -21,16 +31,47 @@ $godotPath = Resolve-GodotBin
 $gutScript = "addons/gut/gut_cmdln.gd"
 $timeoutSeconds = 60
 
+function Set-ChildProcessErrorMode {
+    if (-not ("GodotTestNativeMethods" -as [type])) {
+        Add-Type @"
+using System.Runtime.InteropServices;
+
+public static class GodotTestNativeMethods {
+    [DllImport("kernel32.dll")]
+    public static extern uint SetErrorMode(uint uMode);
+}
+"@
+    }
+    $semFailCriticalErrors = 0x0001
+    $semNoGpFaultErrorBox = 0x0002
+    $semNoOpenFileErrorBox = 0x8000
+    [void][GodotTestNativeMethods]::SetErrorMode($semFailCriticalErrors -bor $semNoGpFaultErrorBox -bor $semNoOpenFileErrorBox)
+}
+
+Set-ChildProcessErrorMode
+
 # Run Godot and capture BOTH output and errors to temporary files
 $tempRoot = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { [System.IO.Path]::GetTempPath() }
 $tempLog = Join-Path $tempRoot "go_dot_game_gut_stdout.tmp"
 $tempErr = Join-Path $tempRoot "go_dot_game_gut_stderr.tmp"
+$godotAppData = Join-Path $tempRoot ("go_dot_game_gut_appdata_" + [System.Guid]::NewGuid().ToString("N"))
+$originalAppData = $env:APPDATA
+New-Item -ItemType Directory -Force -Path $godotAppData | Out-Null
 
 # Clean up old logs
 if (Test-Path $tempLog) { Remove-Item $tempLog }
 if (Test-Path $tempErr) { Remove-Item $tempErr }
 
-$process = Start-Process -FilePath $godotPath -ArgumentList "--path", $repoRoot, "-s", $gutScript, "--headless", "-gexit", "-glog=0" -NoNewWindow -PassThru -RedirectStandardOutput $tempLog -RedirectStandardError $tempErr
+try {
+    $env:APPDATA = $godotAppData
+    $process = Start-Process -FilePath $godotPath -ArgumentList "--headless", "--rendering-driver", "opengl3", "--path", $repoRoot, "-s", $gutScript, "-gexit", "-glog=0" -WindowStyle Hidden -PassThru -RedirectStandardOutput $tempLog -RedirectStandardError $tempErr
+}
+catch {
+    $env:APPDATA = $originalAppData
+    Write-Host "TEST_RESULTS: FAIL"
+    Write-Host "GODOT_START_FAILED: $($_.Exception.Message)"
+    exit 1
+}
 
 # Wait for process with timeout
 $timeoutReached = $false
@@ -46,6 +87,7 @@ while (-not $process.HasExited) {
 $timer.Stop()
 $process.Refresh()
 $exitCode = $process.ExitCode
+$env:APPDATA = $originalAppData
 
 if ($timeoutReached) {
     Write-Host "TEST_RESULTS: FAIL (TIMEOUT reached after $timeoutSeconds seconds)"
@@ -98,7 +140,7 @@ foreach ($line in $output) {
 }
 
 $allOutput = @($output) + @($errors)
-$fatalErrors = $allOutput | Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|ObjectDB instances leaked" | Select-Object -First 5 -Unique
+$fatalErrors = $allOutput | Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|ObjectDB instances leaked|CrashHandlerException|Program crashed|ERROR:" | Select-Object -First 8 -Unique
 
 if ($failedTests.Count -gt 0 -or $fatalErrors.Count -gt 0) {
     $isFailed = $true
@@ -134,7 +176,17 @@ if ($isFailed) {
             Write-Host "  $total"
         }
     } else {
-        Write-Host "SUMMARY: No summary found (Process exit code: $exitCode)"
+        $exitCodeText = if ($null -eq $exitCode) { "unknown" } else { $exitCode }
+        Write-Host "SUMMARY: No summary found (Process exit code: $exitCodeText)"
+        $outputSample = $allOutput | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 12
+        if ($outputSample.Count -gt 0) {
+            Write-Host "OUTPUT_SAMPLE:"
+            foreach ($line in $outputSample) {
+                Write-Host "  $line"
+            }
+        } else {
+            Write-Host "OUTPUT_SAMPLE: <empty>"
+        }
     }
     exit 1
 } else {
