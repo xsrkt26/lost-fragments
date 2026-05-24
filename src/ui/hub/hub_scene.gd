@@ -10,7 +10,7 @@ var current_zone: String = ""
 func _ready() -> void:
 	print("[Hub] 已进入梦境路线。")
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
-	GlobalAudio.play_bgm("hub")
+	GlobalAudio.play_bgm(_get_stage_bgm_key("hub_bgm_key", "hub"))
 
 	var rm = get_node_or_null("/root/RunManager")
 	if rm and rm.is_run_complete:
@@ -19,6 +19,14 @@ func _ready() -> void:
 
 	if interactions:
 		interactions.hide()
+
+func _get_stage_bgm_key(key: String, fallback: String) -> String:
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not rm.has_method("get_current_stage_visual"):
+		return fallback
+	var visual = rm.get_current_stage_visual()
+	var bgm_key = str(visual.get(key, fallback))
+	return bgm_key if bgm_key != "" else fallback
 
 
 func _input(event: InputEvent) -> void:

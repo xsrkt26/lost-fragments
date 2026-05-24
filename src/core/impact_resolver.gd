@@ -256,6 +256,10 @@ func _has_seen_instance(instance: BackpackManager.ItemInstance) -> bool:
 func add_pollution(instance: BackpackManager.ItemInstance, amount: int) -> void:
 	if instance == null or amount <= 0:
 		return
+	var stage_bonus := 0
+	if context != null and context.battle != null and context.battle.has_method("get_stage_pollution_added_bonus"):
+		stage_bonus = int(context.battle.get_stage_pollution_added_bonus())
+	amount += max(0, stage_bonus)
 
 	var old_pollution = instance.current_pollution
 	instance.add_pollution(amount)

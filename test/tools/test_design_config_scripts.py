@@ -21,6 +21,7 @@ class DesignConfigScriptTests(unittest.TestCase):
         self.assertGreaterEqual(result.summary.get("items", 0), 1)
         self.assertEqual(result.summary.get("tools", 0), 15)
         self.assertEqual(result.summary.get("ornaments", 0), 56)
+        self.assertEqual(result.summary.get("stages", 0), 6)
 
     def test_item_catalog_export_reads_godot_resources(self) -> None:
         catalog = parse_item_catalog(REPO_ROOT)
@@ -39,6 +40,7 @@ class DesignConfigScriptTests(unittest.TestCase):
             self.assertIn("summary", manifest)
             self.assertTrue((out_dir / "item_catalog.json").exists())
             self.assertTrue((out_dir / "economy.json").exists())
+            self.assertTrue((out_dir / "stages.json").exists())
 
 
 if __name__ == "__main__":

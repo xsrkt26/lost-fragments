@@ -89,6 +89,7 @@ class DesignConfigValidator:
         self.item_ids: set[str] = set()
         self.tool_ids: set[str] = set()
         self.ornament_ids: set[str] = set()
+        self.route_ids: set[str] = set()
         self.max_act = 6
 
     def validate_all(self) -> ValidationResult:
@@ -101,6 +102,7 @@ class DesignConfigValidator:
         self._validate_ornaments()
         self._validate_events()
         self._validate_routes()
+        self._validate_stages()
         return self.result
 
     def _load_schema(self) -> dict[str, Any]:
@@ -345,6 +347,7 @@ class DesignConfigValidator:
         if not isinstance(routes, dict) or not routes:
             self.result.add_error(path, "routes must be a non-empty object")
             return
+        self.route_ids = {str(route_id) for route_id in routes.keys()}
         default_route_id = str(data.get("default_route_id", ""))
         if default_route_id not in routes:
             self.result.add_error(path, "default_route_id must reference a route")
@@ -383,6 +386,90 @@ class DesignConfigValidator:
                 self.result.add_warning(route_path, "route has no boss_battle node")
         self.result.summary["routes"] = route_count
         self.result.summary["route_nodes"] = node_count
+
+    def _validate_stages(self) -> None:
+        path = Path("data/stages/stages.json")
+        data = self._load_json(path, dict)
+        if not isinstance(data, dict):
+            return
+        max_act = data.get("max_act", self.max_act)
+        if not isinstance(max_act, int) or int(max_act) < 1:
+            self.result.add_error(path, "max_act must be a positive integer")
+            return
+        stages = data.get("stages", {})
+        if not isinstance(stages, dict) or not stages:
+            self.result.add_error(path, "stages must be a non-empty object")
+            return
+        for act in range(1, int(max_act) + 1):
+            if str(act) not in stages:
+                self.result.add_error(path, f"missing stage config for act {act}")
+        for raw_act, stage in stages.items():
+            stage_path = f"{path}.stages.{raw_act}"
+            try:
+                act = int(raw_act)
+            except ValueError:
+                self.result.add_error(stage_path, "stage key must be an integer act number")
+                continue
+            if act < 1 or act > int(max_act):
+                self.result.add_error(stage_path, "stage act is outside 1..max_act")
+            if not isinstance(stage, dict):
+                self.result.add_error(stage_path, "stage must be an object")
+                continue
+            self._required_string(stage, "id", stage_path)
+            self._required_string(stage, "name", stage_path)
+            route_id = str(stage.get("route_id", ""))
+            if route_id and route_id not in self.route_ids:
+                self.result.add_error(stage_path, f"unknown route_id: {route_id}")
+            self._validate_stage_visual(stage.get("visual", {}), stage_path + ".visual")
+            self._validate_battle_modifiers(stage.get("battle_modifiers", {}), stage_path + ".battle_modifiers")
+            self._validate_stage_boss(stage.get("boss", {}), stage_path + ".boss")
+            self._validate_weight_modifiers(stage.get("reward_weight_modifiers", {}), stage_path + ".reward_weight_modifiers")
+            self._validate_weight_modifiers(stage.get("shop_weight_modifiers", {}), stage_path + ".shop_weight_modifiers")
+        self.result.summary["stages"] = len(stages)
+
+    def _validate_stage_visual(self, visual: Any, entry_path: str) -> None:
+        if not isinstance(visual, dict):
+            self.result.add_error(entry_path, "visual must be an object")
+            return
+        for key in ["battle_bgm_key", "hub_bgm_key", "ui_tint"]:
+            if key in visual and not isinstance(visual.get(key), str):
+                self.result.add_error(entry_path, f"{key} must be a string")
+
+    def _validate_battle_modifiers(self, modifiers: Any, entry_path: str) -> None:
+        if not isinstance(modifiers, dict):
+            self.result.add_error(entry_path, "battle_modifiers must be an object")
+            return
+        for key in ["draw_cost_delta", "pollution_added_bonus"]:
+            if key in modifiers and not isinstance(modifiers.get(key), int):
+                self.result.add_error(entry_path, f"{key} must be an integer")
+        if "blocked_cells" in modifiers and modifiers.get("blocked_cells"):
+            self._validate_cells(modifiers.get("blocked_cells"), entry_path + ".blocked_cells")
+
+    def _validate_stage_boss(self, boss: Any, entry_path: str) -> None:
+        if not isinstance(boss, dict):
+            self.result.add_error(entry_path, "boss must be an object")
+            return
+        if "mechanics" in boss:
+            mechanics = boss.get("mechanics", [])
+            if not isinstance(mechanics, list) or not all(isinstance(value, str) for value in mechanics):
+                self.result.add_error(entry_path, "mechanics must be an array of strings")
+        if "score_target" in boss:
+            self._validate_score_target(boss.get("score_target"), entry_path + ".score_target")
+
+    def _validate_weight_modifiers(self, modifiers: Any, entry_path: str) -> None:
+        if not isinstance(modifiers, dict):
+            self.result.add_error(entry_path, "weight modifiers must be an object")
+            return
+        for section in ["types", "ids", "tags", "rarities"]:
+            value = modifiers.get(section, {})
+            if not isinstance(value, dict):
+                self.result.add_error(entry_path, f"{section} must be an object")
+                continue
+            for key, multiplier in value.items():
+                if not isinstance(key, str) or key == "":
+                    self.result.add_error(entry_path, f"{section} keys must be non-empty strings")
+                if not isinstance(multiplier, (int, float)) or float(multiplier) < 0:
+                    self.result.add_error(entry_path, f"{section}.{key} must be a non-negative number")
 
     def _validate_score_target(self, value: Any, entry_path: str) -> None:
         if not isinstance(value, dict):

@@ -1,0 +1,169 @@
+{
+  "version": 1,
+  "max_act": 6,
+  "default_stage_id": "act_1",
+  "stages": {
+    "1": {
+      "id": "act_1",
+      "name": "浅层梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#10151d"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 0,
+        "pollution_added_bonus": 0,
+        "blocked_cells": []
+      },
+      "boss": {
+        "mechanics": ["score_target"],
+        "score_target": {"enabled": true, "value": 50}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.0, "tool": 1.0},
+        "tags": {}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.0, "tool": 1.0},
+        "tags": {}
+      }
+    },
+    "2": {
+      "id": "act_2",
+      "name": "污迹梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#172018"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 0,
+        "pollution_added_bonus": 0,
+        "blocked_cells": []
+      },
+      "boss": {
+        "mechanics": ["score_target", "pollution_pressure"],
+        "score_target": {"enabled": true, "value": 70}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.05, "ornament": 1.0, "tool": 1.05},
+        "tags": {"废弃物": 1.2, "污染": 1.25}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.05, "tool": 1.05},
+        "tags": {"废弃物": 1.15, "污染": 1.2}
+      }
+    },
+    "3": {
+      "id": "act_3",
+      "name": "萌芽梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#15201f"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 0,
+        "pollution_added_bonus": 0,
+        "blocked_cells": []
+      },
+      "boss": {
+        "mechanics": ["score_target", "seed_growth_check"],
+        "score_target": {"enabled": true, "value": 90}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.05, "tool": 1.08},
+        "tags": {"梦境之种": 1.25, "播种": 1.2, "升级": 1.2}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.05, "tool": 1.1},
+        "tags": {"梦境之种": 1.25, "播种": 1.2, "升级": 1.2}
+      }
+    },
+    "4": {
+      "id": "act_4",
+      "name": "齿轮梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#1d1a13"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 1,
+        "pollution_added_bonus": 1,
+        "blocked_cells": []
+      },
+      "boss": {
+        "mechanics": ["score_target", "mechanical_chain_check"],
+        "score_target": {"enabled": true, "value": 110}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.05, "ornament": 1.05, "tool": 1.05},
+        "tags": {"机械": 1.35, "传导": 1.2, "撞击": 1.15}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.05, "ornament": 1.05, "tool": 1.05},
+        "tags": {"机械": 1.35, "传导": 1.25, "撞击": 1.15}
+      }
+    },
+    "5": {
+      "id": "act_5",
+      "name": "裂隙梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#211720"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 1,
+        "pollution_added_bonus": 1,
+        "blocked_cells": [{"x": 1, "y": 1}]
+      },
+      "boss": {
+        "mechanics": ["score_target", "locked_cell_pressure"],
+        "score_target": {"enabled": true, "value": 130}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.05, "ornament": 1.12, "tool": 1.08},
+        "tags": {"混合": 1.2, "高阶": 1.2, "污染": 1.15, "机械": 1.15}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.15, "tool": 1.1},
+        "tags": {"混合": 1.25, "高阶": 1.25, "污染": 1.15, "机械": 1.15}
+      }
+    },
+    "6": {
+      "id": "act_6",
+      "name": "终局梦境",
+      "route_id": "default",
+      "visual": {
+        "battle_bgm_key": "battle",
+        "hub_bgm_key": "hub",
+        "ui_tint": "#211313"
+      },
+      "battle_modifiers": {
+        "draw_cost_delta": 2,
+        "pollution_added_bonus": 1,
+        "blocked_cells": [{"x": 1, "y": 1}, {"x": 5, "y": 5}]
+      },
+      "boss": {
+        "mechanics": ["score_target", "finale_pressure"],
+        "score_target": {"enabled": true, "value": 150}
+      },
+      "reward_weight_modifiers": {
+        "types": {"item": 1.05, "ornament": 1.18, "tool": 1.12},
+        "tags": {"稀有": 1.2, "高阶": 1.25, "混合": 1.25, "机械": 1.15, "污染": 1.15}
+      },
+      "shop_weight_modifiers": {
+        "types": {"item": 1.0, "ornament": 1.2, "tool": 1.15},
+        "tags": {"稀有": 1.2, "高阶": 1.25, "混合": 1.25, "机械": 1.15, "污染": 1.15}
+      }
+    }
+  }
+}

@@ -55,6 +55,7 @@ var _is_processing_impact_queue: bool = false
 var _next_draw_cost_discount: int = 0
 var _tool_recycling_clip_pending: int = 0
 var _blank_talisman_refreshed_ornaments: Array[String] = []
+var _battle_modifiers: Dictionary = {}
 
 func _ready():
 	print("[BattleManager] 节点就绪")
@@ -81,6 +82,7 @@ func _initialize_battle_data():
 	print("[BattleManager] 正在从 RunManager 初始化战斗数据...")
 	var rm = get_node_or_null("/root/RunManager")
 	if rm:
+		_battle_modifiers = rm.get_current_battle_modifiers() if rm.has_method("get_current_battle_modifiers") else {}
 		_apply_backpack_grid_config(rm)
 		_current_battle_deck = Array(rm.current_deck).duplicate()
 		_current_battle_deck.shuffle()
@@ -184,6 +186,9 @@ func apply_sanity_loss(amount: int, reason: String = "effect", item_data: ItemDa
 
 func add_next_draw_cost_discount(amount: int) -> void:
 	_next_draw_cost_discount += max(0, amount)
+
+func get_stage_pollution_added_bonus() -> int:
+	return max(0, int(_battle_modifiers.get("pollution_added_bonus", 0)))
 
 func add_recycling_clip_pending(amount: int) -> void:
 	_tool_recycling_clip_pending += max(0, amount)
@@ -554,6 +559,7 @@ func _process_new_item_acquisition(item: ItemData):
 		else:
 			# 其他数值取绝对值作为消耗，避免负数变成恢复
 			cost = abs(item.base_cost)
+		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
 		if _next_draw_cost_discount > 0:
 			cost = max(1, cost - _next_draw_cost_discount)
 			_next_draw_cost_discount = 0

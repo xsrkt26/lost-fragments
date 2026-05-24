@@ -24,6 +24,7 @@ SOURCE_JSON_FILES = {
     "ornaments": Path("data/ornaments/ornaments.json"),
     "events": Path("data/events/events.json"),
     "routes": Path("data/routes/routes.json"),
+    "stages": Path("data/stages/stages.json"),
     "economy": Path("data/economy/economy.json"),
 }
 

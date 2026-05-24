@@ -6,6 +6,7 @@ extends Node
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 const RewardGenerator = preload("res://src/core/rewards/reward_generator.gd")
 const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
 
 # --- 核心信号 ---
 signal run_started
@@ -531,12 +532,14 @@ func apply_event_choice(choice: Dictionary) -> bool:
 	return true
 
 func get_backpack_grid_config() -> Dictionary:
+	var stage_modifiers = get_current_battle_modifiers()
+	var blocked_cells = _merge_cell_arrays(_get_all_blocked_backpack_cells(), Array(stage_modifiers.get("blocked_cells", [])))
 	return {
 		"grid_width": BACKPACK_GRID_WIDTH,
 		"grid_height": BACKPACK_GRID_HEIGHT,
 		"usable_width": clampi(backpack_usable_width, 1, BACKPACK_GRID_WIDTH),
 		"usable_height": clampi(backpack_usable_height, 1, BACKPACK_GRID_HEIGHT),
-		"blocked_cells": _get_all_blocked_backpack_cells(),
+		"blocked_cells": blocked_cells,
 	}
 
 func _apply_event_effect(effect: Dictionary) -> bool:
@@ -697,10 +700,10 @@ func _are_cells_in_physical_grid(cells: Array[Dictionary]) -> bool:
 			return false
 	return true
 
-func _merge_cell_arrays(a: Array[Dictionary], b: Array[Dictionary]) -> Array[Dictionary]:
+func _merge_cell_arrays(a: Variant, b: Variant) -> Array[Dictionary]:
 	var merged: Array[Dictionary] = []
-	merged.append_array(a)
-	merged.append_array(b)
+	merged.append_array(_normalize_cell_array(a))
+	merged.append_array(_normalize_cell_array(b))
 	return _unique_cells(merged)
 
 func _unique_cells(cells: Array[Dictionary]) -> Array[Dictionary]:
@@ -869,11 +872,23 @@ func reset_route_progress(route_id: String = RouteConfig.DEFAULT_ROUTE_ID):
 	is_run_complete = false
 	_emit_route_changed()
 
+func get_current_stage_route_id() -> String:
+	return RouteConfig.normalize_route_id(StageConfig.get_route_id_for_act(current_act, current_route_id))
+
+func get_current_stage_config() -> Dictionary:
+	return StageConfig.get_stage(current_act)
+
+func get_current_stage_visual() -> Dictionary:
+	return StageConfig.get_visual(current_act)
+
+func get_current_battle_modifiers() -> Dictionary:
+	return StageConfig.get_battle_modifiers(current_act)
+
 func get_route_nodes() -> Array:
-	return RouteConfig.get_route_nodes(current_route_id)
+	return RouteConfig.get_route_nodes(get_current_stage_route_id())
 
 func get_current_route_node() -> Dictionary:
-	return RouteConfig.get_route_node(current_route_id, current_route_index)
+	return RouteConfig.get_route_node(get_current_stage_route_id(), current_route_index)
 
 func get_current_route_node_type() -> String:
 	return get_current_route_node().get("type", "")
@@ -901,12 +916,21 @@ func get_current_battle_config() -> Dictionary:
 	var node_type = get_current_route_node_type()
 	var node = get_current_route_node()
 	var score_rule = RouteConfig.get_score_target_rule(node, current_act)
+	if RouteConfig.is_boss_node_type(node_type):
+		var stage_score_rule = StageConfig.get_boss_score_target_rule(current_act)
+		if bool(stage_score_rule.get("enabled", false)):
+			score_rule = stage_score_rule
 	var has_target = bool(score_rule.get("enabled", false))
 	return {
+		"act": current_act,
+		"stage": get_current_stage_config(),
 		"node_type": node_type,
 		"is_boss": RouteConfig.is_boss_node_type(node_type),
 		"has_score_target": has_target,
-		"target_score": int(score_rule.get("target", NO_SCORE_TARGET)) if has_target else NO_SCORE_TARGET
+		"target_score": int(score_rule.get("target", NO_SCORE_TARGET)) if has_target else NO_SCORE_TARGET,
+		"battle_modifiers": get_current_battle_modifiers(),
+		"visual": get_current_stage_visual(),
+		"boss": StageConfig.get_boss_config(current_act),
 	}
 
 func current_battle_has_score_target() -> bool:
@@ -932,6 +956,9 @@ func has_empty_dream_trophy_reward_bonus(score: int) -> bool:
 func _get_boss_target_score() -> int:
 	var node = get_current_route_node()
 	var score_rule = RouteConfig.get_score_target_rule(node, current_act)
+	var stage_score_rule = StageConfig.get_boss_score_target_rule(current_act)
+	if bool(stage_score_rule.get("enabled", false)):
+		score_rule = stage_score_rule
 	if bool(score_rule.get("enabled", false)):
 		return int(score_rule.get("target", NO_SCORE_TARGET))
 	return NO_SCORE_TARGET
@@ -948,8 +975,8 @@ func advance_route_node(expected_node_id: String = "") -> Dictionary:
 		completed_route_nodes.append(current_route_index)
 	current_route_index += 1
 
-	if current_route_index >= RouteConfig.get_route_size(current_route_id):
-		if current_act >= RouteConfig.get_max_act():
+	if current_route_index >= RouteConfig.get_route_size(get_current_stage_route_id()):
+		if current_act >= StageConfig.get_max_act():
 			_complete_run()
 			_emit_route_changed()
 			return current_node
@@ -962,11 +989,11 @@ func advance_route_node(expected_node_id: String = "") -> Dictionary:
 	return current_node
 
 func _complete_run() -> void:
-	print("[RunManager] 已完成全部 ", RouteConfig.get_max_act(), " 个场景，整局胜利。")
+	print("[RunManager] 已完成全部 ", StageConfig.get_max_act(), " 个场景，整局胜利。")
 	is_run_active = false
 	is_run_complete = true
-	current_act = RouteConfig.get_max_act()
-	current_route_index = max(0, RouteConfig.get_route_size(current_route_id) - 1)
+	current_act = StageConfig.get_max_act()
+	current_route_index = max(0, RouteConfig.get_route_size(get_current_stage_route_id()) - 1)
 	completed_route_nodes = []
 	if saver:
 		saver.delete_save()
@@ -1030,7 +1057,7 @@ func deserialize_run(data: Dictionary):
 	current_depth = data.get("depth", 1)
 	current_route_id = RouteConfig.normalize_route_id(data.get("route_id", RouteConfig.DEFAULT_ROUTE_ID))
 	current_act = max(1, int(data.get("act", 1)))
-	current_route_index = clampi(int(data.get("route_index", 0)), 0, max(0, RouteConfig.get_route_size(current_route_id) - 1))
+	current_route_index = clampi(int(data.get("route_index", 0)), 0, max(0, RouteConfig.get_route_size(get_current_stage_route_id()) - 1))
 	completed_route_nodes = []
 	for index in Array(data.get("completed_route_nodes", [])):
 		completed_route_nodes.append(int(index))

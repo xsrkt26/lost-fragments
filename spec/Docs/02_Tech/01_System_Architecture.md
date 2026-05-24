@@ -25,10 +25,11 @@
 - 道具：`data/tools/tools.json`，由 `ToolDatabase` 加载。
 - 事件：`data/events/events.json`，由 `EventDatabase` 加载。
 - 路线：`data/routes/routes.json`，由 `RouteConfig` 加载。
+- 场景层：`data/stages/stages.json`，由 `StageConfig` 加载。
 - 经济曲线：`data/economy/economy.json`，由 `EconomyConfig` 读取并保留代码默认值作为回退。
 - 策划配置 schema：`data/config/design_config_schema.json`，由 `scripts/design_config/*` 校验和导出工具使用。
 
-路线、奖励、商店、事件和经济数值不应散落在 UI 场景脚本中。策划可编辑配置需要先通过 `scripts/design_config/validate_design_config.py` 校验，再进入导出或发布流程。
+路线、场景层、奖励、商店、事件和经济数值不应散落在 UI 场景脚本中。策划可编辑配置需要先通过 `scripts/design_config/validate_design_config.py` 校验，再进入导出或发布流程。
 
 ### 3. 逻辑与表现分离
 
@@ -71,6 +72,21 @@
 - `elite_battle`
 
 `HubScene` 由路线按钮驱动，只允许进入当前节点；完成战斗、离开商店或完成事件后推进路线。完成第 6 个场景最后节点后，整局胜利并返回主菜单。
+
+`StageConfig` 会按 `current_act` 选择当前场景层配置。每层可以覆盖 `route_id`，因此同一整局内可以使用不同路线结构；未配置或非法时回退到默认路线。
+
+### 1.1 场景层差异化
+
+`data/stages/stages.json` 是六大关差异化入口，当前支持：
+
+- `route_id`：当前层使用的路线配置。
+- `visual`：局内/局外 BGM key 和 UI tint。
+- `boss`：Boss 机制与分数目标。
+- `battle_modifiers`：抽取消耗修正、污染增加量修正和禁用背包格。
+- `reward_weight_modifiers`：关卡奖励候选权重修正。
+- `shop_weight_modifiers`：商店候选权重修正。
+
+`RunManager.get_current_battle_config()` 会把当前层的 `stage`、`visual`、`boss` 和 `battle_modifiers` 一并传给战斗。`BattleManager` 负责应用抽取消耗，`ImpactResolver` 负责应用污染修正，奖励和商店生成器负责应用权重修正。
 
 ### 2. 战斗生命周期
 

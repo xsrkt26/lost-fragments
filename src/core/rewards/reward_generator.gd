@@ -7,6 +7,7 @@ const TYPE_ORNAMENT := "ornament"
 const TYPE_TOOL := "tool"
 const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
 const RouteConfig = preload("res://src/core/route/route_config.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
 const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
 const RARITY_WEIGHT := {
 	"普通": 1,
@@ -23,23 +24,24 @@ static func generate_options(run_manager: Node, item_db: Node, ornament_db: Node
 	var act = max(1, int(run_manager.get("current_act")))
 	var build_tags = _collect_build_tags(run_manager, item_db, ornament_db)
 	var tool_db = _get_tool_db(run_manager)
+	var weight_modifiers = StageConfig.get_reward_weight_modifiers(act)
 
-	var ornament = _pick_ornament(run_manager, ornament_db, act, is_boss, build_tags, rng)
+	var ornament = _pick_ornament(run_manager, ornament_db, act, is_boss, build_tags, weight_modifiers, rng)
 	if not ornament.is_empty():
 		options.append(ornament)
 
-	var item = _pick_item(item_db, is_boss, build_tags, rng)
+	var item = _pick_item(item_db, is_boss, build_tags, weight_modifiers, rng)
 	if not item.is_empty() and options.size() < count:
 		options.append(item)
 
 	if options.size() < count:
 		options.append(_make_shards_reward(act, is_boss))
 
-	var tool = _pick_tool(tool_db, rng)
+	var tool = _pick_tool(tool_db, weight_modifiers, rng)
 	if not tool.is_empty() and options.size() < count:
 		options.append(tool)
 
-	var backup_ornaments = _pick_additional_ornaments(run_manager, ornament_db, act, is_boss, count - options.size(), options, build_tags, rng)
+	var backup_ornaments = _pick_additional_ornaments(run_manager, ornament_db, act, is_boss, count - options.size(), options, build_tags, weight_modifiers, rng)
 	for reward in backup_ornaments:
 		options.append(reward)
 
@@ -51,7 +53,7 @@ static func generate_options(run_manager: Node, item_db: Node, ornament_db: Node
 
 	return options.slice(0, count)
 
-static func _pick_item(item_db: Node, prefer_high_value: bool, build_tags: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
+static func _pick_item(item_db: Node, prefer_high_value: bool, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
 	if item_db == null or not item_db.has_method("get_all_items"):
 		return {}
 	var items = item_db.get_all_items()
@@ -66,7 +68,7 @@ static func _pick_item(item_db: Node, prefer_high_value: bool, build_tags: Dicti
 	for item in items:
 		candidates.append({
 			"item": item,
-			"weight": _get_item_weight(item, prefer_high_value, build_tags),
+			"weight": StageConfig.apply_weight_modifiers(_get_item_weight(item, prefer_high_value, build_tags), TYPE_ITEM, item.id, item.tags, "", weight_modifiers),
 		})
 	var picked = WeightedRandom.pick(candidates, rng)
 	if picked.is_empty():
@@ -86,7 +88,7 @@ static func _make_item_reward(item) -> Dictionary:
 		"amount": 1,
 	}
 
-static func _pick_tool(tool_db: Node, rng: RandomNumberGenerator = null) -> Dictionary:
+static func _pick_tool(tool_db: Node, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
 	if tool_db == null or not tool_db.has_method("get_available_tools"):
 		return {}
 	var tools = tool_db.get_available_tools()
@@ -97,7 +99,7 @@ static func _pick_tool(tool_db: Node, rng: RandomNumberGenerator = null) -> Dict
 		return _make_tool_reward(tools[0])
 	var candidates: Array[Dictionary] = []
 	for tool in tools:
-		candidates.append({"tool": tool, "weight": _get_tool_weight(tool)})
+		candidates.append({"tool": tool, "weight": StageConfig.apply_weight_modifiers(_get_tool_weight(tool), TYPE_TOOL, tool.id, tool.tags, tool.rarity, weight_modifiers)})
 	var picked = WeightedRandom.pick(candidates, rng)
 	if picked.is_empty():
 		return {}
@@ -144,11 +146,11 @@ static func _get_item_weight(item, prefer_high_value: bool, build_tags: Dictiona
 		weight += 4.0
 	return max(0.1, weight)
 
-static func _pick_ornament(run_manager: Node, ornament_db: Node, act: int, prefer_high_value: bool, build_tags: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
-	var rewards = _pick_additional_ornaments(run_manager, ornament_db, act, prefer_high_value, 1, [], build_tags, rng)
+static func _pick_ornament(run_manager: Node, ornament_db: Node, act: int, prefer_high_value: bool, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
+	var rewards = _pick_additional_ornaments(run_manager, ornament_db, act, prefer_high_value, 1, [], build_tags, weight_modifiers, rng)
 	return rewards[0] if not rewards.is_empty() else {}
 
-static func _pick_additional_ornaments(run_manager: Node, ornament_db: Node, act: int, prefer_high_value: bool, count: int, existing: Array, build_tags: Dictionary, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
+static func _pick_additional_ornaments(run_manager: Node, ornament_db: Node, act: int, prefer_high_value: bool, count: int, existing: Array, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if count <= 0 or ornament_db == null or not ornament_db.has_method("get_available_ornaments"):
 		return result
@@ -175,7 +177,7 @@ static func _pick_additional_ornaments(run_manager: Node, ornament_db: Node, act
 	for ornament in available:
 		candidates.append({
 			"ornament": ornament,
-			"weight": _get_ornament_weight(ornament, act, prefer_high_value, build_tags),
+			"weight": StageConfig.apply_weight_modifiers(_get_ornament_weight(ornament, act, prefer_high_value, build_tags), TYPE_ORNAMENT, ornament.id, ornament.tags, ornament.rarity, weight_modifiers),
 		})
 	while result.size() < count and not candidates.is_empty():
 		var index = WeightedRandom.pick_index(candidates, rng)

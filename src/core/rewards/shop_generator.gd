@@ -5,6 +5,7 @@ const TYPE_ITEM := "item"
 const TYPE_ORNAMENT := "ornament"
 const TYPE_TOOL := "tool"
 const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
 const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
 
 const TAG_WEIGHT_STEP := 2.0
@@ -14,10 +15,11 @@ static func generate_offers(run_manager: Node, item_db: Node, ornament_db: Node,
 	var act = max(1, int(run_manager.get("current_act"))) if run_manager != null else 1
 	var build_tags = _collect_build_tags(run_manager, item_db, ornament_db)
 	var tool_db = _get_tool_db(run_manager)
+	var weight_modifiers = StageConfig.get_shop_weight_modifiers(act)
 
-	var items = _get_item_offers(item_db, act, count, build_tags, excluded_keys)
-	var ornaments = _get_ornament_offers(run_manager, ornament_db, act, count, build_tags, excluded_keys)
-	var tools = _get_tool_offers(tool_db, act, count, excluded_keys)
+	var items = _get_item_offers(item_db, act, count, build_tags, weight_modifiers, excluded_keys)
+	var ornaments = _get_ornament_offers(run_manager, ornament_db, act, count, build_tags, weight_modifiers, excluded_keys)
+	var tools = _get_tool_offers(tool_db, act, count, weight_modifiers, excluded_keys)
 
 	_append_weighted_offer(offers, items, rng)
 	_append_weighted_offer(offers, ornaments, rng)
@@ -43,7 +45,7 @@ static func calculate_refresh_cost(act: int, refresh_count: int) -> int:
 static func make_offer_key(offer: Dictionary) -> String:
 	return "%s:%s" % [str(offer.get("type", "")), str(offer.get("id", ""))]
 
-static func _get_item_offers(item_db: Node, act: int, count: int, build_tags: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
+static func _get_item_offers(item_db: Node, act: int, count: int, build_tags: Dictionary, weight_modifiers: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if item_db == null or not item_db.has_method("get_all_items"):
 		return result
@@ -57,14 +59,14 @@ static func _get_item_offers(item_db: Node, act: int, count: int, build_tags: Di
 			"description": "%s\n购买后暂存，整理背包时可摆放。" % item.description,
 			"item_destination": "staging",
 			"price": _calculate_item_price(item, act),
-			"weight": _get_item_weight(item, build_tags),
+			"weight": StageConfig.apply_weight_modifiers(_get_item_weight(item, build_tags), TYPE_ITEM, item.id, item.tags, "", weight_modifiers),
 		}
 		if not excluded_keys.has(make_offer_key(offer)):
 			result.append(offer)
 	result.sort_custom(func(a, b): return _compare_offer_priority(a, b))
 	return result.slice(0, max(count * 3, count))
 
-static func _get_ornament_offers(run_manager: Node, ornament_db: Node, act: int, count: int, build_tags: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
+static func _get_ornament_offers(run_manager: Node, ornament_db: Node, act: int, count: int, build_tags: Dictionary, weight_modifiers: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if ornament_db == null or not ornament_db.has_method("get_available_ornaments"):
 		return result
@@ -81,14 +83,14 @@ static func _get_ornament_offers(run_manager: Node, ornament_db: Node, act: int,
 			"description": ornament.effect_text,
 			"rarity": ornament.rarity,
 			"price": _calculate_ornament_price(ornament, act),
-			"weight": _get_ornament_weight(ornament, act, build_tags),
+			"weight": StageConfig.apply_weight_modifiers(_get_ornament_weight(ornament, act, build_tags), TYPE_ORNAMENT, ornament.id, ornament.tags, ornament.rarity, weight_modifiers),
 		}
 		if not excluded_keys.has(make_offer_key(offer)):
 			result.append(offer)
 	result.sort_custom(func(a, b): return _compare_offer_priority(a, b))
 	return result.slice(0, max(count * 3, count))
 
-static func _get_tool_offers(tool_db: Node, act: int, count: int, excluded_keys: Array) -> Array[Dictionary]:
+static func _get_tool_offers(tool_db: Node, act: int, count: int, weight_modifiers: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if tool_db == null or not tool_db.has_method("get_available_tools"):
 		return result
@@ -101,7 +103,7 @@ static func _get_tool_offers(tool_db: Node, act: int, count: int, excluded_keys:
 			"rarity": tool.rarity,
 			"price": _calculate_tool_price(tool, act),
 			"amount": 1,
-			"weight": _get_tool_weight(tool),
+			"weight": StageConfig.apply_weight_modifiers(_get_tool_weight(tool), TYPE_TOOL, tool.id, tool.tags, tool.rarity, weight_modifiers),
 		}
 		if not excluded_keys.has(make_offer_key(offer)):
 			result.append(offer)

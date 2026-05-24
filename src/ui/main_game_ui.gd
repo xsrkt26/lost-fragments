@@ -72,8 +72,9 @@ func setup(p_battle_manager: BattleManager):
 		GlobalInput.set_context(GlobalInput.Context.UI)
 	else:
 		GlobalInput.set_context(GlobalInput.Context.BATTLE)
-		GlobalAudio.play_bgm("battle")
+		GlobalAudio.play_bgm(_get_stage_bgm_key("battle_bgm_key", "battle"))
 	battle_manager = p_battle_manager
+	_apply_stage_visuals()
 	
 	# 核心修复：确保进入战斗时状态是干净的
 	var gs = get_node_or_null("/root/GameState")
@@ -113,6 +114,28 @@ func setup(p_battle_manager: BattleManager):
 
 func _is_backpack_overlay_mode() -> bool:
 	return _ui_mode == MODE_BACKPACK_OVERLAY
+
+func _get_stage_bgm_key(key: String, fallback: String) -> String:
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not rm.has_method("get_current_stage_visual"):
+		return fallback
+	var visual = rm.get_current_stage_visual()
+	var bgm_key = str(visual.get(key, fallback))
+	return bgm_key if bgm_key != "" else fallback
+
+func _apply_stage_visuals() -> void:
+	if _is_backpack_overlay_mode():
+		return
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not rm.has_method("get_current_stage_visual"):
+		return
+	var visual = rm.get_current_stage_visual()
+	var tint = str(visual.get("ui_tint", ""))
+	if tint == "":
+		return
+	var background = get_node_or_null("Background")
+	if background:
+		background.color = Color.html(tint)
 
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)

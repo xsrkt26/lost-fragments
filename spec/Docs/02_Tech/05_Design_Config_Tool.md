@@ -19,6 +19,7 @@
 | 饰品 | `data/ornaments/ornaments.json` | 调整饰品价格、最早出现层、稀有度、标签、启用状态和描述 |
 | 事件 | `data/events/events.json` | 调整事件权重、风险收益、选项、成本和效果 |
 | 路线 | `data/routes/routes.json` | 调整节点顺序、节点类型、场景映射和 Boss 分数目标 |
+| 场景层 | `data/stages/stages.json` | 调整六大关路线、视觉、Boss 目标、战斗修正、奖励权重和商店权重 |
 | 经济 | `data/economy/economy.json` | 调整碎片产出、商店刷新费用和价格倍率 |
 | Schema | `data/config/design_config_schema.json` | 记录策划可编辑字段、数据源和枚举值 |
 
@@ -34,11 +35,12 @@ python -B scripts\design_config\validate_design_config.py
 
 - JSON 格式是否有效。
 - 数据源路径是否存在。
-- 物品、道具、饰品、事件和路线 id 是否重复。
+- 物品、道具、饰品、事件、路线和场景层 id 是否重复。
 - 道具目标类型、道具稀有度、饰品稀有度、事件效果类型、路线节点类型是否在 schema 枚举内。
 - 事件效果引用的物品、饰品和道具 id 是否存在。
 - 价格、权重、层数、风险收益、经济曲线等数值是否落在基础合法范围内。
 - 路线默认 id、节点 scene、Boss 分数目标结构是否有效。
+- 场景层是否覆盖 1 到 `max_act`，引用的路线是否存在，战斗修正、Boss 目标和权重修正结构是否有效。
 
 校验通过会输出 `DESIGN_CONFIG_VALIDATION: PASS`。出现 `ERROR` 时不能把配置交给游戏或发布流程。
 
@@ -61,6 +63,7 @@ package/design_config_export/
 - `ornaments.json`
 - `events.json`
 - `routes.json`
+- `stages.json`
 - `economy.json`
 - `item_catalog.json`
 - `manifest.json`
@@ -84,6 +87,6 @@ package/design_config_export/
 
 1. 增加 Excel/CSV 到 JSON 的导入脚本。
 2. 将奖励池、商店权重和道具出现概率从代码常量迁入 JSON。
-3. 为事件和路线增加更细的 schema 校验，例如节点内容模板和风险事件预览要求。
+3. 为事件、路线和场景层增加更细的 schema 校验，例如节点内容模板、风险事件预览和关卡差异预览要求。
 4. 开发本地 Web 配置界面，复用当前校验与导出脚本。
 5. 增加战斗模拟和经济曲线预览。

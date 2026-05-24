@@ -75,6 +75,21 @@
         "routes"
       ]
     },
+    "stages": {
+      "path": "data/stages/stages.json",
+      "format": "json_object",
+      "editable_fields": [
+        "max_act",
+        "default_stage_id",
+        "stages",
+        "route_id",
+        "visual",
+        "battle_modifiers",
+        "boss",
+        "reward_weight_modifiers",
+        "shop_weight_modifiers"
+      ]
+    },
     "economy": {
       "path": "data/economy/economy.json",
       "format": "json_object",
