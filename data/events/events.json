@@ -146,5 +146,151 @@
 				]
 			}
 		]
+	},
+	{
+		"id": "polluted_drain",
+		"title": "堵塞排污口",
+		"description": "黑色梦液从排污口缓慢倒灌。处理它会带来污染道具，也能换到一笔碎片。",
+		"earliest_act": 2,
+		"weight": 0.85,
+		"risk": 0.45,
+		"reward": 0.75,
+		"tags": ["污染", "废弃物", "道具"],
+		"choices": [
+			{
+				"id": "take_ink_drop",
+				"title": "收集黑墨滴",
+				"description": "获得 1 个道具“黑墨滴”。",
+				"effects": [
+					{"type": "tool", "id": "black_ink_drop", "amount": 1}
+				]
+			},
+			{
+				"id": "purify_for_shards",
+				"title": "清理残渣",
+				"description": "获得 12 碎片。",
+				"effects": [
+					{"type": "shards", "amount": 12}
+				]
+			}
+		]
+	},
+	{
+		"id": "seedbed_nursery",
+		"title": "温室育苗床",
+		"description": "一排梦境之种在玻璃罩下缓慢发光。你可以带走培育工具，或把旧物变成种子资源。",
+		"earliest_act": 3,
+		"weight": 0.85,
+		"risk": 0.25,
+		"reward": 0.8,
+		"tags": ["梦境之种", "播种", "升级", "道具"],
+		"choices": [
+			{
+				"id": "take_water_drop",
+				"title": "带走小水滴",
+				"description": "获得 1 个道具“小水滴”。",
+				"effects": [
+					{"type": "tool", "id": "small_water_drop", "amount": 1}
+				]
+			},
+			{
+				"id": "take_gardener_gloves",
+				"title": "整理园艺手套",
+				"description": "获得饰品“园丁手套”。",
+				"effects": [
+					{"type": "ornament", "id": "gardener_gloves"}
+				]
+			}
+		]
+	},
+	{
+		"id": "gearwork_bench",
+		"title": "失控工作台",
+		"description": "工作台上的齿轮仍在空转。它能提供机械道具，但需要你冒着被卷入传动链的风险。",
+		"earliest_act": 4,
+		"weight": 0.8,
+		"risk": 0.55,
+		"reward": 0.85,
+		"tags": ["机械", "传导", "撞击", "道具"],
+		"choices": [
+			{
+				"id": "take_extension_hook",
+				"title": "拆下延长钩",
+				"description": "获得 1 个道具“延长钩”。",
+				"effects": [
+					{"type": "tool", "id": "extension_hook", "amount": 1}
+				]
+			},
+			{
+				"id": "oil_the_gears",
+				"title": "收集传动油",
+				"description": "花费 8 碎片，获得 1 个道具“传动油”。",
+				"cost_shards": 8,
+				"effects": [
+					{"type": "tool", "id": "transmission_oil", "amount": 1}
+				]
+			}
+		]
+	},
+	{
+		"id": "rift_black_market",
+		"title": "裂隙黑市",
+		"description": "裂隙边缘的商人只出售危险货。接受交易会得到高阶构筑机会，也可能让背包变得更紧。",
+		"earliest_act": 5,
+		"weight": 0.75,
+		"risk": 0.75,
+		"reward": 0.9,
+		"tags": ["混合", "高阶", "风险", "背包"],
+		"choices": [
+			{
+				"id": "buy_kaleidoscope",
+				"title": "买下万花镜",
+				"description": "花费 18 碎片，获得饰品“万花镜”。",
+				"cost_shards": 18,
+				"effects": [
+					{"type": "ornament", "id": "kaleidoscope"}
+				]
+			},
+			{
+				"id": "lock_for_rare_tool",
+				"title": "接受裂隙工具",
+				"description": "下 1 场局内游戏锁定 1 个背包格，获得 1 个道具“空白符纸”。",
+				"preview": "临时锁格会在下一场局内游戏结束后解除。",
+				"requires_confirm": true,
+				"effects": [
+					{"type": "backpack_temp_lock_cells", "cells": [{"x": 2, "y": 5}], "duration_battles": 1, "force_move": true},
+					{"type": "tool", "id": "blank_talisman", "amount": 1}
+				]
+			}
+		]
+	},
+	{
+		"id": "final_supply_cache",
+		"title": "最终补给箱",
+		"description": "箱子里只剩最关键的补给。你可以补充梦值，也可以押注最后一件高阶道具。",
+		"earliest_act": 6,
+		"weight": 0.9,
+		"risk": 0.35,
+		"reward": 0.95,
+		"tags": ["高阶", "道具", "梦值", "终局"],
+		"choices": [
+			{
+				"id": "recover_before_finale",
+				"title": "稳定梦境",
+				"description": "回复 18 梦值。",
+				"effects": [
+					{"type": "sanity", "amount": 18}
+				]
+			},
+			{
+				"id": "take_universal_tool",
+				"title": "拿走万用工具",
+				"description": "获得 1 个道具“空白符纸”和 10 碎片。",
+				"effects": [
+					{"type": "tool", "id": "blank_talisman", "amount": 1},
+					{"type": "shards", "amount": 10}
+				]
+			}
+		]
 	}
 ]

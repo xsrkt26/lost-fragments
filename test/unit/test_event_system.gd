@@ -33,13 +33,17 @@ func test_event_database_loads_events_and_filters_by_act():
 	var all_events = event_db.get_all_events()
 	var act_one = event_db.get_available_events(1)
 	var act_two = event_db.get_available_events(2)
+	var act_six = event_db.get_available_events(6)
 	var act_one_ids = act_one.map(func(event_data): return event_data.id)
 	var act_two_ids = act_two.map(func(event_data): return event_data.id)
+	var act_six_ids = act_six.map(func(event_data): return event_data.id)
 
 	assert_true(all_events.size() >= 4)
 	assert_true(act_one_ids.has("forgotten_cache"))
 	assert_false(act_one_ids.has("loose_straps"))
 	assert_true(act_two_ids.has("loose_straps"))
+	assert_true(act_two_ids.has("polluted_drain"))
+	assert_true(act_six_ids.has("final_supply_cache"))
 
 func test_pick_event_for_run_is_deterministic():
 	var rm = _make_run_manager(1, 2)

@@ -35,10 +35,24 @@ func test_stage_config_loads_all_six_acts_and_metadata():
 
 	var stage_4 = StageConfig.get_stage(4)
 	assert_eq(stage_4.get("id"), "act_4")
-	assert_eq(StageConfig.get_route_id_for_act(4), RouteConfig.DEFAULT_ROUTE_ID)
+	assert_eq(StageConfig.get_route_id_for_act(4), "act_4_gearworks")
 	assert_eq(StageConfig.get_boss_score_target_rule(4).target, 110)
 	assert_eq(StageConfig.get_battle_modifiers(4).pollution_added_bonus, 1)
 	assert_eq(StageConfig.get_visual(4).battle_bgm_key, "battle")
+
+func test_stage_routes_point_to_distinct_content_tracks():
+	assert_eq(StageConfig.get_route_id_for_act(1), RouteConfig.DEFAULT_ROUTE_ID)
+	assert_eq(StageConfig.get_route_id_for_act(2), "act_2_pollution")
+	assert_eq(StageConfig.get_route_id_for_act(3), "act_3_grove")
+	assert_eq(StageConfig.get_route_id_for_act(4), "act_4_gearworks")
+	assert_eq(StageConfig.get_route_id_for_act(5), "act_5_rift")
+	assert_eq(StageConfig.get_route_id_for_act(6), "act_6_finale")
+
+	var finale_nodes = RouteConfig.get_route_nodes("act_6_finale")
+	assert_eq(finale_nodes.size(), 9)
+	assert_eq(finale_nodes[0].get("type"), RouteConfig.NODE_EVENT)
+	assert_eq(finale_nodes[6].get("type"), RouteConfig.NODE_BOSS_BATTLE)
+	assert_eq(RouteConfig.get_score_target_rule(finale_nodes[3], 6).target, 88)
 
 func test_stage_config_falls_back_when_file_is_missing():
 	var stage = StageConfig.get_stage(6, "user://missing_stages_for_test.json")

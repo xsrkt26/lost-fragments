@@ -33,7 +33,7 @@
     "2": {
       "id": "act_2",
       "name": "污迹梦境",
-      "route_id": "default",
+      "route_id": "act_2_pollution",
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
@@ -60,7 +60,7 @@
     "3": {
       "id": "act_3",
       "name": "萌芽梦境",
-      "route_id": "default",
+      "route_id": "act_3_grove",
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
@@ -87,7 +87,7 @@
     "4": {
       "id": "act_4",
       "name": "齿轮梦境",
-      "route_id": "default",
+      "route_id": "act_4_gearworks",
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
@@ -114,7 +114,7 @@
     "5": {
       "id": "act_5",
       "name": "裂隙梦境",
-      "route_id": "default",
+      "route_id": "act_5_rift",
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
@@ -141,7 +141,7 @@
     "6": {
       "id": "act_6",
       "name": "终局梦境",
-      "route_id": "default",
+      "route_id": "act_6_finale",
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",

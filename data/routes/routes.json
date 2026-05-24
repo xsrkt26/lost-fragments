@@ -3,65 +3,142 @@
   "max_act": 6,
   "routes": {
     "default": [
-      {
-        "id": "battle_1",
-        "type": "battle",
-        "label": "局内游戏",
-        "scene": "battle"
-      },
-      {
-        "id": "shop_1",
-        "type": "shop",
-        "label": "商店",
-        "scene": "shop"
-      },
-      {
-        "id": "event_1",
-        "type": "event",
-        "label": "事件",
-        "scene": "event"
-      },
-      {
-        "id": "battle_2",
-        "type": "battle",
-        "label": "局内游戏",
-        "scene": "battle"
-      },
-      {
-        "id": "shop_2",
-        "type": "shop",
-        "label": "商店",
-        "scene": "shop"
-      },
-      {
-        "id": "event_2",
-        "type": "event",
-        "label": "事件",
-        "scene": "event"
-      },
+      {"id": "battle_1", "type": "battle", "label": "局内游戏", "scene": "battle"},
+      {"id": "shop_1", "type": "shop", "label": "商店", "scene": "shop"},
+      {"id": "event_1", "type": "event", "label": "事件", "scene": "event"},
+      {"id": "battle_2", "type": "battle", "label": "局内游戏", "scene": "battle"},
+      {"id": "shop_2", "type": "shop", "label": "商店", "scene": "shop"},
+      {"id": "event_2", "type": "event", "label": "事件", "scene": "event"},
       {
         "id": "boss_1",
         "type": "boss_battle",
         "label": "Boss局内游戏",
         "scene": "battle",
-        "score_target": {
-          "enabled": true,
-          "base": 30,
-          "act_multiplier": 20
-        }
+        "score_target": {"enabled": true, "base": 30, "act_multiplier": 20}
+      },
+      {"id": "shop_3", "type": "shop", "label": "商店", "scene": "shop"},
+      {"id": "event_3", "type": "event", "label": "事件", "scene": "event"}
+    ],
+    "act_2_pollution": [
+      {"id": "pollution_battle_1", "type": "battle", "label": "污迹试炼", "scene": "battle"},
+      {"id": "pollution_event_1", "type": "event", "label": "污迹事件", "scene": "event"},
+      {"id": "pollution_shop_1", "type": "shop", "label": "净化商店", "scene": "shop"},
+      {
+        "id": "pollution_elite_1",
+        "type": "elite_battle",
+        "label": "浊流精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 38}
+      },
+      {"id": "pollution_event_2", "type": "event", "label": "污染抉择", "scene": "event"},
+      {"id": "pollution_shop_2", "type": "shop", "label": "废物摊位", "scene": "shop"},
+      {
+        "id": "pollution_boss",
+        "type": "boss_battle",
+        "label": "污迹Boss",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 70}
+      },
+      {"id": "pollution_shop_3", "type": "shop", "label": "战后商店", "scene": "shop"},
+      {"id": "pollution_event_3", "type": "event", "label": "排污余波", "scene": "event"}
+    ],
+    "act_3_grove": [
+      {"id": "grove_battle_1", "type": "battle", "label": "萌芽试炼", "scene": "battle"},
+      {"id": "grove_event_1", "type": "event", "label": "温室事件", "scene": "event"},
+      {"id": "grove_battle_2", "type": "battle", "label": "根须局内游戏", "scene": "battle"},
+      {"id": "grove_shop_1", "type": "shop", "label": "园艺商店", "scene": "shop"},
+      {"id": "grove_event_2", "type": "event", "label": "播种抉择", "scene": "event"},
+      {
+        "id": "grove_elite_1",
+        "type": "elite_battle",
+        "label": "蔓生精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 52}
       },
       {
-        "id": "shop_3",
-        "type": "shop",
-        "label": "商店",
-        "scene": "shop"
+        "id": "grove_boss",
+        "type": "boss_battle",
+        "label": "萌芽Boss",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 90}
+      },
+      {"id": "grove_shop_2", "type": "shop", "label": "收获商店", "scene": "shop"},
+      {"id": "grove_event_3", "type": "event", "label": "收获事件", "scene": "event"}
+    ],
+    "act_4_gearworks": [
+      {"id": "gear_battle_1", "type": "battle", "label": "齿轮试炼", "scene": "battle"},
+      {"id": "gear_shop_1", "type": "shop", "label": "零件商店", "scene": "shop"},
+      {
+        "id": "gear_elite_1",
+        "type": "elite_battle",
+        "label": "传动精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 64}
+      },
+      {"id": "gear_event_1", "type": "event", "label": "机械事件", "scene": "event"},
+      {"id": "gear_battle_2", "type": "battle", "label": "连锁局内游戏", "scene": "battle"},
+      {"id": "gear_shop_2", "type": "shop", "label": "传动商店", "scene": "shop"},
+      {
+        "id": "gear_boss",
+        "type": "boss_battle",
+        "label": "齿轮Boss",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 110}
+      },
+      {"id": "gear_event_2", "type": "event", "label": "过载余波", "scene": "event"},
+      {"id": "gear_shop_3", "type": "shop", "label": "终端商店", "scene": "shop"}
+    ],
+    "act_5_rift": [
+      {"id": "rift_battle_1", "type": "battle", "label": "裂隙试炼", "scene": "battle"},
+      {"id": "rift_event_1", "type": "event", "label": "裂隙事件", "scene": "event"},
+      {"id": "rift_shop_1", "type": "shop", "label": "黑市商店", "scene": "shop"},
+      {
+        "id": "rift_elite_1",
+        "type": "elite_battle",
+        "label": "混合精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 78}
+      },
+      {"id": "rift_event_2", "type": "event", "label": "风险抉择", "scene": "event"},
+      {"id": "rift_battle_2", "type": "battle", "label": "裂隙局内游戏", "scene": "battle"},
+      {
+        "id": "rift_boss",
+        "type": "boss_battle",
+        "label": "裂隙Boss",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 130}
+      },
+      {"id": "rift_shop_2", "type": "shop", "label": "战后黑市", "scene": "shop"},
+      {"id": "rift_event_3", "type": "event", "label": "裂隙余波", "scene": "event"}
+    ],
+    "act_6_finale": [
+      {"id": "finale_event_1", "type": "event", "label": "终局前兆", "scene": "event"},
+      {"id": "finale_battle_1", "type": "battle", "label": "终局试炼", "scene": "battle"},
+      {"id": "finale_shop_1", "type": "shop", "label": "最终补给", "scene": "shop"},
+      {
+        "id": "finale_elite_1",
+        "type": "elite_battle",
+        "label": "污染精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 88}
+      },
+      {"id": "finale_event_2", "type": "event", "label": "终局抉择", "scene": "event"},
+      {
+        "id": "finale_elite_2",
+        "type": "elite_battle",
+        "label": "机械精英",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 96}
       },
       {
-        "id": "event_3",
-        "type": "event",
-        "label": "事件",
-        "scene": "event"
-      }
+        "id": "finale_boss",
+        "type": "boss_battle",
+        "label": "终局Boss",
+        "scene": "battle",
+        "score_target": {"enabled": true, "value": 150}
+      },
+      {"id": "finale_shop_2", "type": "shop", "label": "最后商店", "scene": "shop"},
+      {"id": "finale_event_3", "type": "event", "label": "归途事件", "scene": "event"}
     ]
   }
 }
