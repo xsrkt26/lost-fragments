@@ -4,6 +4,8 @@ extends RefCounted
 const MIN_ACT := 1
 const MAX_ACT := 6
 const ECONOMY_CONFIG_PATH := "res://data/economy/economy.json"
+const RouteConfig = preload("res://src/core/route/route_config.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
 
 const NORMAL_BATTLE_SHARDS_BASE := 8
 const NORMAL_BATTLE_SHARDS_PER_ACT := 2
@@ -93,11 +95,15 @@ static func act_economy_snapshot(act: int) -> Dictionary:
 	var clamped_act = _clamp_act_for_config(act, config)
 	var normal_shards = battle_reward_shards(clamped_act, false)
 	var boss_shards = battle_reward_shards(clamped_act, true)
+	var route_summary = _route_battle_reward_summary(clamped_act)
 	return {
 		"act": clamped_act,
 		"normal_battle_shards": normal_shards,
 		"boss_battle_shards": boss_shards,
-		"route_battle_shards": normal_shards * 2 + boss_shards,
+		"route_battle_shards": int(route_summary.get("route_battle_shards", normal_shards * 2 + boss_shards)),
+		"route_normal_battle_nodes": int(route_summary.get("normal_battle_nodes", 2)),
+		"route_elite_battle_nodes": int(route_summary.get("elite_battle_nodes", 0)),
+		"route_boss_battle_nodes": int(route_summary.get("boss_battle_nodes", 1)),
 		"first_refresh_cost": shop_refresh_cost(clamped_act, 0),
 		"item_price_multiplier_percent": shop_item_price_multiplier_percent(clamped_act),
 		"common_ornament_price_multiplier_percent": shop_ornament_price_multiplier_percent(RARITY_COMMON, clamped_act),
@@ -129,6 +135,32 @@ static func _normalize_config(raw: Dictionary) -> Dictionary:
 			merged[key] = raw_section[key]
 		config[section_name] = merged
 	return config
+
+
+static func _route_battle_reward_summary(act: int) -> Dictionary:
+	var route_id = StageConfig.get_route_id_for_act(act, RouteConfig.DEFAULT_ROUTE_ID)
+	var normal_count := 0
+	var elite_count := 0
+	var boss_count := 0
+	var route_shards := 0
+	for node in RouteConfig.get_route_nodes(route_id):
+		var node_type = str(node.get("type", ""))
+		if not RouteConfig.is_battle_node_type(node_type):
+			continue
+		var is_boss = RouteConfig.is_boss_node_type(node_type)
+		route_shards += battle_reward_shards(act, is_boss)
+		if is_boss:
+			boss_count += 1
+		elif node_type == RouteConfig.NODE_ELITE_BATTLE:
+			elite_count += 1
+		else:
+			normal_count += 1
+	return {
+		"route_battle_shards": route_shards,
+		"normal_battle_nodes": normal_count,
+		"elite_battle_nodes": elite_count,
+		"boss_battle_nodes": boss_count,
+	}
 
 
 static func _section(config: Dictionary, section_name: String) -> Dictionary:

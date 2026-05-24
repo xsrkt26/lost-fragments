@@ -31,12 +31,12 @@ func _make_run_manager(act: int, route_index: int):
 
 func test_economy_snapshot_matches_current_balance_targets():
 	var expected = [
-		{"act": 1, "normal": 8, "boss": 18, "route": 34, "refresh": 7, "item_pct": 100, "common_pct": 100, "advanced_pct": 108, "rare_pct": 115},
-		{"act": 2, "normal": 10, "boss": 22, "route": 42, "refresh": 9, "item_pct": 107, "common_pct": 109, "advanced_pct": 117, "rare_pct": 124},
-		{"act": 3, "normal": 12, "boss": 26, "route": 50, "refresh": 11, "item_pct": 114, "common_pct": 118, "advanced_pct": 126, "rare_pct": 133},
-		{"act": 4, "normal": 14, "boss": 30, "route": 58, "refresh": 13, "item_pct": 121, "common_pct": 127, "advanced_pct": 135, "rare_pct": 142},
-		{"act": 5, "normal": 16, "boss": 34, "route": 66, "refresh": 15, "item_pct": 128, "common_pct": 136, "advanced_pct": 144, "rare_pct": 151},
-		{"act": 6, "normal": 18, "boss": 38, "route": 74, "refresh": 17, "item_pct": 135, "common_pct": 145, "advanced_pct": 153, "rare_pct": 160},
+		{"act": 1, "normal": 8, "boss": 18, "route": 34, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 7, "item_pct": 100, "common_pct": 100, "advanced_pct": 108, "rare_pct": 115},
+		{"act": 2, "normal": 10, "boss": 22, "route": 42, "normal_nodes": 1, "elite_nodes": 1, "boss_nodes": 1, "refresh": 9, "item_pct": 107, "common_pct": 109, "advanced_pct": 117, "rare_pct": 124},
+		{"act": 3, "normal": 12, "boss": 26, "route": 62, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 11, "item_pct": 114, "common_pct": 118, "advanced_pct": 126, "rare_pct": 133},
+		{"act": 4, "normal": 14, "boss": 30, "route": 72, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 13, "item_pct": 121, "common_pct": 127, "advanced_pct": 135, "rare_pct": 142},
+		{"act": 5, "normal": 16, "boss": 34, "route": 82, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 15, "item_pct": 128, "common_pct": 136, "advanced_pct": 144, "rare_pct": 151},
+		{"act": 6, "normal": 18, "boss": 38, "route": 92, "normal_nodes": 1, "elite_nodes": 2, "boss_nodes": 1, "refresh": 17, "item_pct": 135, "common_pct": 145, "advanced_pct": 153, "rare_pct": 160},
 	]
 
 	for row in expected:
@@ -44,6 +44,9 @@ func test_economy_snapshot_matches_current_balance_targets():
 		assert_eq(snapshot.normal_battle_shards, row.normal)
 		assert_eq(snapshot.boss_battle_shards, row.boss)
 		assert_eq(snapshot.route_battle_shards, row.route)
+		assert_eq(snapshot.route_normal_battle_nodes, row.normal_nodes)
+		assert_eq(snapshot.route_elite_battle_nodes, row.elite_nodes)
+		assert_eq(snapshot.route_boss_battle_nodes, row.boss_nodes)
 		assert_eq(snapshot.first_refresh_cost, row.refresh)
 		assert_eq(snapshot.item_price_multiplier_percent, row.item_pct)
 		assert_eq(snapshot.common_ornament_price_multiplier_percent, row.common_pct)
