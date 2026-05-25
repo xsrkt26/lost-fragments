@@ -1,70 +1,156 @@
-[gd_scene load_steps=2 format=3 uid="uid://audio_settings_01"]
+[gd_scene load_steps=5 format=3 uid="uid://audio_settings_01"]
 
 [ext_resource type="Script" path="res://src/ui/settings/audio_settings_ui.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/settings/settings_background.png" id="2_background"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
+bg_color = Color(1, 1, 1, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_paper_control"]
+bg_color = Color(0.92, 0.82, 0.66, 0.22)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.17, 0.12, 0.08, 0.42)
 
 [node name="AudioSettingsUI" type="Control"]
-custom_minimum_size = Vector2(350, 300)
 layout_mode = 3
-anchors_preset = 8
-anchor_left = 0.5
-anchor_top = 0.5
-anchor_right = 0.5
-anchor_bottom = 0.5
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Panel" type="ColorRect" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.15, 0.15, 0.15, 0.95)
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="UiLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 30
-theme_override_constants/margin_top = 30
-theme_override_constants/margin_right = 30
-theme_override_constants/margin_bottom = 30
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 20
+[node name="BackButton" type="Button" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+tooltip_text = "返回"
+theme_override_styles/normal = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
+text = ""
 
-[node name="Title" type="Label" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-theme_override_font_sizes/font_size = 32
-text = "音频设置"
-horizontal_alignment = 1
+[node name="ResolutionOption" type="OptionButton" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
 
-[node name="MasterLabel" type="Label" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "主音量"
+[node name="WindowModeOption" type="OptionButton" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
 
-[node name="MasterSlider" type="HSlider" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
+[node name="MasterSlider" type="HSlider" parent="UiLayer"]
+layout_mode = 0
+mouse_default_cursor_shape = 2
 max_value = 1.0
-step = 0.05
+step = 0.01
 value = 0.8
 
-[node name="MuteButton" type="Button" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-text = "解除静音"
+[node name="MasterValue" type="Label" parent="UiLayer"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
+theme_override_font_sizes/font_size = 36
+text = "80%"
 
-[node name="Spacer" type="Control" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
+[node name="MusicSlider" type="HSlider" parent="UiLayer"]
+layout_mode = 0
+mouse_default_cursor_shape = 2
+max_value = 1.0
+step = 0.01
+value = 0.7
 
-[node name="CloseButton" type="Button" parent="MarginContainer/VBoxContainer"]
-custom_minimum_size = Vector2(0, 50)
-layout_mode = 2
-text = "完成并退出"
+[node name="MusicValue" type="Label" parent="UiLayer"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
+theme_override_font_sizes/font_size = 36
+text = "70%"
+
+[node name="SfxSlider" type="HSlider" parent="UiLayer"]
+layout_mode = 0
+mouse_default_cursor_shape = 2
+max_value = 1.0
+step = 0.01
+value = 0.9
+
+[node name="SfxValue" type="Label" parent="UiLayer"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
+theme_override_font_sizes/font_size = 36
+text = "90%"
+
+[node name="MuteButton" type="Button" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 26
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
+text = "静音"
+
+[node name="AnimationSpeedOption" type="OptionButton" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 30
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
+
+[node name="ResetButton" type="Button" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
+text = "重置"
+
+[node name="CloseButton" type="Button" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_colors/font_color = Color(0.05, 0.035, 0.02, 1)
+theme_override_font_sizes/font_size = 24
+theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control")
+text = "完成"

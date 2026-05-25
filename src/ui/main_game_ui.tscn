@@ -9,6 +9,7 @@
 [ext_resource type="PackedScene" path="res://src/ui/backpack/backpack_ui.tscn" id="7_backpack"]
 [ext_resource type="Texture2D" uid="uid://cj3l11hpmcsmq" path="res://assets/ui/v3/backpack_grid.png" id="8_grid_bg"]
 [ext_resource type="Texture2D" uid="uid://c3p5t7brj4dy7" path="res://assets/ui/v3/trash_can.png" id="9_trash"]
+[ext_resource type="Texture2D" path="res://assets/ui/backpack/backpack_overlay_background.png" id="10_backpack_overlay"]
 
 [node name="MainGameUI" type="Control" unique_id=471982305]
 layout_mode = 3
@@ -36,6 +37,19 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
+
+[node name="BackpackOverlayBackground" type="TextureRect" parent="ContentLayer"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("10_backpack_overlay")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="DreamcatcherPanel" type="TextureRect" parent="ContentLayer" unique_id=422682609]
 layout_mode = 0

@@ -529,7 +529,7 @@
 
 - `test/unit/test_card_tooltip.gd` 覆盖物品污染层数变化后的 UI 同步、全局卡牌悬浮说明的动态污染显示，以及空物品数据不会保留旧悬浮窗。
 - `test/unit/test_shop_system.gd` 覆盖商店物品商品使用全局卡牌悬浮说明。
-- `test/integration/test_scene_smoke.gd` 作为每次 AI 改动后的固定 headless 场景冒烟测试，覆盖 `src/ui/main_menu/main_menu.tscn`、`src/ui/hub/hub_scene.tscn`、`src/ui/main_game_ui.tscn`、`src/ui/shop/shop_scene.tscn` 和 `src/ui/debug/debug_sandbox.tscn`。
+- `test/integration/test_scene_smoke.gd` 作为每次 AI 改动后的固定 headless 场景冒烟测试，覆盖主菜单、Hub、图鉴、设置、局内、商店、调试沙盒、背包组件和事件场景。
 
 实现假设：
 
@@ -835,6 +835,10 @@
 - 无可继续存档时继续游戏热区会禁用并显示半透明遮罩，正式文字仍由美术图承载，按钮仅提供鼠标交互和 tooltip。
 - 新版主菜单图已内嵌菜单文字、页签和退出打火机，场景不再叠加旧版 `main_menu_scroll_*.png` 书卷贴图，避免旧素材遮挡新背景。
 - `GlobalScene.transition_to()` 已接入 2D 翻页 MVP：转场前截取当前 viewport，场景切到背后后用 `page_turn.gdshader` 做书页弯曲、背面、折痕阴影和高光；截图失败时自动回退到原黑屏淡入淡出。
+- 新设置、图鉴和整理背包三张整页 UI 已接入运行时资源：`assets/ui/settings/settings_background.png`、`assets/ui/gallery/gallery_background.png`、`assets/ui/backpack/backpack_overlay_background.png`。
+- 设置界面已从单一主音量弹窗扩展为整页设置：支持主音量、BGM、音效、静音、分辨率、窗口/全屏模式、动画速度和重置；动画速度会影响翻页转场时长。
+- 图鉴界面已改为相册页背景，物品按钮铺在右侧绳格，左侧纸条区域显示选中物品词条和说明。
+- Hub 的整理背包浮层已接入新背包页背景，保留原背包放置逻辑，并在右侧显示已发动效果列表和累计板信息。
 
 实现假设：
 
@@ -847,6 +851,7 @@
 
 - `test/unit/test_ui_feedback.gd` 覆盖按钮反馈绑定幂等性、递归绑定动态按钮，以及 hover 缩放后恢复。
 - `test/unit/test_main_menu_scene.gd` 覆盖主菜单正式背景图、透明按钮热区、设置容器和继续游戏禁用遮罩节点。
+- `test/unit/test_settings_scene.gd`、`test/unit/test_gallery_scene.gd` 和 `test/unit/test_hub_player.gd` 覆盖新设置页、新图鉴页和整理背包浮层背景/关键交互节点。
 
 ### F8. 经济数值调试
 

@@ -1,6 +1,18 @@
-[gd_scene load_steps=2 format=3 uid="uid://gallery_scene_01"]
+[gd_scene load_steps=5 format=3 uid="uid://gallery_scene_01"]
 
 [ext_resource type="Script" path="res://src/ui/gallery/gallery_scene.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/gallery/gallery_background.png" id="2_background"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
+bg_color = Color(1, 1, 1, 0)
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_item_button"]
+bg_color = Color(0.78, 0.63, 0.43, 0.18)
+border_width_left = 1
+border_width_top = 1
+border_width_right = 1
+border_width_bottom = 1
+border_color = Color(0.24, 0.14, 0.08, 0.32)
 
 [node name="GalleryScene" type="Control"]
 layout_mode = 3
@@ -11,53 +23,58 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="ColorRect" parent="."]
+[node name="Background" type="TextureRect" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-color = Color(0.0823529, 0.0823529, 0.0823529, 1)
+mouse_filter = 2
+texture = ExtResource("2_background")
+expand_mode = 1
+stretch_mode = 6
 
-[node name="MarginContainer" type="MarginContainer" parent="."]
+[node name="UiLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/margin_left = 50
-theme_override_constants/margin_top = 50
-theme_override_constants/margin_right = 50
-theme_override_constants/margin_bottom = 50
 
-[node name="VBoxContainer" type="VBoxContainer" parent="MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 20
+[node name="BackButton" type="Button" parent="UiLayer"]
+layout_mode = 0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+tooltip_text = "返回"
+theme_override_styles/normal = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
+text = ""
 
-[node name="Header" type="HBoxContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
+[node name="ItemScroll" type="ScrollContainer" parent="UiLayer"]
+layout_mode = 0
+horizontal_scroll_mode = 0
 
-[node name="Title" type="Label" parent="MarginContainer/VBoxContainer/Header"]
+[node name="ItemGrid" type="GridContainer" parent="UiLayer/ItemScroll"]
 layout_mode = 2
-size_flags_horizontal = 3
-theme_override_font_sizes/font_size = 48
-text = "物品图鉴"
+theme_override_constants/h_separation = 12
+theme_override_constants/v_separation = 12
+columns = 7
 
-[node name="BackButton" type="Button" parent="MarginContainer/VBoxContainer/Header"]
-custom_minimum_size = Vector2(120, 50)
-layout_mode = 2
-text = "返回"
+[node name="DetailName" type="Label" parent="UiLayer"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.04, 0.025, 0.012, 1)
+theme_override_font_sizes/font_size = 34
+text = "记忆"
+horizontal_alignment = 1
 
-[node name="ScrollContainer" type="ScrollContainer" parent="MarginContainer/VBoxContainer"]
-layout_mode = 2
-size_flags_vertical = 3
+[node name="DetailText" type="Label" parent="UiLayer"]
+layout_mode = 0
+theme_override_colors/font_color = Color(0.08, 0.05, 0.025, 1)
+theme_override_font_sizes/font_size = 22
+text = ""
+autowrap_mode = 3
 
-[node name="GridContainer" type="GridContainer" parent="MarginContainer/VBoxContainer/ScrollContainer"]
-layout_mode = 2
-size_flags_horizontal = 3
-size_flags_vertical = 3
-theme_override_constants/h_separation = 20
-theme_override_constants/v_separation = 20
-columns = 6
+[connection signal="pressed" from="UiLayer/BackButton" to="." method="_on_back_pressed"]

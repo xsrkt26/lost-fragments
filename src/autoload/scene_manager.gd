@@ -116,7 +116,7 @@ func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) 
 	await get_tree().process_frame
 
 	var tween = create_tween()
-	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, PAGE_TURN_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	await tween.finished
 	_clear_page_turn_overlay()
 
@@ -152,6 +152,12 @@ func _capture_current_scene_texture() -> Texture2D:
 func _set_page_turn_progress(value: float) -> void:
 	if _page_material:
 		_page_material.set_shader_parameter("progress", value)
+
+func _get_page_turn_duration() -> float:
+	var settings = get_node_or_null("/root/SettingsManager")
+	if settings != null and settings.has_method("get_animation_speed_multiplier"):
+		return PAGE_TURN_DURATION * float(settings.get_animation_speed_multiplier())
+	return PAGE_TURN_DURATION
 
 func _clear_page_turn_overlay() -> void:
 	_page_texture_rect.texture = null

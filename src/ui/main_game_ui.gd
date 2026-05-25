@@ -4,6 +4,11 @@ signal close_requested
 
 const MODE_BATTLE := "battle"
 const MODE_BACKPACK_OVERLAY := "backpack_overlay"
+const OVERLAY_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
+const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
+const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
+const BACKPACK_OVERLAY_EFFECTS_RECT := Rect2(1060.0, 220.0, 455.0, 420.0)
+const BACKPACK_OVERLAY_STATS_RECT := Rect2(1040.0, 720.0, 535.0, 280.0)
 
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
 
@@ -19,6 +24,7 @@ const MODE_BACKPACK_OVERLAY := "backpack_overlay"
 @onready var pending_item_area = get_node_or_null("ContentLayer/PendingItemPanel/PendingItemArea")
 @onready var tool_panel = get_node_or_null("ContentLayer/ToolPanel")
 @onready var tool_slot_area = get_node_or_null("ContentLayer/ToolPanel/ToolSlots")
+@onready var backpack_overlay_background = get_node_or_null("ContentLayer/BackpackOverlayBackground")
 
 @export var draw_spawn_point_path: NodePath = "ContentLayer/DreamcatcherPanel/DrawSpawnPoint"
 
@@ -141,7 +147,9 @@ func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
 	var background = get_node_or_null("Background")
 	if background:
-		background.color = Color(0, 0, 0, 0.62)
+		background.color = Color(0, 0, 0, 1)
+	if backpack_overlay_background:
+		backpack_overlay_background.show()
 	for path in [
 		"ContentLayer/DreamcatcherPanel",
 		"ContentLayer/MenuButton",
@@ -149,16 +157,40 @@ func _apply_backpack_overlay_mode() -> void:
 		"ContentLayer/StatsPanel",
 		"ContentLayer/OrnamentsPanel",
 		"ContentLayer/ToolPanel",
+		"ContentLayer/PendingItemPanel",
 	]:
 		var node = get_node_or_null(path)
 		if node:
 			node.hide()
-	_position_backpack_overlay_panel()
+	var grid_background = get_node_or_null("ContentLayer/GridPanel/GridBackground")
+	if grid_background:
+		grid_background.hide()
+	if trash_bin:
+		trash_bin.hide()
+	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
+	if grid_panel is TextureRect:
+		grid_panel.texture = null
+	if not resized.is_connected(_position_backpack_overlay_panel):
+		resized.connect(_position_backpack_overlay_panel)
 	_ensure_backpack_overlay_close_button()
+	_ensure_backpack_overlay_info()
+	_position_backpack_overlay_panel()
 
 func _position_backpack_overlay_panel() -> void:
 	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
 	if grid_panel == null:
+		return
+	if _is_backpack_overlay_mode():
+		var target := _overlay_art_rect_to_viewport(BACKPACK_OVERLAY_GRID_PANEL_RECT)
+		grid_panel.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		grid_panel.position = target.position
+		var base_size: Vector2 = grid_panel.size
+		if base_size.x <= 0.0 or base_size.y <= 0.0:
+			base_size = Vector2(846.0, 1003.0)
+		grid_panel.scale = Vector2(target.size.x / base_size.x, target.size.y / base_size.y)
+		_layout_overlay_control("ContentLayer/CloseBackpackButton", BACKPACK_OVERLAY_CLOSE_RECT)
+		_layout_overlay_control("ContentLayer/OverlayEffectsList", BACKPACK_OVERLAY_EFFECTS_RECT)
+		_layout_overlay_control("ContentLayer/OverlayStatsLabel", BACKPACK_OVERLAY_STATS_RECT)
 		return
 	grid_panel.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
 	grid_panel.scale = Vector2(0.68, 0.68)
@@ -175,17 +207,91 @@ func _ensure_backpack_overlay_close_button() -> void:
 		return
 	var close_button = Button.new()
 	close_button.name = "CloseBackpackButton"
-	close_button.text = "关闭"
+	close_button.text = ""
 	close_button.tooltip_text = "关闭整理背包"
 	close_button.focus_mode = Control.FOCUS_NONE
-	close_button.custom_minimum_size = Vector2(96, 42)
-	close_button.set_anchors_preset(Control.PRESET_TOP_RIGHT)
-	close_button.offset_left = -124.0
-	close_button.offset_top = 24.0
-	close_button.offset_right = -24.0
-	close_button.offset_bottom = 66.0
+	close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	var transparent := StyleBoxFlat.new()
+	transparent.bg_color = Color(1, 1, 1, 0)
+	close_button.add_theme_stylebox_override("normal", transparent)
+	close_button.add_theme_stylebox_override("hover", transparent)
+	close_button.add_theme_stylebox_override("pressed", transparent)
+	close_button.add_theme_stylebox_override("disabled", transparent)
 	close_button.pressed.connect(_request_overlay_close)
 	content_layer.add_child(close_button)
+
+func _ensure_backpack_overlay_info() -> void:
+	var content_layer = get_node_or_null("ContentLayer")
+	if content_layer == null:
+		return
+	if not content_layer.has_node("OverlayEffectsList"):
+		var effects := VBoxContainer.new()
+		effects.name = "OverlayEffectsList"
+		effects.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		effects.add_theme_constant_override("separation", 8)
+		content_layer.add_child(effects)
+	if not content_layer.has_node("OverlayStatsLabel"):
+		var stats := Label.new()
+		stats.name = "OverlayStatsLabel"
+		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		stats.add_theme_color_override("font_color", Color(0.04, 0.025, 0.012, 1))
+		stats.add_theme_font_size_override("font_size", 28)
+		stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		content_layer.add_child(stats)
+	_refresh_backpack_overlay_info()
+
+func _refresh_backpack_overlay_info() -> void:
+	var effects = get_node_or_null("ContentLayer/OverlayEffectsList")
+	if effects:
+		for child in effects.get_children():
+			child.queue_free()
+		var rm = get_node_or_null("/root/RunManager")
+		var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+		var entries: Array[String] = []
+		if rm != null and ornament_db != null:
+			for ornament_id in rm.current_ornaments:
+				var ornament = ornament_db.get_ornament_by_id(ornament_id)
+				if ornament != null:
+					entries.append(ornament.ornament_name)
+		if entries.is_empty():
+			entries.append("暂无已发动效果")
+		for entry in entries.slice(0, 8):
+			var label := Label.new()
+			label.text = "▸ " + entry
+			label.add_theme_color_override("font_color", Color(0.05, 0.03, 0.015, 1))
+			label.add_theme_font_size_override("font_size", 24)
+			effects.add_child(label)
+
+	var stats := get_node_or_null("ContentLayer/OverlayStatsLabel") as Label
+	if stats:
+		var rm = get_node_or_null("/root/RunManager")
+		var act := 1
+		var node_index := 1
+		if rm != null:
+			act = int(rm.current_act)
+			node_index = int(rm.current_route_index) + 1
+		stats.text = "累计板:\n当前场景: 第 %d 层 / 节点 %d\n背包物品会在关闭时保存\n本局时间已过去    --:--:--" % [act, node_index]
+
+func _overlay_art_rect_to_viewport(source_rect: Rect2) -> Rect2:
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = OVERLAY_ART_BASE_SIZE
+	var scale_factor: float = maxf(viewport_size.x / OVERLAY_ART_BASE_SIZE.x, viewport_size.y / OVERLAY_ART_BASE_SIZE.y)
+	var displayed_art_size := OVERLAY_ART_BASE_SIZE * scale_factor
+	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
+	return Rect2(
+		displayed_art_origin + source_rect.position * scale_factor,
+		source_rect.size * scale_factor
+	)
+
+func _layout_overlay_control(path: NodePath, source_rect: Rect2) -> void:
+	var control := get_node_or_null(path) as Control
+	if control == null:
+		return
+	var target := _overlay_art_rect_to_viewport(source_rect)
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	control.position = target.position
+	control.size = target.size
 
 func _request_overlay_close() -> void:
 	if battle_manager and battle_manager.has_method("persist_backpack_to_run"):

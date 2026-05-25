@@ -28,6 +28,13 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 
 	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 	assert_not_null(ui.get_node_or_null("ContentLayer/CloseBackpackButton"))
+	var overlay_background := ui.get_node_or_null("ContentLayer/BackpackOverlayBackground") as TextureRect
+	assert_not_null(overlay_background)
+	assert_true(overlay_background.visible)
+	assert_not_null(overlay_background.texture)
+	assert_eq(overlay_background.texture.resource_path, "res://assets/ui/backpack/backpack_overlay_background.png")
+	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayEffectsList"))
+	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayStatsLabel"))
 	assert_false(ui.get_node("ContentLayer/DreamcatcherPanel").visible)
 	assert_false(ui.get_node("ContentLayer/MenuButton").visible)
 
