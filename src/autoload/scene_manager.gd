@@ -6,7 +6,7 @@ signal transition_started(target_scene)
 signal transition_finished(new_scene)
 
 const PAGE_TURN_SHADER = preload("res://src/ui/transitions/page_turn.gdshader")
-const PAGE_TURN_DURATION := 0.62
+const PAGE_TURN_DURATION := 1.45
 
 enum SceneType {
 	MAIN_MENU,
