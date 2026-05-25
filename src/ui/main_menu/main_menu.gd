@@ -1,15 +1,15 @@
 extends Control
 
-## 主菜单：使用正式美术图作为背景，按钮承载抠出的卷轴贴图以支持 hover 放大。
+## 主菜单：使用整张正式美术图作为背景，按钮只提供透明点击热区。
 
-const BASE_MENU_SIZE := Vector2(1280.0, 720.0)
+const BASE_MENU_SIZE := Vector2(1920.0, 1080.0)
 const HOTSPOT_RECTS := {
-	"NewGameButton": Rect2(66.0, 148.0, 210.0, 520.0),
-	"ContinueButton": Rect2(244.0, 218.0, 218.0, 446.0),
-	"GalleryButton": Rect2(428.0, 288.0, 194.0, 376.0),
-	"SettingsButton": Rect2(590.0, 348.0, 184.0, 316.0),
-	"QuitButton": Rect2(748.0, 400.0, 184.0, 264.0),
-	"ContinueDisabledOverlay": Rect2(244.0, 218.0, 218.0, 446.0),
+	"NewGameButton": Rect2(1370.0, 180.0, 390.0, 125.0),
+	"ContinueButton": Rect2(1370.0, 300.0, 390.0, 125.0),
+	"GalleryButton": Rect2(1360.0, 430.0, 390.0, 155.0),
+	"SettingsButton": Rect2(1360.0, 585.0, 370.0, 165.0),
+	"QuitButton": Rect2(1605.0, 750.0, 250.0, 300.0),
+	"ContinueDisabledOverlay": Rect2(1385.0, 300.0, 230.0, 125.0),
 }
 
 @onready var continue_button: Button = $MenuHotspots/ContinueButton

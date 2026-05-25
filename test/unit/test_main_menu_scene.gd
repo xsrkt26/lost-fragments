@@ -1,13 +1,13 @@
 extends GutTest
 
 const MainMenuScene = preload("res://src/ui/main_menu/main_menu.tscn")
-const SCROLL_TEXTURES := {
-	"NewGameButton": "res://assets/ui/main_menu/main_menu_scroll_new_game.png",
-	"ContinueButton": "res://assets/ui/main_menu/main_menu_scroll_continue.png",
-	"GalleryButton": "res://assets/ui/main_menu/main_menu_scroll_gallery.png",
-	"SettingsButton": "res://assets/ui/main_menu/main_menu_scroll_settings.png",
-	"QuitButton": "res://assets/ui/main_menu/main_menu_scroll_quit.png",
-}
+const BUTTON_NAMES := [
+	"NewGameButton",
+	"ContinueButton",
+	"GalleryButton",
+	"SettingsButton",
+	"QuitButton",
+]
 
 class FakeRunManager:
 	extends Node
@@ -20,7 +20,7 @@ class FakeRunManager:
 	func start_new_run() -> void:
 		start_new_run_call_count += 1
 
-func test_main_menu_uses_source_art_and_click_hotspots() -> void:
+func test_main_menu_uses_full_background_art_and_click_hotspots() -> void:
 	var menu = add_child_autofree(MainMenuScene.instantiate())
 	await get_tree().process_frame
 	await get_tree().process_frame
@@ -30,18 +30,16 @@ func test_main_menu_uses_source_art_and_click_hotspots() -> void:
 	assert_not_null(background.texture)
 	assert_eq(background.texture.resource_path, "res://assets/ui/main_menu/main_menu_background.png")
 	assert_eq(background.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_COVERED)
+	assert_eq(background.texture.get_size(), Vector2(1920.0, 1080.0))
 
-	for button_name in SCROLL_TEXTURES.keys():
+	for button_name in BUTTON_NAMES:
 		var button := menu.get_node_or_null("MenuHotspots/%s" % button_name) as Button
 		assert_not_null(button, "Main menu should expose hotspot: %s" % button_name)
 		assert_eq(button.text, "")
 		assert_true(button.tooltip_text.length() > 0)
 		assert_true(button.size.x > 0.0)
 		assert_true(button.size.y > 0.0)
-		var scroll := button.get_node_or_null("Scroll") as TextureRect
-		assert_not_null(scroll, "Main menu should render a cut-out scroll: %s" % button_name)
-		assert_not_null(scroll.texture)
-		assert_eq(scroll.texture.resource_path, SCROLL_TEXTURES[button_name])
+		assert_null(button.get_node_or_null("Scroll"), "New main menu art already contains the labels and tabs.")
 		var hover_style := button.get_theme_stylebox("hover") as StyleBoxFlat
 		assert_not_null(hover_style)
 		assert_almost_eq(hover_style.bg_color.a, 0.0, 0.001)

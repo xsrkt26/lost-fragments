@@ -1,12 +1,7 @@
-[gd_scene load_steps=9 format=3 uid="uid://main_menu_01"]
+[gd_scene load_steps=4 format=3 uid="uid://main_menu_01"]
 
 [ext_resource type="Script" path="res://src/ui/main_menu/main_menu.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_background.png" id="2_background"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_scroll_new_game.png" id="3_scroll_new_game"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_scroll_continue.png" id="4_scroll_continue"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_scroll_gallery.png" id="5_scroll_gallery"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_scroll_settings.png" id="6_scroll_settings"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_scroll_quit.png" id="7_scroll_quit"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotspot_transparent"]
 bg_color = Color(1, 1, 1, 0)
@@ -51,18 +46,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 text = ""
 
-[node name="Scroll" type="TextureRect" parent="MenuHotspots/NewGameButton"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("3_scroll_new_game")
-expand_mode = 1
-stretch_mode = 5
-
 [node name="ContinueButton" type="Button" parent="MenuHotspots"]
 layout_mode = 0
 focus_mode = 0
@@ -73,18 +56,6 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 text = ""
-
-[node name="Scroll" type="TextureRect" parent="MenuHotspots/ContinueButton"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("4_scroll_continue")
-expand_mode = 1
-stretch_mode = 5
 
 [node name="GalleryButton" type="Button" parent="MenuHotspots"]
 layout_mode = 0
@@ -97,18 +68,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 text = ""
 
-[node name="Scroll" type="TextureRect" parent="MenuHotspots/GalleryButton"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("5_scroll_gallery")
-expand_mode = 1
-stretch_mode = 5
-
 [node name="SettingsButton" type="Button" parent="MenuHotspots"]
 layout_mode = 0
 focus_mode = 0
@@ -120,18 +79,6 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 text = ""
 
-[node name="Scroll" type="TextureRect" parent="MenuHotspots/SettingsButton"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("6_scroll_settings")
-expand_mode = 1
-stretch_mode = 5
-
 [node name="QuitButton" type="Button" parent="MenuHotspots"]
 layout_mode = 0
 focus_mode = 0
@@ -142,18 +89,6 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 text = ""
-
-[node name="Scroll" type="TextureRect" parent="MenuHotspots/QuitButton"]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-texture = ExtResource("7_scroll_quit")
-expand_mode = 1
-stretch_mode = 5
 
 [node name="ContinueDisabledOverlay" type="ColorRect" parent="MenuHotspots"]
 visible = false
