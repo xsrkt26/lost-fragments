@@ -62,7 +62,17 @@ if ((Get-Content -LiteralPath $exportPresetsPath -Raw) -notmatch $presetPattern)
     throw "Export preset not found: $Preset"
 }
 
+function Test-IsWindowsHost {
+    if (Get-Variable -Name IsWindows -Scope Global -ErrorAction SilentlyContinue) {
+        return [bool]$IsWindows
+    }
+    return $env:OS -eq "Windows_NT"
+}
+
 function Set-ChildProcessErrorMode {
+    if (-not (Test-IsWindowsHost)) {
+        return
+    }
     if (-not ("GodotReleaseNativeMethods" -as [type])) {
         Add-Type @"
 using System.Runtime.InteropServices;

@@ -31,7 +31,17 @@ $godotPath = Resolve-GodotBin
 $gutScript = "addons/gut/gut_cmdln.gd"
 $timeoutSeconds = 60
 
+function Test-IsWindowsHost {
+    if (Get-Variable -Name IsWindows -Scope Global -ErrorAction SilentlyContinue) {
+        return [bool]$IsWindows
+    }
+    return $env:OS -eq "Windows_NT"
+}
+
 function Set-ChildProcessErrorMode {
+    if (-not (Test-IsWindowsHost)) {
+        return
+    }
     if (-not ("GodotTestNativeMethods" -as [type])) {
         Add-Type @"
 using System.Runtime.InteropServices;
@@ -64,7 +74,17 @@ if (Test-Path $tempErr) { Remove-Item $tempErr }
 
 try {
     $env:APPDATA = $godotAppData
-    $process = Start-Process -FilePath $godotPath -ArgumentList "--headless", "--rendering-driver", "opengl3", "--path", $repoRoot, "-s", $gutScript, "-gexit", "-glog=0" -WindowStyle Hidden -PassThru -RedirectStandardOutput $tempLog -RedirectStandardError $tempErr
+    $startArgs = @{
+        FilePath = $godotPath
+        ArgumentList = @("--headless", "--rendering-driver", "opengl3", "--path", $repoRoot, "-s", $gutScript, "-gexit", "-glog=0")
+        PassThru = $true
+        RedirectStandardOutput = $tempLog
+        RedirectStandardError = $tempErr
+    }
+    if (Test-IsWindowsHost) {
+        $startArgs["WindowStyle"] = "Hidden"
+    }
+    $process = Start-Process @startArgs
 }
 catch {
     $env:APPDATA = $originalAppData
