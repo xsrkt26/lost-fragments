@@ -3,6 +3,7 @@ extends Node2D
 const HUB_SOURCE_SIZE := Vector2(1593.0, 872.0)
 const PLAYER_START_SOURCE_X := 455.0
 const PLAYER_FLOOR_SOURCE_Y := 818.0
+const PLAYER_FLOOR_OFFSET := 64.0
 const PLAYER_WALK_MIN_SOURCE_X := 250.0
 const PLAYER_WALK_MAX_SOURCE_X := 1360.0
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
@@ -249,11 +250,11 @@ func _layout_player_and_floor(viewport_size: Vector2) -> void:
 	if not _has_positioned_player:
 		player.global_position = Vector2(
 			_art_origin.x + PLAYER_START_SOURCE_X * _art_scale,
-			floor_y - 30.0
+			floor_y - PLAYER_FLOOR_OFFSET
 		)
 		_has_positioned_player = true
 	else:
-		player.global_position.y = floor_y - 30.0
+		player.global_position.y = floor_y - PLAYER_FLOOR_OFFSET
 		player.global_position.x = clampf(player.global_position.x, min_x, max_x)
 
 
