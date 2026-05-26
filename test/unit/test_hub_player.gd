@@ -128,10 +128,11 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var background := hub.get_node_or_null("Background") as TextureRect
+	var background := hub.get_node_or_null("HubArt/Background") as TextureRect
 	assert_not_null(background)
 	assert_not_null(background.texture)
 	assert_eq(background.texture.resource_path, "res://assets/ui/book/wood_floor.png")
+	assert_eq(background.size, Vector2(1593.0, 872.0))
 
 	for node_path in [
 		"HubArt/Page",

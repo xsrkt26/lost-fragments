@@ -28,10 +28,10 @@ bg_color = Color(1, 1, 1, 0)
 [node name="HubScene" type="Node2D"]
 script = ExtResource("1_script")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="ViewportBackground" type="TextureRect" parent="."]
 z_index = -100
-offset_right = 1280.0
-offset_bottom = 720.0
+offset_right = 1593.0
+offset_bottom = 872.0
 mouse_filter = 2
 texture = ExtResource("4_wood_floor")
 expand_mode = 1
@@ -39,6 +39,15 @@ stretch_mode = 6
 
 [node name="HubArt" type="Node2D" parent="."]
 z_index = 0
+
+[node name="Background" type="TextureRect" parent="HubArt"]
+z_index = -1
+offset_right = 1593.0
+offset_bottom = 872.0
+mouse_filter = 2
+texture = ExtResource("4_wood_floor")
+expand_mode = 1
+stretch_mode = 6
 
 [node name="RouteTab" type="Sprite2D" parent="HubArt"]
 z_index = 6

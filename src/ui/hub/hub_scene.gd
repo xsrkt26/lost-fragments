@@ -12,7 +12,7 @@ const OPTION_RECTS := {
 	"SettingsButton": Rect2(0.0, 492.0, 166.0, 100.0),
 }
 
-@onready var background: TextureRect = $Background
+@onready var viewport_background: TextureRect = $ViewportBackground
 @onready var hub_art: Node2D = $HubArt
 @onready var overlay_root: Control = $CanvasLayer/OverlayRoot
 @onready var player: CharacterBody2D = $Player
@@ -181,9 +181,9 @@ func _layout_scene() -> void:
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = Vector2(1280.0, 720.0)
-	if background != null:
-		background.position = Vector2.ZERO
-		background.size = viewport_size
+	if viewport_background != null:
+		viewport_background.position = Vector2.ZERO
+		viewport_background.size = viewport_size
 	_layout_hub_art(viewport_size)
 	_layout_player_and_floor(viewport_size)
 	for button_name in OPTION_RECTS.keys():
