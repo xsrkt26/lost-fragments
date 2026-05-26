@@ -5,6 +5,7 @@ const PLAYER_START_SOURCE_X := 455.0
 const PLAYER_FLOOR_SOURCE_Y := 818.0
 const PLAYER_WALK_MIN_SOURCE_X := 250.0
 const PLAYER_WALK_MAX_SOURCE_X := 1360.0
+const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const OPTION_RECTS := {
 	"RouteButton": Rect2(0.0, 170.0, 176.0, 100.0),
 	"BackpackButton": Rect2(0.0, 282.0, 166.0, 96.0),
@@ -18,6 +19,8 @@ const OPTION_RECTS := {
 @onready var player: CharacterBody2D = $Player
 @onready var floor_body: StaticBody2D = $Floor
 @onready var interactions: Node2D = $Interactions
+@onready var speech_bubble: Sprite2D = $HubArt/SpeechBubble
+@onready var speech_text: Label = $HubArt/SpeechText
 
 var current_zone: String = ""
 var _art_origin: Vector2 = Vector2.ZERO
@@ -29,6 +32,7 @@ func _ready() -> void:
 	print("[Hub] 已进入梦境路线。")
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
 	GlobalAudio.play_bgm(_get_stage_bgm_key("hub_bgm_key", "hub"))
+	_hide_speech()
 
 	var rm = get_node_or_null("/root/RunManager")
 	if rm and rm.is_run_complete:
@@ -103,21 +107,25 @@ func _lock_briefly_before_transition() -> void:
 
 func _on_battle_trigger_body_entered(_body) -> void:
 	current_zone = "battle"
+	show_speech_message("按 E 进入梦境")
 	print("[Hub] 站在 [进入战斗] 区域。按 E 进入。")
 
 
 func _on_shop_trigger_body_entered(_body) -> void:
 	current_zone = "shop"
+	show_speech_message("按 E 查看商店")
 	print("[Hub] 站在 [梦境商店] 区域。按 E 进入。")
 
 
 func _on_gallery_trigger_body_entered(_body) -> void:
 	current_zone = "gallery"
+	show_speech_message("按 E 查看图鉴")
 	print("[Hub] 站在 [物品图鉴] 区域。按 E 进入。")
 
 
 func _on_zone_body_exited(_body) -> void:
 	current_zone = ""
+	_hide_speech()
 	print("[Hub] 离开区域")
 
 
@@ -148,6 +156,25 @@ func _enter_shop() -> void:
 
 func _enter_gallery() -> void:
 	print("[Hub] 图鉴请从主菜单进入。")
+
+
+func show_speech_message(message: String = "") -> void:
+	if speech_bubble == null or speech_text == null:
+		return
+	speech_text.text = DEFAULT_SPEECH_TEXT if message.is_empty() else message
+	speech_bubble.visible = true
+	speech_text.visible = true
+
+
+func hide_speech_message() -> void:
+	_hide_speech()
+
+
+func _hide_speech() -> void:
+	if speech_bubble != null:
+		speech_bubble.visible = false
+	if speech_text != null:
+		speech_text.visible = false
 
 
 func _on_backpack_button_pressed() -> void:

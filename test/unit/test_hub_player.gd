@@ -135,6 +135,10 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	assert_eq(background.size, Vector2(1593.0, 872.0))
 
 	for node_path in [
+		"HubArt/PageBack",
+		"HubArt/PageRouteCover",
+		"HubArt/PageBackpackCover",
+		"HubArt/PageMiddle",
 		"HubArt/Page",
 		"HubArt/Room",
 		"HubArt/RingRight",
@@ -142,6 +146,10 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 		"HubArt/BackpackTab",
 		"HubArt/GalleryTab",
 		"HubArt/SettingsTab",
+		"HubArt/CornerTopLeft",
+		"HubArt/CornerTopRight",
+		"HubArt/CornerBottomLeft",
+		"HubArt/CornerBottomRight",
 		"HubArt/SpeechBubble",
 	]:
 		var sprite := hub.get_node_or_null(node_path) as Sprite2D
@@ -151,7 +159,45 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 
 	var speech_text := hub.get_node_or_null("HubArt/SpeechText") as Label
 	assert_not_null(speech_text)
+	var speech_bubble := hub.get_node_or_null("HubArt/SpeechBubble") as Sprite2D
+	assert_not_null(speech_bubble)
+	assert_false(speech_bubble.visible)
+	assert_false(speech_text.visible)
+
+	hub.show_speech_message()
+	assert_true(speech_bubble.visible)
+	assert_true(speech_text.visible)
 	assert_eq(speech_text.text, "你终于醒了！")
+
+	hub.show_speech_message("按 E 查看图鉴")
+	assert_eq(speech_text.text, "按 E 查看图鉴")
+
+	hub.hide_speech_message()
+	assert_false(speech_bubble.visible)
+	assert_false(speech_text.visible)
+
+	var page := hub.get_node_or_null("HubArt/Page") as Sprite2D
+	var page_back := hub.get_node_or_null("HubArt/PageBack") as Sprite2D
+	var page_route_cover := hub.get_node_or_null("HubArt/PageRouteCover") as Sprite2D
+	var page_backpack_cover := hub.get_node_or_null("HubArt/PageBackpackCover") as Sprite2D
+	var page_middle := hub.get_node_or_null("HubArt/PageMiddle") as Sprite2D
+	assert_true(page_back.position.x < page_route_cover.position.x)
+	assert_true(page_route_cover.position.x < page_backpack_cover.position.x)
+	assert_true(page_backpack_cover.position.x < page_middle.position.x)
+	assert_true(page_middle.position.x < page.position.x)
+
+	var route_tab := hub.get_node_or_null("HubArt/RouteTab") as Sprite2D
+	var backpack_tab := hub.get_node_or_null("HubArt/BackpackTab") as Sprite2D
+	var gallery_tab := hub.get_node_or_null("HubArt/GalleryTab") as Sprite2D
+	var settings_tab := hub.get_node_or_null("HubArt/SettingsTab") as Sprite2D
+	assert_true(route_tab.z_index > page_back.z_index)
+	assert_true(route_tab.z_index < page_route_cover.z_index)
+	assert_true(backpack_tab.z_index > page_route_cover.z_index)
+	assert_true(backpack_tab.z_index < page_backpack_cover.z_index)
+	assert_true(gallery_tab.z_index > page_backpack_cover.z_index)
+	assert_true(gallery_tab.z_index < page_middle.z_index)
+	assert_true(settings_tab.z_index > page_middle.z_index)
+	assert_true(settings_tab.z_index < page.z_index)
 
 	var route_button := hub.get_node_or_null("CanvasLayer/RouteButton") as Button
 	assert_not_null(route_button)
