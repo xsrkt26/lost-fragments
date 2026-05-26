@@ -96,17 +96,6 @@ layout_mode = 0
 mouse_filter = 2
 color = Color(0.11, 0.08, 0.04, 0.3)
 
-[node name="CanvasLayer" type="CanvasLayer" parent="."]
-
-[node name="SettingsContainer" type="Control" parent="CanvasLayer"]
-layout_mode = 3
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-
 [connection signal="pressed" from="MenuHotspots/NewGameButton" to="." method="_on_new_game_button_pressed"]
 [connection signal="pressed" from="MenuHotspots/ContinueButton" to="." method="_on_continue_button_pressed"]
 [connection signal="pressed" from="MenuHotspots/GalleryButton" to="." method="_on_gallery_button_pressed"]

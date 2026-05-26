@@ -837,6 +837,8 @@
 - `GlobalScene.transition_to()` 已接入 2D 翻页 MVP：转场前截取当前 viewport，场景切到背后后用 `page_turn.gdshader` 做书页弯曲、背面、折痕阴影和高光；截图失败时自动回退到原黑屏淡入淡出。
 - 新设置、图鉴和整理背包 UI 已从整页背景图改为拆分素材拼装：公共书页素材位于 `assets/ui/book/`，设置拉链素材位于 `assets/ui/settings/`，图鉴装饰素材位于 `assets/ui/gallery/`，整理背包布包/补丁/统计纸素材位于 `assets/ui/backpack/`。
 - 设置界面已从单一主音量弹窗扩展为整页设置：支持主音量、BGM、音效、静音、分辨率、窗口/全屏模式、动画速度和重置；动画速度会影响翻页转场时长。
+- 设置界面已注册为 `GlobalScene.SceneType.SETTINGS`，从主菜单进入和返回都走 `GlobalScene.transition_to()` / `GlobalScene.go_back()`，不再作为主菜单子节点直接 `queue_free()`。
+- 设置界面音量控件使用上下两条拉链贴图拼装，首尾基准对齐；数值降低时拉链绕拉链头轻微张开，保持透明 `HSlider` 作为交互热区。
 - 图鉴界面已改为相册页背景，物品按钮铺在右侧绳格，左侧纸条区域显示选中物品词条和说明。
 - Hub 的整理背包浮层已接入新背包页背景，保留原背包放置逻辑，并在右侧显示已发动效果列表和累计板信息。
 

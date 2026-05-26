@@ -57,6 +57,8 @@ const ZIPPER_TRACK_RECTS := {
 	"Sfx": Rect2(754.0, 698.0, 520.0, 48.0),
 }
 const ZIPPER_HEAD_SIZE := Vector2(141.0, 36.0)
+const ZIPPER_MAX_OPEN_OFFSET := 18.0
+const ZIPPER_MAX_OPEN_ROTATION := 0.085
 
 const SPEED_IDS := [
 	"slow",
@@ -177,9 +179,7 @@ func _layout_art_nodes() -> void:
 			continue
 		_layout_art_control(node, ART_RECTS[node_name])
 	for track_name in ZIPPER_TRACK_RECTS.keys():
-		var track := get_node_or_null("ArtLayer/SliderTrack%s" % track_name) as Control
-		if track:
-			_layout_art_control(track, ZIPPER_TRACK_RECTS[track_name])
+		_layout_zipper_pair(track_name)
 	_update_zipper_heads()
 
 func _layout_art_control(control: Control, source_rect: Rect2) -> void:
@@ -222,6 +222,32 @@ func _update_zipper_heads() -> void:
 	_position_zipper_head("Master", master_slider.value)
 	_position_zipper_head("Music", music_slider.value)
 	_position_zipper_head("Sfx", sfx_slider.value)
+	_layout_zipper_pair("Master", master_slider.value)
+	_layout_zipper_pair("Music", music_slider.value)
+	_layout_zipper_pair("Sfx", sfx_slider.value)
+
+func _layout_zipper_pair(track_name: String, value: float = 1.0) -> void:
+	if not ZIPPER_TRACK_RECTS.has(track_name):
+		return
+	var top := get_node_or_null("ArtLayer/SliderTrack%sTop" % track_name) as Control
+	var bottom := get_node_or_null("ArtLayer/SliderTrack%sBottom" % track_name) as Control
+	if top == null or bottom == null:
+		return
+	var source_rect: Rect2 = ZIPPER_TRACK_RECTS[track_name]
+	var target: Rect2 = _art_rect_to_viewport(source_rect)
+	var scale_factor: float = target.size.x / source_rect.size.x
+	var open_amount: float = 1.0 - clampf(value, 0.0, 1.0)
+	var offset: float = ZIPPER_MAX_OPEN_OFFSET * open_amount * scale_factor
+	var rotation: float = ZIPPER_MAX_OPEN_ROTATION * open_amount
+	var pivot_x: float = clampf(value, 0.0, 1.0) * target.size.x
+	for node in [top, bottom]:
+		node.position = target.position
+		node.size = target.size
+		node.pivot_offset = Vector2(pivot_x, target.size.y * 0.5)
+	top.position.y -= offset
+	bottom.position.y += offset
+	top.rotation = -rotation
+	bottom.rotation = rotation
 
 func _position_zipper_head(track_name: String, value: float) -> void:
 	if not ZIPPER_TRACK_RECTS.has(track_name):
@@ -290,7 +316,7 @@ func _on_reset_pressed() -> void:
 	_update_ui()
 
 func _on_close_pressed() -> void:
-	queue_free()
+	GlobalScene.go_back()
 
 func _resolution_index(resolution: Vector2i) -> int:
 	for i in range(SettingsManager.RESOLUTION_OPTIONS.size()):

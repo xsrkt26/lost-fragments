@@ -16,7 +16,8 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"AlbumPage",
 		"AlbumRingRight",
 		"SettingsTab",
-		"SliderTrackMaster",
+		"SliderTrackMasterTop",
+		"SliderTrackMasterBottom",
 		"SliderHeadMaster",
 	]:
 		var art := ui.get_node_or_null("ArtLayer/%s" % node_name) as TextureRect
@@ -52,4 +53,27 @@ func test_settings_scene_updates_audio_values() -> void:
 	await get_tree().process_frame
 
 	assert_almost_eq(float(SettingsManager.audio_settings["master_volume"]), 0.42, 0.001)
+	SettingsManager.set_master_volume(previous)
+
+func test_settings_zipper_tracks_open_when_slider_is_lowered() -> void:
+	var ui = add_child_autofree(SettingsScene.instantiate())
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var slider := ui.get_node("UiLayer/MasterSlider") as HSlider
+	var top := ui.get_node("ArtLayer/SliderTrackMasterTop") as TextureRect
+	var bottom := ui.get_node("ArtLayer/SliderTrackMasterBottom") as TextureRect
+	var previous: float = float(SettingsManager.audio_settings["master_volume"])
+
+	slider.value = 1.0
+	await get_tree().process_frame
+	assert_almost_eq(top.position.y, bottom.position.y, 0.01)
+	assert_almost_eq(top.rotation, 0.0, 0.001)
+	assert_almost_eq(bottom.rotation, 0.0, 0.001)
+
+	slider.value = 0.2
+	await get_tree().process_frame
+	assert_true(top.position.y < bottom.position.y)
+	assert_true(top.rotation < 0.0)
+	assert_true(bottom.rotation > 0.0)
 	SettingsManager.set_master_volume(previous)

@@ -45,7 +45,9 @@ func test_main_menu_uses_full_background_art_and_click_hotspots() -> void:
 		assert_almost_eq(hover_style.bg_color.a, 0.0, 0.001)
 
 	assert_not_null(menu.get_node_or_null("MenuHotspots/ContinueDisabledOverlay"))
-	assert_not_null(menu.get_node_or_null("CanvasLayer/SettingsContainer"))
+	assert_null(menu.get_node_or_null("CanvasLayer/SettingsContainer"))
+	assert_true(GlobalScene.SceneType.keys().has("SETTINGS"))
+	assert_eq(GlobalScene.SCENE_PATHS[GlobalScene.SceneType.SETTINGS], "res://src/ui/settings/audio_settings_ui.tscn")
 
 func test_new_game_action_starts_run_without_intermediate_scene() -> void:
 	var menu = add_child_autofree(MainMenuScene.instantiate())

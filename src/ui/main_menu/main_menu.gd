@@ -18,7 +18,6 @@ const HOTSPOT_RECTS := {
 @onready var settings_button: Button = $MenuHotspots/SettingsButton
 @onready var quit_button: Button = $MenuHotspots/QuitButton
 @onready var continue_disabled_overlay: ColorRect = $MenuHotspots/ContinueDisabledOverlay
-@onready var settings_container: Control = $CanvasLayer/SettingsContainer
 
 var run_manager_override = null
 
@@ -107,13 +106,7 @@ func _on_gallery_button_pressed() -> void:
 	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
 
 func _on_settings_button_pressed() -> void:
-	if settings_container.get_child_count() > 0:
-		for child in settings_container.get_children():
-			child.queue_free()
-	else:
-		var scene = load("res://src/ui/settings/audio_settings_ui.tscn")
-		var ui = scene.instantiate()
-		settings_container.add_child(ui)
+	GlobalScene.transition_to(GlobalScene.SceneType.SETTINGS)
 
 func _on_quit_button_pressed() -> void:
 	get_tree().quit()

@@ -15,6 +15,7 @@ enum SceneType {
 	SHOP,
 	EVENT,
 	GALLERY,
+	SETTINGS,
 	DEBUG
 }
 
@@ -25,6 +26,7 @@ const SCENE_PATHS = {
 	SceneType.SHOP: "res://src/ui/shop/shop_scene.tscn",
 	SceneType.EVENT: "res://src/ui/event/event_scene.tscn",
 	SceneType.GALLERY: "res://src/ui/gallery/gallery_scene.tscn",
+	SceneType.SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",
 	SceneType.DEBUG: "res://src/ui/debug/debug_sandbox.tscn"
 }
 
