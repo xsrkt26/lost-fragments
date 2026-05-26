@@ -69,7 +69,10 @@ func _input(event: InputEvent) -> void:
 
 	if GlobalInput.is_context(GlobalInput.Context.WORLD):
 		if event.is_action_pressed("ui_accept") or Input.is_key_pressed(KEY_E):
-			_enter_current_route_node()
+			if current_zone == "gallery":
+				_enter_gallery()
+			else:
+				_enter_current_route_node()
 
 
 func _unhandled_input(event: InputEvent) -> void:
@@ -137,7 +140,7 @@ func _on_route_button_pressed() -> void:
 	_enter_current_route_node()
 
 func _on_gallery_button_pressed() -> void:
-	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
+	_enter_gallery()
 
 func _on_settings_button_pressed() -> void:
 	GlobalScene.transition_to(GlobalScene.SceneType.SETTINGS)
@@ -156,7 +159,7 @@ func _enter_shop() -> void:
 
 
 func _enter_gallery() -> void:
-	print("[Hub] 图鉴请从主菜单进入。")
+	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
 
 
 func show_speech_message(message: String = "") -> void:
