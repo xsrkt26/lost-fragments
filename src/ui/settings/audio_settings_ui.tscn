@@ -1,4 +1,4 @@
-[gd_scene load_steps=17 format=3 uid="uid://audio_settings_01"]
+[gd_scene load_steps=18 format=3 uid="uid://audio_settings_01"]
 
 [ext_resource type="Script" path="res://src/ui/settings/audio_settings_ui.gd" id="1_script"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/wood_floor.png" id="2_wood"]
@@ -13,6 +13,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/settings/zipper_top.png" id="11_zipper_top"]
 [ext_resource type="Texture2D" path="res://assets/ui/settings/zipper_head.png" id="12_zipper_head"]
 [ext_resource type="Texture2D" path="res://assets/ui/settings/zipper_bottom.png" id="13_zipper_bottom"]
+[ext_resource type="Script" path="res://src/ui/settings/zipper_slider_visual.gd" id="14_zipper_visual"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
 bg_color = Color(1, 1, 1, 0)
@@ -99,68 +100,29 @@ texture = ExtResource("10_tab_settings")
 expand_mode = 1
 stretch_mode = 0
 
-[node name="SliderTrackMasterTop" type="TextureRect" parent="ArtLayer"]
+[node name="ZipperVisualMaster" type="Control" parent="ArtLayer"]
 layout_mode = 0
 mouse_filter = 2
-texture = ExtResource("11_zipper_top")
-expand_mode = 1
-stretch_mode = 0
+script = ExtResource("14_zipper_visual")
+top_texture = ExtResource("11_zipper_top")
+bottom_texture = ExtResource("13_zipper_bottom")
+head_texture = ExtResource("12_zipper_head")
 
-[node name="SliderTrackMasterBottom" type="TextureRect" parent="ArtLayer"]
+[node name="ZipperVisualMusic" type="Control" parent="ArtLayer"]
 layout_mode = 0
 mouse_filter = 2
-texture = ExtResource("13_zipper_bottom")
-expand_mode = 1
-stretch_mode = 0
+script = ExtResource("14_zipper_visual")
+top_texture = ExtResource("11_zipper_top")
+bottom_texture = ExtResource("13_zipper_bottom")
+head_texture = ExtResource("12_zipper_head")
 
-[node name="SliderHeadMaster" type="TextureRect" parent="ArtLayer"]
+[node name="ZipperVisualSfx" type="Control" parent="ArtLayer"]
 layout_mode = 0
 mouse_filter = 2
-texture = ExtResource("12_zipper_head")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderTrackMusicTop" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("11_zipper_top")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderTrackMusicBottom" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("13_zipper_bottom")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderHeadMusic" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("12_zipper_head")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderTrackSfxTop" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("11_zipper_top")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderTrackSfxBottom" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("13_zipper_bottom")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SliderHeadSfx" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("12_zipper_head")
-expand_mode = 1
-stretch_mode = 0
+script = ExtResource("14_zipper_visual")
+top_texture = ExtResource("11_zipper_top")
+bottom_texture = ExtResource("13_zipper_bottom")
+head_texture = ExtResource("12_zipper_head")
 
 [node name="AlbumRingRight" type="TextureRect" parent="ArtLayer"]
 layout_mode = 0

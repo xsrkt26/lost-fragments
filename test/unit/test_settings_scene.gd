@@ -16,14 +16,13 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"AlbumPage",
 		"AlbumRingRight",
 		"SettingsTab",
-		"SliderTrackMasterTop",
-		"SliderTrackMasterBottom",
-		"SliderHeadMaster",
+		"ZipperVisualMaster",
 	]:
-		var art := ui.get_node_or_null("ArtLayer/%s" % node_name) as TextureRect
+		var art := ui.get_node_or_null("ArtLayer/%s" % node_name) as Control
 		assert_not_null(art, "Settings split art should expose %s" % node_name)
-		assert_not_null(art.texture)
-		assert_true(art.texture.resource_path != "res://assets/ui/settings/settings_background.png")
+		if art is TextureRect:
+			assert_not_null(art.texture)
+			assert_true(art.texture.resource_path != "res://assets/ui/settings/settings_background.png")
 
 	for node_name in [
 		"BackButton",
@@ -61,19 +60,19 @@ func test_settings_zipper_tracks_open_when_slider_is_lowered() -> void:
 	await get_tree().process_frame
 
 	var slider := ui.get_node("UiLayer/MasterSlider") as HSlider
-	var top := ui.get_node("ArtLayer/SliderTrackMasterTop") as TextureRect
-	var bottom := ui.get_node("ArtLayer/SliderTrackMasterBottom") as TextureRect
+	var visual = ui.get_node("ArtLayer/ZipperVisualMaster")
 	var previous: float = float(SettingsManager.audio_settings["master_volume"])
 
 	slider.value = 1.0
 	await get_tree().process_frame
-	assert_almost_eq(top.position.y, bottom.position.y, 0.01)
-	assert_almost_eq(top.rotation, 0.0, 0.001)
-	assert_almost_eq(bottom.rotation, 0.0, 0.001)
+	var closed_layout: Dictionary = visual.call("get_debug_layout")
+	assert_almost_eq(float(closed_layout["open_width"]), 0.0, 0.01)
+	assert_true(float(closed_layout["closed_gap"]) > 0.0)
 
 	slider.value = 0.2
 	await get_tree().process_frame
-	assert_true(top.position.y < bottom.position.y)
-	assert_true(top.rotation < 0.0)
-	assert_true(bottom.rotation > 0.0)
+	var open_layout: Dictionary = visual.call("get_debug_layout")
+	assert_true(float(open_layout["closed_width"]) > 0.0)
+	assert_true(float(open_layout["open_width"]) > 0.0)
+	assert_almost_eq(float(open_layout["closed_width"]) + float(open_layout["open_width"]), (visual as Control).size.x, 0.01)
 	SettingsManager.set_master_volume(previous)

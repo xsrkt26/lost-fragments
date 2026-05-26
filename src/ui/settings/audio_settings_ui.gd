@@ -51,14 +51,11 @@ const STATIC_LABEL_TEXT := {
 	"LabelAnimation": "动画速度:",
 	"LabelSpeedChoices": "慢  /  中  /  快",
 }
-const ZIPPER_TRACK_RECTS := {
-	"Master": Rect2(754.0, 499.0, 520.0, 48.0),
-	"Music": Rect2(754.0, 606.0, 520.0, 48.0),
-	"Sfx": Rect2(754.0, 698.0, 520.0, 48.0),
+const ZIPPER_VISUAL_RECTS := {
+	"Master": Rect2(754.0, 480.0, 520.0, 86.0),
+	"Music": Rect2(754.0, 587.0, 520.0, 86.0),
+	"Sfx": Rect2(754.0, 679.0, 520.0, 86.0),
 }
-const ZIPPER_HEAD_SIZE := Vector2(141.0, 36.0)
-const ZIPPER_MAX_OPEN_OFFSET := 18.0
-const ZIPPER_MAX_OPEN_ROTATION := 0.085
 
 const SPEED_IDS := [
 	"slow",
@@ -178,8 +175,10 @@ func _layout_art_nodes() -> void:
 		if node == null:
 			continue
 		_layout_art_control(node, ART_RECTS[node_name])
-	for track_name in ZIPPER_TRACK_RECTS.keys():
-		_layout_zipper_pair(track_name)
+	for track_name in ZIPPER_VISUAL_RECTS.keys():
+		var visual := get_node_or_null("ArtLayer/ZipperVisual%s" % track_name) as Control
+		if visual:
+			_layout_art_control(visual, ZIPPER_VISUAL_RECTS[track_name])
 	_update_zipper_heads()
 
 func _layout_art_control(control: Control, source_rect: Rect2) -> void:
@@ -219,51 +218,14 @@ func _label_base_font_size(node_name: String) -> int:
 	return 36
 
 func _update_zipper_heads() -> void:
-	_position_zipper_head("Master", master_slider.value)
-	_position_zipper_head("Music", music_slider.value)
-	_position_zipper_head("Sfx", sfx_slider.value)
-	_layout_zipper_pair("Master", master_slider.value)
-	_layout_zipper_pair("Music", music_slider.value)
-	_layout_zipper_pair("Sfx", sfx_slider.value)
+	_set_zipper_visual_value("Master", master_slider.value)
+	_set_zipper_visual_value("Music", music_slider.value)
+	_set_zipper_visual_value("Sfx", sfx_slider.value)
 
-func _layout_zipper_pair(track_name: String, value: float = 1.0) -> void:
-	if not ZIPPER_TRACK_RECTS.has(track_name):
-		return
-	var top := get_node_or_null("ArtLayer/SliderTrack%sTop" % track_name) as Control
-	var bottom := get_node_or_null("ArtLayer/SliderTrack%sBottom" % track_name) as Control
-	if top == null or bottom == null:
-		return
-	var source_rect: Rect2 = ZIPPER_TRACK_RECTS[track_name]
-	var target: Rect2 = _art_rect_to_viewport(source_rect)
-	var scale_factor: float = target.size.x / source_rect.size.x
-	var open_amount: float = 1.0 - clampf(value, 0.0, 1.0)
-	var offset: float = ZIPPER_MAX_OPEN_OFFSET * open_amount * scale_factor
-	var rotation: float = ZIPPER_MAX_OPEN_ROTATION * open_amount
-	var pivot_x: float = clampf(value, 0.0, 1.0) * target.size.x
-	for node in [top, bottom]:
-		node.position = target.position
-		node.size = target.size
-		node.pivot_offset = Vector2(pivot_x, target.size.y * 0.5)
-	top.position.y -= offset
-	bottom.position.y += offset
-	top.rotation = -rotation
-	bottom.rotation = rotation
-
-func _position_zipper_head(track_name: String, value: float) -> void:
-	if not ZIPPER_TRACK_RECTS.has(track_name):
-		return
-	var head := get_node_or_null("ArtLayer/SliderHead%s" % track_name) as Control
-	if head == null:
-		return
-	var source_rect: Rect2 = ZIPPER_TRACK_RECTS[track_name]
-	var track_target: Rect2 = _art_rect_to_viewport(source_rect)
-	var scale_factor: float = track_target.size.x / source_rect.size.x
-	var head_size: Vector2 = ZIPPER_HEAD_SIZE * scale_factor
-	head.size = head_size
-	head.position = Vector2(
-		track_target.position.x + clampf(value, 0.0, 1.0) * maxf(0.0, track_target.size.x - head_size.x),
-		track_target.position.y + (track_target.size.y - head_size.y) * 0.5
-	)
+func _set_zipper_visual_value(track_name: String, value: float) -> void:
+	var visual := get_node_or_null("ArtLayer/ZipperVisual%s" % track_name)
+	if visual != null and visual.has_method("set_zipper_value"):
+		visual.set_zipper_value(value)
 
 func _update_volume_labels() -> void:
 	master_value.text = "%d%%" % roundi(master_slider.value * 100.0)
