@@ -9,6 +9,22 @@ const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
 const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
 const BACKPACK_OVERLAY_EFFECTS_RECT := Rect2(1060.0, 220.0, 455.0, 420.0)
 const BACKPACK_OVERLAY_STATS_RECT := Rect2(1040.0, 720.0, 535.0, 280.0)
+const BACKPACK_OVERLAY_ART_RECTS := {
+	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
+	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
+	"BackTab": Rect2(4.0, 84.0, 207.0, 161.0),
+	"AlbumPage": Rect2(51.0, 0.0, 1670.0, 1080.0),
+	"BackpackTab": Rect2(4.0, 279.0, 223.0, 179.0),
+	"SettingsTab": Rect2(8.0, 514.0, 214.0, 186.0),
+	"AlbumTab": Rect2(1608.0, 208.0, 217.0, 164.0),
+	"GalleryTab": Rect2(1553.0, 415.0, 205.0, 183.0),
+	"BagBase": Rect2(186.0, 154.0, 825.0, 907.0),
+	"BagPatch": Rect2(242.0, 389.0, 685.0, 621.0),
+	"OrnamentBar": Rect2(1054.0, 221.0, 320.0, 132.0),
+	"StatsPaper": Rect2(1147.0, 628.0, 648.0, 416.0),
+	"TrashIcon": Rect2(1515.0, 717.0, 163.0, 143.0),
+	"AlbumRingRight": Rect2(1793.0, 8.0, 127.0, 1063.0),
+}
 
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
 
@@ -24,7 +40,7 @@ const BACKPACK_OVERLAY_STATS_RECT := Rect2(1040.0, 720.0, 535.0, 280.0)
 @onready var pending_item_area = get_node_or_null("ContentLayer/PendingItemPanel/PendingItemArea")
 @onready var tool_panel = get_node_or_null("ContentLayer/ToolPanel")
 @onready var tool_slot_area = get_node_or_null("ContentLayer/ToolPanel/ToolSlots")
-@onready var backpack_overlay_background = get_node_or_null("ContentLayer/BackpackOverlayBackground")
+@onready var backpack_overlay_art = get_node_or_null("ContentLayer/BackpackOverlayArt")
 
 @export var draw_spawn_point_path: NodePath = "ContentLayer/DreamcatcherPanel/DrawSpawnPoint"
 
@@ -148,8 +164,8 @@ func _apply_backpack_overlay_mode() -> void:
 	var background = get_node_or_null("Background")
 	if background:
 		background.color = Color(0, 0, 0, 1)
-	if backpack_overlay_background:
-		backpack_overlay_background.show()
+	if backpack_overlay_art:
+		backpack_overlay_art.show()
 	for path in [
 		"ContentLayer/DreamcatcherPanel",
 		"ContentLayer/MenuButton",
@@ -177,6 +193,7 @@ func _apply_backpack_overlay_mode() -> void:
 	_position_backpack_overlay_panel()
 
 func _position_backpack_overlay_panel() -> void:
+	_layout_backpack_overlay_art()
 	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
 	if grid_panel == null:
 		return
@@ -200,6 +217,18 @@ func _position_backpack_overlay_panel() -> void:
 		max(24.0, (viewport_size.x - panel_size.x) * 0.5),
 		max(8.0, (viewport_size.y - panel_size.y) * 0.5)
 	)
+
+func _layout_backpack_overlay_art() -> void:
+	if backpack_overlay_art == null or not _is_backpack_overlay_mode():
+		return
+	for node_name in BACKPACK_OVERLAY_ART_RECTS.keys():
+		var node := get_node_or_null("ContentLayer/BackpackOverlayArt/%s" % node_name) as Control
+		if node == null:
+			continue
+		var target := _overlay_art_rect_to_viewport(BACKPACK_OVERLAY_ART_RECTS[node_name])
+		node.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		node.position = target.position
+		node.size = target.size
 
 func _ensure_backpack_overlay_close_button() -> void:
 	var content_layer = get_node_or_null("ContentLayer")

@@ -2,16 +2,27 @@ extends GutTest
 
 const SettingsScene = preload("res://src/ui/settings/audio_settings_ui.tscn")
 
-func test_settings_scene_uses_new_background_and_controls() -> void:
+func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var background := ui.get_node_or_null("Background") as TextureRect
-	assert_not_null(background)
-	assert_not_null(background.texture)
-	assert_eq(background.texture.resource_path, "res://assets/ui/settings/settings_background.png")
-	assert_eq(background.texture.get_size(), Vector2(1920.0, 1080.0))
+	assert_null(ui.get_node_or_null("Background"), "Settings should be assembled from split art layers, not one full-screen bitmap.")
+	var art_layer := ui.get_node_or_null("ArtLayer") as Control
+	assert_not_null(art_layer)
+	for node_name in [
+		"WoodFloor",
+		"RedBookCover",
+		"AlbumPage",
+		"AlbumRingRight",
+		"SettingsTab",
+		"SliderTrackMaster",
+		"SliderHeadMaster",
+	]:
+		var art := ui.get_node_or_null("ArtLayer/%s" % node_name) as TextureRect
+		assert_not_null(art, "Settings split art should expose %s" % node_name)
+		assert_not_null(art.texture)
+		assert_true(art.texture.resource_path != "res://assets/ui/settings/settings_background.png")
 
 	for node_name in [
 		"BackButton",

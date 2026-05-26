@@ -2,16 +2,27 @@ extends GutTest
 
 const GalleryScene = preload("res://src/ui/gallery/gallery_scene.tscn")
 
-func test_gallery_scene_uses_new_background_and_item_grid() -> void:
+func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	var gallery = add_child_autofree(GalleryScene.instantiate())
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var background := gallery.get_node_or_null("Background") as TextureRect
-	assert_not_null(background)
-	assert_not_null(background.texture)
-	assert_eq(background.texture.resource_path, "res://assets/ui/gallery/gallery_background.png")
-	assert_eq(background.texture.get_size(), Vector2(1920.0, 1080.0))
+	assert_null(gallery.get_node_or_null("Background"), "Gallery should be assembled from split art layers, not one full-screen bitmap.")
+	var art_layer := gallery.get_node_or_null("ArtLayer") as Control
+	assert_not_null(art_layer)
+	for node_name in [
+		"WoodFloor",
+		"RedBookCover",
+		"AlbumPage",
+		"AlbumRingRight",
+		"GalleryTab",
+		"Magnifier",
+		"ForgetMeNot",
+	]:
+		var art := gallery.get_node_or_null("ArtLayer/%s" % node_name) as TextureRect
+		assert_not_null(art, "Gallery split art should expose %s" % node_name)
+		assert_not_null(art.texture)
+		assert_true(art.texture.resource_path != "res://assets/ui/gallery/gallery_background.png")
 
 	var back_button := gallery.get_node_or_null("UiLayer/BackButton") as Button
 	assert_not_null(back_button)

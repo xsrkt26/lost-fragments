@@ -1,7 +1,17 @@
-[gd_scene load_steps=5 format=3 uid="uid://gallery_scene_01"]
+[gd_scene load_steps=16 format=3 uid="uid://gallery_scene_01"]
 
 [ext_resource type="Script" path="res://src/ui/gallery/gallery_scene.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ui/gallery/gallery_background.png" id="2_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/wood_floor.png" id="2_wood"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/red_book_cover.png" id="3_book"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/album_page.png" id="4_page"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/album_ring_right.png" id="5_ring"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_back.png" id="6_tab_back"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_album.png" id="7_tab_album"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_backpack.png" id="8_tab_backpack"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_gallery.png" id="9_tab_gallery"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_settings.png" id="10_tab_settings"]
+[ext_resource type="Texture2D" path="res://assets/ui/gallery/magnifier.png" id="11_magnifier"]
+[ext_resource type="Texture2D" path="res://assets/ui/gallery/forget_me_not.png" id="12_flower"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
 bg_color = Color(1, 1, 1, 0)
@@ -23,7 +33,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="ArtLayer" type="Control" parent="."]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -31,9 +41,88 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
-texture = ExtResource("2_background")
+
+[node name="WoodFloor" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("2_wood")
 expand_mode = 1
-stretch_mode = 6
+stretch_mode = 0
+
+[node name="RedBookCover" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("3_book")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackTab" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("6_tab_back")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumPage" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackpackTab" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("8_tab_backpack")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="GalleryTab" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("9_tab_gallery")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="SettingsTab" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("10_tab_settings")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumTab" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("7_tab_album")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="GridBackdrop" type="ColorRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+color = Color(0.62, 0.46, 0.28, 0.23)
+
+[node name="Magnifier" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("11_magnifier")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="ForgetMeNot" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_flower")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumRingRight" type="TextureRect" parent="ArtLayer"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("5_ring")
+expand_mode = 1
+stretch_mode = 0
 
 [node name="UiLayer" type="Control" parent="."]
 layout_mode = 1

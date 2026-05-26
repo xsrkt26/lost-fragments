@@ -835,7 +835,7 @@
 - 无可继续存档时继续游戏热区会禁用并显示半透明遮罩，正式文字仍由美术图承载，按钮仅提供鼠标交互和 tooltip。
 - 新版主菜单图已内嵌菜单文字、页签和退出打火机，场景不再叠加旧版 `main_menu_scroll_*.png` 书卷贴图，避免旧素材遮挡新背景。
 - `GlobalScene.transition_to()` 已接入 2D 翻页 MVP：转场前截取当前 viewport，场景切到背后后用 `page_turn.gdshader` 做书页弯曲、背面、折痕阴影和高光；截图失败时自动回退到原黑屏淡入淡出。
-- 新设置、图鉴和整理背包三张整页 UI 已接入运行时资源：`assets/ui/settings/settings_background.png`、`assets/ui/gallery/gallery_background.png`、`assets/ui/backpack/backpack_overlay_background.png`。
+- 新设置、图鉴和整理背包 UI 已从整页背景图改为拆分素材拼装：公共书页素材位于 `assets/ui/book/`，设置拉链素材位于 `assets/ui/settings/`，图鉴装饰素材位于 `assets/ui/gallery/`，整理背包布包/补丁/统计纸素材位于 `assets/ui/backpack/`。
 - 设置界面已从单一主音量弹窗扩展为整页设置：支持主音量、BGM、音效、静音、分辨率、窗口/全屏模式、动画速度和重置；动画速度会影响翻页转场时长。
 - 图鉴界面已改为相册页背景，物品按钮铺在右侧绳格，左侧纸条区域显示选中物品词条和说明。
 - Hub 的整理背包浮层已接入新背包页背景，保留原背包放置逻辑，并在右侧显示已发动效果列表和累计板信息。
@@ -851,7 +851,7 @@
 
 - `test/unit/test_ui_feedback.gd` 覆盖按钮反馈绑定幂等性、递归绑定动态按钮，以及 hover 缩放后恢复。
 - `test/unit/test_main_menu_scene.gd` 覆盖主菜单正式背景图、透明按钮热区、设置容器和继续游戏禁用遮罩节点。
-- `test/unit/test_settings_scene.gd`、`test/unit/test_gallery_scene.gd` 和 `test/unit/test_hub_player.gd` 覆盖新设置页、新图鉴页和整理背包浮层背景/关键交互节点。
+- `test/unit/test_settings_scene.gd`、`test/unit/test_gallery_scene.gd` 和 `test/unit/test_hub_player.gd` 覆盖新设置页、新图鉴页和整理背包浮层拆分图层/关键交互节点。
 
 ### F8. 经济数值调试
 

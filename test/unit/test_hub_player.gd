@@ -28,11 +28,23 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 
 	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 	assert_not_null(ui.get_node_or_null("ContentLayer/CloseBackpackButton"))
-	var overlay_background := ui.get_node_or_null("ContentLayer/BackpackOverlayBackground") as TextureRect
-	assert_not_null(overlay_background)
-	assert_true(overlay_background.visible)
-	assert_not_null(overlay_background.texture)
-	assert_eq(overlay_background.texture.resource_path, "res://assets/ui/backpack/backpack_overlay_background.png")
+	var overlay_art := ui.get_node_or_null("ContentLayer/BackpackOverlayArt") as Control
+	assert_not_null(overlay_art)
+	assert_true(overlay_art.visible)
+	for node_name in [
+		"WoodFloor",
+		"RedBookCover",
+		"AlbumPage",
+		"AlbumRingRight",
+		"BackpackTab",
+		"BagBase",
+		"BagPatch",
+		"StatsPaper",
+	]:
+		var art := ui.get_node_or_null("ContentLayer/BackpackOverlayArt/%s" % node_name) as TextureRect
+		assert_not_null(art, "Backpack overlay split art should expose %s" % node_name)
+		assert_not_null(art.texture)
+		assert_true(art.texture.resource_path != "res://assets/ui/backpack/backpack_overlay_background.png")
 	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayEffectsList"))
 	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayStatsLabel"))
 	assert_false(ui.get_node("ContentLayer/DreamcatcherPanel").visible)

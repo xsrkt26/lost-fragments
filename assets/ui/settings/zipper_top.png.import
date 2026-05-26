@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://bhisxkpk6bsk1"
-path="res://.godot/imported/settings_background.png-3634c9f01d9b8caf1c2e9232f22b310f.ctex"
+uid="uid://cqr3jlnw1bgpa"
+path="res://.godot/imported/zipper_top.png-54c96f53a8c252dc60f67095d4bbd4bb.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/settings/settings_background.png"
-dest_files=["res://.godot/imported/settings_background.png-3634c9f01d9b8caf1c2e9232f22b310f.ctex"]
+source_file="res://assets/ui/settings/zipper_top.png"
+dest_files=["res://.godot/imported/zipper_top.png-54c96f53a8c252dc60f67095d4bbd4bb.ctex"]
 
 [params]
 

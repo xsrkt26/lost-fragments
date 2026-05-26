@@ -2,16 +2,16 @@
 
 importer="texture"
 type="CompressedTexture2D"
-uid="uid://cp7yby6gmy0wg"
-path="res://.godot/imported/backpack_overlay_background.png-b27c451654c9c836f4933e610ef7e4ac.ctex"
+uid="uid://bur5n7xg22ams"
+path="res://.godot/imported/album_page.png-53c819d245798b7966e5253546f8d94f.ctex"
 metadata={
 "vram_texture": false
 }
 
 [deps]
 
-source_file="res://assets/ui/backpack/backpack_overlay_background.png"
-dest_files=["res://.godot/imported/backpack_overlay_background.png-b27c451654c9c836f4933e610ef7e4ac.ctex"]
+source_file="res://assets/ui/book/album_page.png"
+dest_files=["res://.godot/imported/album_page.png-53c819d245798b7966e5253546f8d94f.ctex"]
 
 [params]
 
