@@ -4,6 +4,36 @@ signal close_requested
 
 const MODE_BATTLE := "battle"
 const MODE_BACKPACK_OVERLAY := "backpack_overlay"
+const BATTLE_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
+const BATTLE_DREAMCATCHER_RECT := Rect2(264.0, 70.0, 787.0, 671.0)
+const BATTLE_GRID_PANEL_RECT := Rect2(966.0, 74.0, 825.0, 907.0)
+const BATTLE_STATS_RECT := Rect2(324.0, 618.0, 648.0, 416.0)
+const BATTLE_ORNAMENTS_RECT := Rect2(968.0, 42.0, 767.0, 314.0)
+const BATTLE_MENU_RECT := Rect2(4.0, 80.0, 116.0, 104.0)
+const BATTLE_PENDING_ITEMS_RECT := Rect2(328.0, 506.0, 520.0, 112.0)
+const BATTLE_TOOL_PANEL_RECT := Rect2(334.0, 962.0, 520.0, 76.0)
+const BATTLE_GRID_CHILD_RECTS := {
+	"GridBackground": Rect2(80.0, 305.0, 723.0, 684.0),
+	"BackpackUI": Rect2(80.0, 305.0, 723.0, 684.0),
+	"TrashBin": Rect2(-188.0, 626.0, 163.0, 143.0),
+}
+const BATTLE_ORNAMENT_SLOTS_RECT := Rect2(62.0, 143.0, 638.0, 104.0)
+const BATTLE_ART_RECTS := {
+	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
+	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
+	"BackTab": Rect2(4.0, 84.0, 207.0, 161.0),
+	"AlbumPage": Rect2(51.0, 0.0, 1670.0, 1080.0),
+	"AlbumTab": Rect2(76.0, 170.0, 217.0, 164.0),
+	"BackpackTab": Rect2(26.0, 282.0, 223.0, 179.0),
+	"GalleryTab": Rect2(50.0, 396.0, 205.0, 183.0),
+	"SettingsTab": Rect2(8.0, 510.0, 214.0, 186.0),
+	"CornerTopLeft": Rect2(264.0, 58.0, 237.0, 246.0),
+	"CornerTopRight": Rect2(1598.0, 58.0, 237.0, 246.0),
+	"CornerBottomLeft": Rect2(266.0, 834.0, 237.0, 246.0),
+	"CornerBottomRight": Rect2(1598.0, 834.0, 237.0, 246.0),
+	"ForgetMeNot": Rect2(42.0, 584.0, 348.0, 490.0),
+	"AlbumRingRight": Rect2(1793.0, 8.0, 127.0, 1063.0),
+}
 const OVERLAY_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
 const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
 const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
@@ -40,6 +70,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 @onready var pending_item_area = get_node_or_null("ContentLayer/PendingItemPanel/PendingItemArea")
 @onready var tool_panel = get_node_or_null("ContentLayer/ToolPanel")
 @onready var tool_slot_area = get_node_or_null("ContentLayer/ToolPanel/ToolSlots")
+@onready var battle_art = get_node_or_null("ContentLayer/BattleArt")
 @onready var backpack_overlay_art = get_node_or_null("ContentLayer/BackpackOverlayArt")
 
 @export var draw_spawn_point_path: NodePath = "ContentLayer/DreamcatcherPanel/DrawSpawnPoint"
@@ -48,6 +79,8 @@ var battle_manager: BattleManager
 var _is_battle_ended: bool = false
 var _draw_locked: bool = false
 var _dreamcatcher_base_scale := Vector2.ONE
+var _battle_art_origin := Vector2.ZERO
+var _battle_art_scale := 1.0
 var _ui_mode: String = MODE_BATTLE
 var _overlay_close_callback: Callable = Callable()
 var _selected_tool_id: String = ""
@@ -62,24 +95,31 @@ func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> vo
 
 func _ready():
 	print("[MainGameUI Debug] UI初始化开始...")
+	if not resized.is_connected(_layout_battle_scene):
+		resized.connect(_layout_battle_scene)
+	_layout_battle_scene()
 	if dreamcatcher_panel:
 		_dreamcatcher_base_scale = dreamcatcher_panel.scale
 	if _is_backpack_overlay_mode():
 		_apply_backpack_overlay_mode()
 	
-	# 设置手动结束按钮文本 (对齐设计需求)
 	var menu_btn = $ContentLayer/MenuButton
 	if menu_btn:
-		menu_btn.text = "结束本局"
+		menu_btn.text = ""
+		menu_btn.tooltip_text = "结束本局"
+		menu_btn.flat = true
+		menu_btn.focus_mode = Control.FOCUS_NONE
 	
 	# 检查关键节点是否成功获取
 	if draw_button:
 		# 强制确保按钮是可见的且接收鼠标
 		draw_button.visible = true
 		draw_button.tooltip_text = "捕梦"
+		draw_button.focus_mode = Control.FOCUS_NONE
 	if trash_bin:
 		trash_bin.tooltip_text = "丢弃"
 	_ensure_tool_panel()
+	_layout_battle_scene()
 	
 	# 容错：自动初始化逻辑
 	await get_tree().create_timer(0.1).timeout
@@ -156,14 +196,94 @@ func _apply_stage_visuals() -> void:
 	if tint == "":
 		return
 	var background = get_node_or_null("Background")
-	if background:
+	if background is ColorRect:
 		background.color = Color.html(tint)
+
+func _layout_battle_scene() -> void:
+	if _is_backpack_overlay_mode():
+		return
+	_update_battle_art_transform()
+	if battle_art:
+		battle_art.show()
+	for node_name in BATTLE_ART_RECTS.keys():
+		var node := get_node_or_null("ContentLayer/BattleArt/%s" % node_name) as Control
+		if node == null:
+			continue
+		var target := _battle_art_rect_to_viewport(BATTLE_ART_RECTS[node_name])
+		node.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		node.position = target.position
+		node.size = target.size
+		node.scale = Vector2.ONE
+
+	_layout_scaled_control("ContentLayer/DreamcatcherPanel", BATTLE_DREAMCATCHER_RECT)
+	_layout_scaled_control("ContentLayer/GridPanel", BATTLE_GRID_PANEL_RECT)
+	_layout_scaled_control("ContentLayer/StatsPanel", BATTLE_STATS_RECT)
+	_layout_scaled_control("ContentLayer/OrnamentsPanel", BATTLE_ORNAMENTS_RECT)
+	_layout_scaled_control("ContentLayer/MenuButton", BATTLE_MENU_RECT)
+	_layout_screen_control("ContentLayer/PendingItemPanel", BATTLE_PENDING_ITEMS_RECT)
+	_layout_screen_control("ContentLayer/ToolPanel", BATTLE_TOOL_PANEL_RECT)
+	_layout_grid_panel_children()
+	_layout_child_control("ContentLayer/OrnamentsPanel/Slots", BATTLE_ORNAMENT_SLOTS_RECT)
+	if dreamcatcher_panel:
+		_dreamcatcher_base_scale = dreamcatcher_panel.scale
+
+func _update_battle_art_transform() -> void:
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = BATTLE_ART_BASE_SIZE
+	_battle_art_scale = minf(
+		viewport_size.x / BATTLE_ART_BASE_SIZE.x,
+		viewport_size.y / BATTLE_ART_BASE_SIZE.y
+	)
+	var displayed_art_size := BATTLE_ART_BASE_SIZE * _battle_art_scale
+	_battle_art_origin = (viewport_size - displayed_art_size) * 0.5
+
+func _battle_art_rect_to_viewport(source_rect: Rect2) -> Rect2:
+	return Rect2(
+		_battle_art_origin + source_rect.position * _battle_art_scale,
+		source_rect.size * _battle_art_scale
+	)
+
+func _layout_scaled_control(path: NodePath, source_rect: Rect2) -> void:
+	var control := get_node_or_null(path) as Control
+	if control == null:
+		return
+	var target := _battle_art_rect_to_viewport(source_rect)
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	control.position = target.position
+	control.size = source_rect.size
+	control.scale = Vector2(_battle_art_scale, _battle_art_scale)
+
+func _layout_screen_control(path: NodePath, source_rect: Rect2) -> void:
+	var control := get_node_or_null(path) as Control
+	if control == null:
+		return
+	var target := _battle_art_rect_to_viewport(source_rect)
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	control.position = target.position
+	control.size = target.size
+	control.scale = Vector2.ONE
+
+func _layout_grid_panel_children() -> void:
+	for node_name in BATTLE_GRID_CHILD_RECTS.keys():
+		_layout_child_control("ContentLayer/GridPanel/%s" % node_name, BATTLE_GRID_CHILD_RECTS[node_name])
+
+func _layout_child_control(path: NodePath, source_rect: Rect2) -> void:
+	var control := get_node_or_null(path) as Control
+	if control == null:
+		return
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	control.position = source_rect.position
+	control.size = source_rect.size
+	control.scale = Vector2.ONE
 
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
 	var background = get_node_or_null("Background")
-	if background:
+	if background is ColorRect:
 		background.color = Color(0, 0, 0, 1)
+	if battle_art:
+		battle_art.hide()
 	if backpack_overlay_art:
 		backpack_overlay_art.show()
 	for path in [
@@ -559,10 +679,11 @@ func _render_ornaments():
 		if ornament == null:
 			continue
 		var slot = Button.new()
-		slot.custom_minimum_size = Vector2(64, 64)
+		slot.custom_minimum_size = Vector2(54, 54)
 		slot.text = ornament.ornament_name.substr(0, min(2, ornament.ornament_name.length()))
 		slot.tooltip_text = ornament.get_tooltip_text()
 		slot.focus_mode = Control.FOCUS_NONE
+		slot.flat = true
 		slot.set_meta("ornament_id", ornament.id)
 		ornaments_area.add_child(slot)
 
@@ -590,6 +711,7 @@ func _ensure_tool_panel() -> void:
 	content_layer.add_child(panel)
 	tool_panel = panel
 	tool_slot_area = slots
+	_layout_battle_scene()
 
 func _connect_tool_inventory_signal() -> void:
 	var rm = get_node_or_null("/root/RunManager")
@@ -629,6 +751,7 @@ func _render_tools() -> void:
 		button.gui_input.connect(func(event): _on_tool_button_gui_input(event, tool_id, button))
 		tool_slot_area.add_child(button)
 	_update_tool_selection_visuals()
+	_layout_battle_scene()
 
 func _set_selected_tool(tool_id: String) -> void:
 	_selected_tool_id = "" if _selected_tool_id == tool_id else tool_id
