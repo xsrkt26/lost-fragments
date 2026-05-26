@@ -1,10 +1,28 @@
 extends Node2D
 
+const HUB_SOURCE_SIZE := Vector2(1593.0, 872.0)
+const PLAYER_START_SOURCE_X := 455.0
+const PLAYER_FLOOR_SOURCE_Y := 818.0
+const PLAYER_WALK_MIN_SOURCE_X := 250.0
+const PLAYER_WALK_MAX_SOURCE_X := 1360.0
+const OPTION_RECTS := {
+	"RouteButton": Rect2(0.0, 170.0, 176.0, 100.0),
+	"BackpackButton": Rect2(0.0, 282.0, 166.0, 96.0),
+	"GalleryButton": Rect2(0.0, 386.0, 176.0, 100.0),
+	"SettingsButton": Rect2(0.0, 492.0, 166.0, 100.0),
+}
+
+@onready var background: TextureRect = $Background
+@onready var hub_art: Node2D = $HubArt
 @onready var overlay_root: Control = $CanvasLayer/OverlayRoot
 @onready var player: CharacterBody2D = $Player
+@onready var floor_body: StaticBody2D = $Floor
 @onready var interactions: Node2D = $Interactions
 
 var current_zone: String = ""
+var _art_origin: Vector2 = Vector2.ZERO
+var _art_scale: float = 1.0
+var _has_positioned_player := false
 
 
 func _ready() -> void:
@@ -19,6 +37,9 @@ func _ready() -> void:
 
 	if interactions:
 		interactions.hide()
+	if get_viewport():
+		get_viewport().size_changed.connect(_layout_scene)
+	_layout_scene()
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
 	var rm = get_node_or_null("/root/RunManager")
@@ -103,6 +124,15 @@ func _on_zone_body_exited(_body) -> void:
 func _on_main_menu_button_pressed() -> void:
 	_return_to_main_menu()
 
+func _on_route_button_pressed() -> void:
+	_enter_current_route_node()
+
+func _on_gallery_button_pressed() -> void:
+	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
+
+func _on_settings_button_pressed() -> void:
+	GlobalScene.transition_to(GlobalScene.SceneType.SETTINGS)
+
 
 func _return_to_main_menu() -> void:
 	GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)
@@ -146,3 +176,62 @@ func _close_backpack_overlay() -> void:
 				manager.persist_backpack_to_run()
 		child.queue_free()
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+func _layout_scene() -> void:
+	var viewport_size := get_viewport_rect().size
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = Vector2(1280.0, 720.0)
+	if background != null:
+		background.position = Vector2.ZERO
+		background.size = viewport_size
+	_layout_hub_art(viewport_size)
+	_layout_player_and_floor(viewport_size)
+	for button_name in OPTION_RECTS.keys():
+		var button := get_node_or_null("CanvasLayer/%s" % button_name) as Control
+		if button == null:
+			continue
+		var target := _source_rect_to_viewport(OPTION_RECTS[button_name])
+		button.position = target.position
+		button.size = target.size
+
+
+func _layout_hub_art(viewport_size: Vector2) -> void:
+	_art_scale = minf(
+		viewport_size.x / HUB_SOURCE_SIZE.x,
+		viewport_size.y / HUB_SOURCE_SIZE.y
+	)
+	var displayed_size := HUB_SOURCE_SIZE * _art_scale
+	_art_origin = (viewport_size - displayed_size) * 0.5
+	if hub_art != null:
+		hub_art.position = _art_origin
+		hub_art.scale = Vector2(_art_scale, _art_scale)
+
+
+func _layout_player_and_floor(viewport_size: Vector2) -> void:
+	var floor_y := _art_origin.y + PLAYER_FLOOR_SOURCE_Y * _art_scale
+	if floor_body != null:
+		floor_body.position = Vector2(viewport_size.x * 0.5, floor_y)
+	if player == null:
+		return
+
+	var min_x := _art_origin.x + PLAYER_WALK_MIN_SOURCE_X * _art_scale
+	var max_x := _art_origin.x + PLAYER_WALK_MAX_SOURCE_X * _art_scale
+	if player.has_method("set_walk_bounds"):
+		player.set_walk_bounds(min_x, max_x)
+
+	if not _has_positioned_player:
+		player.global_position = Vector2(
+			_art_origin.x + PLAYER_START_SOURCE_X * _art_scale,
+			floor_y - 30.0
+		)
+		_has_positioned_player = true
+	else:
+		player.global_position.y = floor_y - 30.0
+		player.global_position.x = clampf(player.global_position.x, min_x, max_x)
+
+
+func _source_rect_to_viewport(source_rect: Rect2) -> Rect2:
+	return Rect2(
+		_art_origin + source_rect.position * _art_scale,
+		source_rect.size * _art_scale
+	)

@@ -19,6 +19,17 @@ func test_mouse_move_target_is_set_and_cleared():
 	assert_false(player.has_move_target)
 
 
+func test_mouse_move_target_is_clamped_to_walk_bounds():
+	player.global_position = Vector2(100.0, 0.0)
+	player.set_walk_bounds(200.0, 500.0)
+
+	player.move_to_global_x(80.0)
+	assert_eq(player.move_target_x, 200.0)
+
+	player.move_to_global_x(620.0)
+	assert_eq(player.move_target_x, 500.0)
+
+
 func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 	var ui = MainGameUI.instantiate()
 	ui.configure_for_backpack_overlay()
@@ -96,6 +107,10 @@ func test_hub_player_uses_character_animation_frames():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
+	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	assert_not_null(hub_player)
+	assert_true(hub_player.visible)
+
 	var animated_sprite := hub.get_node_or_null("Player/AnimatedSprite2D") as AnimatedSprite2D
 	assert_not_null(animated_sprite)
 	assert_not_null(animated_sprite.sprite_frames)
@@ -108,7 +123,7 @@ func test_hub_player_uses_character_animation_frames():
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
 
 
-func test_hub_scene_uses_left_side_hub_art_without_route_map():
+func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
@@ -116,30 +131,51 @@ func test_hub_scene_uses_left_side_hub_art_without_route_map():
 	var background := hub.get_node_or_null("Background") as TextureRect
 	assert_not_null(background)
 	assert_not_null(background.texture)
-	assert_eq(background.texture.resource_path, "res://assets/ui/hub/hub_background.png")
+	assert_eq(background.texture.resource_path, "res://assets/ui/book/wood_floor.png")
+
+	for node_path in [
+		"HubArt/Page",
+		"HubArt/Room",
+		"HubArt/RingRight",
+		"HubArt/RouteTab",
+		"HubArt/BackpackTab",
+		"HubArt/GalleryTab",
+		"HubArt/SettingsTab",
+		"HubArt/SpeechBubble",
+	]:
+		var sprite := hub.get_node_or_null(node_path) as Sprite2D
+		assert_not_null(sprite, "Hub split art should expose %s" % node_path)
+		assert_not_null(sprite.texture)
+		assert_true(sprite.texture.resource_path != "res://assets/ui/hub/hub_background.png")
+
+	var speech_text := hub.get_node_or_null("HubArt/SpeechText") as Label
+	assert_not_null(speech_text)
+	assert_eq(speech_text.text, "你终于醒了！")
+
+	var route_button := hub.get_node_or_null("CanvasLayer/RouteButton") as Button
+	assert_not_null(route_button)
+	assert_eq(route_button.tooltip_text, "继续梦境")
+	assert_true(route_button.pressed.is_connected(Callable(hub, "_on_route_button_pressed")))
 
 	var backpack_button := hub.get_node_or_null("CanvasLayer/BackpackButton") as Button
 	assert_not_null(backpack_button)
-	assert_eq(backpack_button.position.x, 24.0)
+	assert_eq(backpack_button.tooltip_text, "整理背包")
+	assert_true(backpack_button.pressed.is_connected(Callable(hub, "_on_backpack_button_pressed")))
 
-	var backpack_art := hub.get_node_or_null("CanvasLayer/BackpackButton/Art") as TextureRect
-	assert_not_null(backpack_art)
-	assert_not_null(backpack_art.texture)
-	assert_eq(backpack_art.texture.resource_path, "res://assets/ui/hub/hub_backpack_tab.png")
+	var gallery_button := hub.get_node_or_null("CanvasLayer/GalleryButton") as Button
+	assert_not_null(gallery_button)
+	assert_eq(gallery_button.tooltip_text, "图鉴")
+	assert_true(gallery_button.pressed.is_connected(Callable(hub, "_on_gallery_button_pressed")))
 
-	var main_menu_button := hub.get_node_or_null("CanvasLayer/MainMenuButton") as Button
-	assert_not_null(main_menu_button)
-	assert_eq(main_menu_button.position.x, 24.0)
-
-	var exit_art := hub.get_node_or_null("CanvasLayer/MainMenuButton/Art") as TextureRect
-	assert_not_null(exit_art)
-	assert_not_null(exit_art.texture)
-	assert_eq(exit_art.texture.resource_path, "res://assets/ui/hub/hub_exit_tab.png")
+	var settings_button := hub.get_node_or_null("CanvasLayer/SettingsButton") as Button
+	assert_not_null(settings_button)
+	assert_eq(settings_button.tooltip_text, "设置")
+	assert_true(settings_button.pressed.is_connected(Callable(hub, "_on_settings_button_pressed")))
 
 	assert_null(hub.get_node_or_null("CanvasLayer/RoutePanel"))
 
 
-func test_hub_exposes_mouse_return_to_main_menu_button():
+func test_hub_keeps_legacy_main_menu_button_hidden_from_left_tabs():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
@@ -147,6 +183,5 @@ func test_hub_exposes_mouse_return_to_main_menu_button():
 	var button := hub.get_node_or_null("CanvasLayer/MainMenuButton") as Button
 	assert_not_null(button)
 	assert_eq(button.tooltip_text, "返回主界面")
-	assert_not_null(button.get_node_or_null("Art"))
-	assert_not_null(button.get_node_or_null("Caption"))
+	assert_false(button.visible)
 	assert_true(button.pressed.is_connected(Callable(hub, "_on_main_menu_button_pressed")))

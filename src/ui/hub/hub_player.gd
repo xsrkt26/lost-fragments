@@ -9,6 +9,9 @@ const ANIM_WALK: StringName = &"walk"
 
 var has_move_target: bool = false
 var move_target_x: float = 0.0
+var has_walk_bounds: bool = false
+var walk_min_x: float = 0.0
+var walk_max_x: float = 0.0
 
 @onready var animated_sprite := get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 @onready var legacy_sprite := get_node_or_null("Sprite2D") as Sprite2D
@@ -19,12 +22,21 @@ func _ready() -> void:
 
 
 func move_to_global_x(target_x: float) -> void:
-	move_target_x = target_x
+	move_target_x = _clamp_to_walk_bounds(target_x)
 	has_move_target = true
 
 
 func clear_move_target() -> void:
 	has_move_target = false
+
+
+func set_walk_bounds(min_x: float, max_x: float) -> void:
+	walk_min_x = minf(min_x, max_x)
+	walk_max_x = maxf(min_x, max_x)
+	has_walk_bounds = true
+	global_position.x = _clamp_to_walk_bounds(global_position.x)
+	if has_move_target:
+		move_target_x = _clamp_to_walk_bounds(move_target_x)
 
 
 func _physics_process(delta: float) -> void:
@@ -33,6 +45,7 @@ func _physics_process(delta: float) -> void:
 		clear_move_target()
 		_apply_gravity(delta)
 		move_and_slide()
+		_apply_walk_bounds()
 		_play_animation(ANIM_IDLE)
 		return
 
@@ -61,6 +74,7 @@ func _physics_process(delta: float) -> void:
 		is_moving_horizontally = abs(velocity.x) > 0.1
 
 	move_and_slide()
+	_apply_walk_bounds()
 	_play_animation(ANIM_WALK if is_moving_horizontally else ANIM_IDLE)
 
 
@@ -98,3 +112,18 @@ func _play_animation(animation_name: StringName) -> void:
 		animated_sprite.play(animation_name)
 	elif not animated_sprite.is_playing():
 		animated_sprite.play()
+
+
+func _clamp_to_walk_bounds(value: float) -> float:
+	if not has_walk_bounds:
+		return value
+	return clampf(value, walk_min_x, walk_max_x)
+
+
+func _apply_walk_bounds() -> void:
+	if not has_walk_bounds:
+		return
+	var clamped_x := _clamp_to_walk_bounds(global_position.x)
+	if not is_equal_approx(clamped_x, global_position.x):
+		global_position.x = clamped_x
+		velocity.x = 0.0
