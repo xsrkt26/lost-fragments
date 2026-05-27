@@ -91,6 +91,38 @@ public static class GodotReleaseNativeMethods {
 
 Set-ChildProcessErrorMode
 
+function Initialize-IsolatedGodotAppData {
+    param(
+        [string]$IsolatedAppData,
+        [string]$OriginalAppData
+    )
+
+    if (-not (Test-IsWindowsHost)) {
+        return
+    }
+    if ([string]::IsNullOrWhiteSpace($OriginalAppData)) {
+        return
+    }
+
+    $sourceTemplates = Join-Path $OriginalAppData "Godot\export_templates"
+    if (-not (Test-Path -LiteralPath $sourceTemplates)) {
+        return
+    }
+
+    $isolatedGodotDir = Join-Path $IsolatedAppData "Godot"
+    $destTemplates = Join-Path $isolatedGodotDir "export_templates"
+    New-Item -ItemType Directory -Force -Path $isolatedGodotDir | Out-Null
+    if (Test-Path -LiteralPath $destTemplates) {
+        return
+    }
+
+    try {
+        New-Item -ItemType Junction -Path $destTemplates -Target $sourceTemplates -ErrorAction Stop | Out-Null
+    } catch {
+        Copy-Item -LiteralPath $sourceTemplates -Destination $destTemplates -Recurse -Force
+    }
+}
+
 function Invoke-RepoCommand {
     param(
         [string]$Name,
@@ -144,8 +176,10 @@ $buildTimeUtc = (Get-Date).ToUniversalTime()
 $timestamp = $buildTimeUtc.ToString("yyyyMMdd-HHmmss")
 $packageDir = Join-Path $repoRoot $OutputDir
 New-Item -ItemType Directory -Force -Path $packageDir | Out-Null
+$originalAppData = $env:APPDATA
 $godotAppData = Join-Path ([System.IO.Path]::GetTempPath()) ("go_dot_game_release_appdata_" + [System.Guid]::NewGuid().ToString("N"))
 New-Item -ItemType Directory -Force -Path $godotAppData | Out-Null
+Initialize-IsolatedGodotAppData -IsolatedAppData $godotAppData -OriginalAppData $originalAppData
 
 $artifactBase = "$ProductName-$timestamp-$commitShort"
 $outputPath = Join-Path $packageDir "$artifactBase.exe"

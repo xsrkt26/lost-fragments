@@ -12,7 +12,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/book/tab_gallery.png" id="10_tab_gallery"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/tab_settings.png" id="11_tab_settings"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/tab_back.png" id="12_tab_back"]
-[ext_resource type="Texture2D" path="res://assets/sourceImage/对话框.png" id="13_speech_bubble"]
+[ext_resource type="Texture2D" path="res://assets/ui/hub/dialog_bubble.png" id="13_speech_bubble"]
 [ext_resource type="Texture2D" path="res://assets/ui/gallery/photo_corner.png" id="14_photo_corner"]
 
 [sub_resource type="RectangleShape2D" id="RectangleShape2D_player"]

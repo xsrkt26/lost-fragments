@@ -21,7 +21,7 @@
 [ext_resource type="Texture2D" uid="uid://401y561jeyi7" path="res://assets/ui/backpack/trash_icon.png" id="23_trash_icon"]
 [ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="24_photo_corner"]
 [ext_resource type="Texture2D" uid="uid://8jk6iec3plut" path="res://assets/ui/gallery/forget_me_not.png" id="25_forget_me_not"]
-[ext_resource type="Texture2D" uid="uid://b1tpo3q6n8vfy" path="res://assets/ui/battle/potion_100.png" id="26_potion"]
+[ext_resource type="Texture2D" uid="uid://dflyasj2mkm0q" path="res://assets/ui/battle/potion_state_100.png" id="26_potion"]
 [ext_resource type="Texture2D" uid="uid://b1tsy8m4c2rja" path="res://assets/ui/battle/syringe.png" id="27_syringe"]
 [ext_resource type="Texture2D" uid="uid://b1tkn5eaq4xul" path="res://assets/ui/battle/knife.png" id="28_knife"]
 [ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
@@ -488,12 +488,13 @@ stretch_mode = 5
 layout_mode = 0
 offset_left = 284.99997
 offset_top = 21.0
-offset_right = 410.99997
-offset_bottom = 219.0
+offset_right = 419.22278
+offset_bottom = 198.5607
 scale = Vector2(0.99834, 0.90673214)
 mouse_filter = 2
 texture = ExtResource("26_potion")
 expand_mode = 1
+stretch_mode = 5
 
 [node name="TrashIconArt" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=1646955514]
 layout_mode = 0

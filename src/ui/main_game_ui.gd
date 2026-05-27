@@ -17,6 +17,13 @@ const STATS_FONT_SIZE_MIN := 26
 const STATS_DARK_COLOR := Color(0.04, 0.035, 0.03)
 const STATS_LOW_SANITY_COLOR := Color(1, 0, 0)
 const STATS_SCORE_REACHED_COLOR := Color(0.2, 0.8, 0.2)
+const POTION_STATE_TEXTURES := [
+	preload("res://assets/ui/battle/potion_state_100.png"),
+	preload("res://assets/ui/battle/potion_state_75.png"),
+	preload("res://assets/ui/battle/potion_state_50.png"),
+	preload("res://assets/ui/battle/potion_state_25.png"),
+	preload("res://assets/ui/battle/potion_state_0.png"),
+]
 const BACKPACK_OVERLAY_ART_RECTS := {
 	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
 	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
@@ -41,6 +48,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 @onready var sanity_label = $ContentLayer/StatsPanel/SanityLabel
 @onready var score_label = $ContentLayer/StatsPanel/ScoreLabel
 @onready var target_score_label = get_node_or_null("ContentLayer/StatsPanel/TargetScoreLabel") as Label
+@onready var potion_bag = get_node_or_null("ContentLayer/StatsPanel/PotionBag") as TextureRect
 @onready var draw_button = $ContentLayer/DreamcatcherPanel/DrawButton
 @onready var dreamcatcher_panel = $ContentLayer/DreamcatcherPanel
 @onready var draw_spawn_point = get_node_or_null(draw_spawn_point_path)
@@ -204,10 +212,8 @@ func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
 func _reset_content_layer_to_viewport() -> void:
 	if content_layer == null:
 		return
-	content_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
-	content_layer.position = Vector2.ZERO
-	content_layer.size = get_viewport_rect().size
 	content_layer.scale = Vector2.ONE
+	content_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
@@ -932,10 +938,12 @@ func _update_stats_display(san, score):
 	_apply_stats_display(san, score, max_san, score_rule)
 
 func _apply_stats_display(san: int, score: int, max_san: int, score_rule: Dictionary):
+	var sanity_ratio := 0.0
+	if max_san > 0:
+		sanity_ratio = clampf(float(san) / float(max_san), 0.0, 1.0)
+	_apply_potion_state(sanity_ratio)
 	if sanity_label:
-		var sanity_percent := 0
-		if max_san > 0:
-			sanity_percent = roundi(clampf(float(san) / float(max_san), 0.0, 1.0) * 100.0)
+		var sanity_percent := roundi(sanity_ratio * 100.0)
 		_set_stat_label_text(sanity_label, str(sanity_percent) + "%", STATS_FONT_SIZE_SANITY, 4)
 		# 梦值低时变红
 		if san <= max_san * 0.2:
@@ -953,6 +961,23 @@ func _apply_stats_display(san: int, score: int, max_san: int, score_rule: Dictio
 	if target_score_label:
 		_set_stat_label_text(target_score_label, _format_target_text(score_rule.has_target, score_rule.target), STATS_FONT_SIZE_TARGET)
 		target_score_label.add_theme_color_override("font_color", STATS_DARK_COLOR)
+
+func _apply_potion_state(sanity_ratio: float) -> void:
+	if potion_bag == null:
+		return
+	potion_bag.texture = POTION_STATE_TEXTURES[_get_potion_state_index(sanity_ratio)]
+
+func _get_potion_state_index(sanity_ratio: float) -> int:
+	var ratio := clampf(sanity_ratio, 0.0, 1.0)
+	if ratio >= 0.8:
+		return 0
+	if ratio >= 0.6:
+		return 1
+	if ratio >= 0.4:
+		return 2
+	if ratio >= 0.2:
+		return 3
+	return 4
 
 func _set_stat_label_text(label: Label, text: String, base_font_size: int, full_size_length: int = 3) -> void:
 	label.text = text

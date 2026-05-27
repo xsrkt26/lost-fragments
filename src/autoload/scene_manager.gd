@@ -6,7 +6,7 @@ signal transition_started(target_scene)
 signal transition_finished(new_scene)
 
 const PAGE_TURN_SHADER = preload("res://src/ui/transitions/page_turn.gdshader")
-const PAGE_TURN_DURATION := 1.45
+const PAGE_TURN_DURATION := 1.05
 
 enum SceneType {
 	MAIN_MENU,
@@ -42,6 +42,8 @@ var _is_transitioning := false
 
 func _ready():
 	_setup_transition_ui()
+	if get_tree() and get_tree().root and not get_tree().root.size_changed.is_connected(_sync_transition_ui_to_viewport):
+		get_tree().root.size_changed.connect(_sync_transition_ui_to_viewport)
 	# 初始判断当前是哪个场景
 	_detect_initial_scene()
 
@@ -68,6 +70,22 @@ func _setup_transition_ui():
 	_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	canvas.add_child(_overlay)
+	_sync_transition_ui_to_viewport()
+
+func _sync_transition_ui_to_viewport() -> void:
+	var viewport_size := Vector2(1920.0, 1080.0)
+	var viewport := get_viewport()
+	if viewport != null:
+		var visible_size := viewport.get_visible_rect().size
+		if visible_size.x > 0.0 and visible_size.y > 0.0:
+			viewport_size = visible_size
+	var transition_controls: Array[Control] = [_page_texture_rect, _overlay]
+	for control in transition_controls:
+		if control == null:
+			continue
+		control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		control.position = Vector2.ZERO
+		control.size = viewport_size
 
 func _detect_initial_scene():
 	if not get_tree().current_scene: return
@@ -88,16 +106,57 @@ func transition_to(target: SceneType, push_to_history: bool = true):
 	print("[SceneManager] 正在转场至: ", SceneType.keys()[target])
 	transition_started.emit(target)
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_sync_transition_ui_to_viewport()
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 
 	var snapshot_texture = await _capture_current_scene_texture()
-	if snapshot_texture:
+	if snapshot_texture == null:
+		snapshot_texture = _make_fallback_page_texture()
+	if snapshot_texture != null:
 		await _transition_with_page_turn(target, snapshot_texture)
 	else:
 		await _transition_with_fade(target)
 
 	_is_transitioning = false
 	transition_finished.emit(get_tree().current_scene)
+
+func transition_with_page_turn(change_callback: Callable) -> void:
+	if _is_transitioning:
+		return
+	_is_transitioning = true
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_sync_transition_ui_to_viewport()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var snapshot_texture = await _capture_current_scene_texture()
+	if snapshot_texture == null:
+		snapshot_texture = _make_fallback_page_texture()
+	if snapshot_texture == null:
+		if change_callback.is_valid():
+			change_callback.call()
+		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_is_transitioning = false
+		return
+
+	_page_texture_rect.texture = snapshot_texture
+	_page_texture_rect.visible = true
+	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_STOP
+	_page_material.set_shader_parameter("progress", 0.0)
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overlay.color = Color(0, 0, 0, 0)
+
+	if change_callback.is_valid():
+		change_callback.call()
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_sync_transition_ui_to_viewport()
+
+	var tween = create_tween()
+	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	await tween.finished
+	_clear_page_turn_overlay()
+	_is_transitioning = false
 
 func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) -> void:
 	_page_texture_rect.texture = snapshot_texture
@@ -116,6 +175,7 @@ func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) 
 
 	await get_tree().process_frame
 	await get_tree().process_frame
+	_sync_transition_ui_to_viewport()
 
 	var tween = create_tween()
 	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
@@ -149,6 +209,11 @@ func _capture_current_scene_texture() -> Texture2D:
 	var image = viewport_texture.get_image()
 	if image == null or image.get_width() <= 0 or image.get_height() <= 0:
 		return null
+	return ImageTexture.create_from_image(image)
+
+func _make_fallback_page_texture() -> Texture2D:
+	var image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	image.fill(Color(0.12, 0.095, 0.065, 1.0))
 	return ImageTexture.create_from_image(image)
 
 func _set_page_turn_progress(value: float) -> void:

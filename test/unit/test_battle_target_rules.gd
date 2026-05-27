@@ -22,11 +22,33 @@ func test_reaching_boss_target_does_not_auto_end_battle():
 	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
 	ui.sanity_label = autofree(Label.new())
 	ui.score_label = autofree(Label.new())
+	ui.target_score_label = autofree(Label.new())
 
 	ui._apply_stats_display(100, 50, 100, {"has_target": true, "target": 50})
 
-	assert_eq(ui.score_label.text, "得分: 50 / 50")
+	assert_eq(ui.sanity_label.text, "100%")
+	assert_eq(ui.score_label.text, "50")
+	assert_eq(ui.target_score_label.text, "50")
 	assert_false(ui._is_battle_ended)
+
+func test_potion_state_tracks_sanity_ratio():
+	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
+	ui.potion_bag = autofree(TextureRect.new())
+
+	ui._apply_stats_display(100, 0, 100, {"has_target": true, "target": 50})
+	assert_eq(ui.potion_bag.texture.resource_path, "res://assets/ui/battle/potion_state_100.png")
+
+	ui._apply_stats_display(79, 0, 100, {"has_target": true, "target": 50})
+	assert_eq(ui.potion_bag.texture.resource_path, "res://assets/ui/battle/potion_state_75.png")
+
+	ui._apply_stats_display(50, 0, 100, {"has_target": true, "target": 50})
+	assert_eq(ui.potion_bag.texture.resource_path, "res://assets/ui/battle/potion_state_50.png")
+
+	ui._apply_stats_display(20, 0, 100, {"has_target": true, "target": 50})
+	assert_eq(ui.potion_bag.texture.resource_path, "res://assets/ui/battle/potion_state_25.png")
+
+	ui._apply_stats_display(19, 0, 100, {"has_target": true, "target": 50})
+	assert_eq(ui.potion_bag.texture.resource_path, "res://assets/ui/battle/potion_state_0.png")
 
 func test_draw_lock_updates_button_disabled_state():
 	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())

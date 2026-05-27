@@ -267,11 +267,11 @@ func _on_gallery_button_pressed() -> void:
 	_enter_gallery()
 
 func _on_settings_button_pressed() -> void:
-	GlobalScene.transition_to(GlobalScene.SceneType.SETTINGS)
+	_transition_from_hub(GlobalScene.SceneType.SETTINGS)
 
 
 func _return_to_main_menu() -> void:
-	GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)
+	_transition_from_hub(GlobalScene.SceneType.MAIN_MENU, false)
 
 
 func _enter_battle() -> void:
@@ -283,7 +283,12 @@ func _enter_shop() -> void:
 
 
 func _enter_gallery() -> void:
-	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
+	_transition_from_hub(GlobalScene.SceneType.GALLERY)
+
+
+func _transition_from_hub(target: int, push_to_history: bool = true) -> void:
+	await _lock_briefly_before_transition()
+	GlobalScene.transition_to(target, push_to_history)
 
 
 func show_speech_message(message: String = "") -> void:
@@ -309,7 +314,11 @@ func _on_backpack_button_pressed() -> void:
 	if overlay_root.get_child_count() > 0:
 		_close_backpack_overlay()
 	else:
-		_open_backpack_overlay()
+		_open_backpack_overlay_with_transition()
+
+
+func _open_backpack_overlay_with_transition() -> void:
+	GlobalScene.transition_with_page_turn(Callable(self, "_open_backpack_overlay"))
 
 
 func _open_backpack_overlay() -> void:
