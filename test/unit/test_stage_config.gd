@@ -39,6 +39,8 @@ func test_stage_config_loads_all_six_acts_and_metadata():
 	assert_eq(StageConfig.get_boss_score_target_rule(4).target, 110)
 	assert_eq(StageConfig.get_battle_modifiers(4).pollution_added_bonus, 1)
 	assert_eq(StageConfig.get_visual(4).battle_bgm_key, "battle")
+	assert_false(StageConfig.get_visual(1).has("hub_background_key"))
+	assert_eq(StageConfig.get_visual(4).hub_background_key, "cardboard")
 
 func test_stage_routes_point_to_distinct_content_tracks():
 	assert_eq(StageConfig.get_route_id_for_act(1), RouteConfig.DEFAULT_ROUTE_ID)

@@ -115,6 +115,13 @@ scale = Vector2(0.82, 0.82)
 texture = ExtResource("6_room")
 centered = false
 
+[node name="Foreground" type="Sprite2D" parent="HubArt"]
+visible = false
+z_index = 15
+position = Vector2(156, 50)
+scale = Vector2(0.82, 0.82)
+centered = false
+
 [node name="RingRight" type="Sprite2D" parent="HubArt"]
 z_index = 12
 position = Vector2(1492, -22)

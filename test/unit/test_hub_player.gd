@@ -4,10 +4,20 @@ const HubScene = preload("res://src/ui/hub/hub_scene.tscn")
 const MainGameUI = preload("res://src/ui/main_game_ui.tscn")
 
 var player
+var rm_snapshot := {}
 
 
 func before_each():
 	player = add_child_autofree(load("res://src/ui/hub/hub_player.gd").new())
+	var rm = get_node_or_null("/root/RunManager")
+	rm_snapshot = rm.serialize_run() if rm else {}
+
+
+func after_each():
+	var rm = get_node_or_null("/root/RunManager")
+	if rm and not rm_snapshot.is_empty():
+		rm.deserialize_run(rm_snapshot)
+	rm_snapshot = {}
 
 
 func test_mouse_move_target_is_set_and_cleared():
@@ -60,6 +70,27 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayStatsLabel"))
 	assert_false(ui.get_node("ContentLayer/DreamcatcherPanel").visible)
 	assert_false(ui.get_node("ContentLayer/MenuButton").visible)
+
+
+func test_main_game_dreamcatcher_overlay_sits_above_cloud():
+	var ui = MainGameUI.instantiate()
+	add_child_autofree(ui)
+	await get_tree().create_timer(0.2).timeout
+
+	var panel := ui.get_node_or_null("ContentLayer/DreamcatcherPanel") as TextureRect
+	assert_not_null(panel)
+	assert_not_null(panel.texture)
+	assert_eq(panel.texture.resource_path, "res://assets/ui/battle/dreamcatcher_cloud.png")
+
+	var overlay := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherOverlay") as TextureRect
+	assert_not_null(overlay)
+	assert_not_null(overlay.texture)
+	assert_eq(overlay.texture.resource_path, "res://assets/ui/battle/dreamcatcher_overlay.png")
+	assert_eq(overlay.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+
+	var draw_button := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DrawButton") as TextureButton
+	assert_not_null(draw_button)
+	assert_true(overlay.get_index() < draw_button.get_index())
 
 
 func test_hub_backpack_overlay_close_button_restores_world_context():
@@ -121,6 +152,54 @@ func test_hub_player_uses_character_animation_frames():
 	assert_eq(animated_sprite.scale, Vector2(0.3, 0.3))
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("idle", 0))
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
+
+
+func test_hub_scene_applies_stage_background_and_foreground():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 2
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var room := hub.get_node_or_null("HubArt/Room") as Sprite2D
+	assert_not_null(room)
+	assert_not_null(room.texture)
+	assert_eq(room.texture.resource_path, "res://assets/ui/hub/backgrounds/xiaojia.png")
+	assert_eq(room.position, Vector2(156.0, 50.0))
+	assert_true(room.scale.x > 0.0)
+	assert_eq(room.scale.x, room.scale.y)
+
+	var foreground := hub.get_node_or_null("HubArt/Foreground") as Sprite2D
+	assert_not_null(foreground)
+	assert_true(foreground.visible)
+	assert_not_null(foreground.texture)
+	assert_eq(foreground.texture.resource_path, "res://assets/ui/hub/backgrounds/xiaojia_foreground.png")
+	assert_eq(foreground.position, room.position)
+	assert_eq(foreground.scale, room.scale)
+
+
+func test_hub_scene_keeps_default_room_art_without_active_run():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = false
+	rm.current_act = 2
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var room := hub.get_node_or_null("HubArt/Room") as Sprite2D
+	assert_not_null(room)
+	assert_not_null(room.texture)
+	assert_eq(room.texture.resource_path, "res://assets/ui/hub/hub_room.png")
+
+	var foreground := hub.get_node_or_null("HubArt/Foreground") as Sprite2D
+	assert_not_null(foreground)
+	assert_false(foreground.visible)
+	assert_null(foreground.texture)
 
 
 func test_hub_scene_uses_split_hub_art_without_composited_reference():

@@ -10,6 +10,13 @@ const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
 const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
 const BACKPACK_OVERLAY_EFFECTS_RECT := Rect2(1060.0, 220.0, 455.0, 420.0)
 const BACKPACK_OVERLAY_STATS_RECT := Rect2(1040.0, 720.0, 535.0, 280.0)
+const STATS_FONT_SIZE_SANITY := 32
+const STATS_FONT_SIZE_SCORE := 52
+const STATS_FONT_SIZE_TARGET := 44
+const STATS_FONT_SIZE_MIN := 26
+const STATS_DARK_COLOR := Color(0.04, 0.035, 0.03)
+const STATS_LOW_SANITY_COLOR := Color(1, 0, 0)
+const STATS_SCORE_REACHED_COLOR := Color(0.2, 0.8, 0.2)
 const BACKPACK_OVERLAY_ART_RECTS := {
 	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
 	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
@@ -31,8 +38,9 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 
 @onready var content_layer = $ContentLayer
 @onready var backpack_ui = $ContentLayer/GridPanel/BackpackUI
-@onready var sanity_label = $ContentLayer/StatsPanel/VBox/SanityLabel
-@onready var score_label = $ContentLayer/StatsPanel/VBox/ScoreLabel
+@onready var sanity_label = $ContentLayer/StatsPanel/SanityLabel
+@onready var score_label = $ContentLayer/StatsPanel/ScoreLabel
+@onready var target_score_label = get_node_or_null("ContentLayer/StatsPanel/TargetScoreLabel") as Label
 @onready var draw_button = $ContentLayer/DreamcatcherPanel/DrawButton
 @onready var dreamcatcher_panel = $ContentLayer/DreamcatcherPanel
 @onready var draw_spawn_point = get_node_or_null(draw_spawn_point_path)
@@ -925,20 +933,33 @@ func _update_stats_display(san, score):
 
 func _apply_stats_display(san: int, score: int, max_san: int, score_rule: Dictionary):
 	if sanity_label:
-		sanity_label.text = "梦值: %d / %d" % [san, max_san]
+		var sanity_percent := 0
+		if max_san > 0:
+			sanity_percent = roundi(clampf(float(san) / float(max_san), 0.0, 1.0) * 100.0)
+		_set_stat_label_text(sanity_label, str(sanity_percent) + "%", STATS_FONT_SIZE_SANITY, 4)
 		# 梦值低时变红
 		if san <= max_san * 0.2:
-			sanity_label.add_theme_color_override("font_color", Color(1, 0, 0))
+			sanity_label.add_theme_color_override("font_color", STATS_LOW_SANITY_COLOR)
 		else:
-			sanity_label.add_theme_color_override("font_color", Color(0.8, 0.2, 0.2))
+			sanity_label.add_theme_color_override("font_color", STATS_DARK_COLOR)
 	
 	if score_label:
-		score_label.text = "得分: %d / %s" % [score, _format_target_text(score_rule.has_target, score_rule.target)]
+		_set_stat_label_text(score_label, str(score), STATS_FONT_SIZE_SCORE)
 		# 有目标且达成时变绿；无目标时保持默认深色。
 		if score_rule.has_target and score >= score_rule.target:
-			score_label.add_theme_color_override("font_color", Color(0.2, 0.8, 0.2))
+			score_label.add_theme_color_override("font_color", STATS_SCORE_REACHED_COLOR)
 		else:
-			score_label.add_theme_color_override("font_color", Color(0.2, 0.16, 0.13))
+			score_label.add_theme_color_override("font_color", STATS_DARK_COLOR)
+	if target_score_label:
+		_set_stat_label_text(target_score_label, _format_target_text(score_rule.has_target, score_rule.target), STATS_FONT_SIZE_TARGET)
+		target_score_label.add_theme_color_override("font_color", STATS_DARK_COLOR)
+
+func _set_stat_label_text(label: Label, text: String, base_font_size: int, full_size_length: int = 3) -> void:
+	label.text = text
+	var font_size := base_font_size
+	if text.length() > full_size_length:
+		font_size = maxi(STATS_FONT_SIZE_MIN, roundi(float(base_font_size) * float(full_size_length) / float(text.length())))
+	label.add_theme_font_size_override("font_size", font_size)
 
 func _get_current_score_rule() -> Dictionary:
 	var rm = get_node_or_null("/root/RunManager")

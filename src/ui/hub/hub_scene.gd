@@ -1,6 +1,19 @@
 extends Node2D
 
 const HUB_SOURCE_SIZE := Vector2(1593.0, 872.0)
+const HUB_ROOM_SOURCE_POS := Vector2(156.0, 50.0)
+const HUB_ROOM_DISPLAY_SIZE := Vector2(1371.0, 772.0)
+const HUB_BACKGROUND_TEXTURES := {
+	"grandma": preload("res://assets/ui/hub/backgrounds/grandma.png"),
+	"xiaojia": preload("res://assets/ui/hub/backgrounds/xiaojia.png"),
+	"parents": preload("res://assets/ui/hub/backgrounds/parents.png"),
+	"cardboard": preload("res://assets/ui/hub/backgrounds/cardboard.png"),
+	"stage": preload("res://assets/ui/hub/backgrounds/stage.png"),
+}
+const HUB_FOREGROUND_TEXTURES := {
+	"xiaojia": preload("res://assets/ui/hub/backgrounds/xiaojia_foreground.png"),
+	"stage": preload("res://assets/ui/hub/backgrounds/stage_foreground.png"),
+}
 const PLAYER_START_SOURCE_X := 455.0
 const PLAYER_FLOOR_SOURCE_Y := 818.0
 const PLAYER_FLOOR_OFFSET := 64.0
@@ -20,6 +33,8 @@ const OPTION_RECTS := {
 @onready var player: CharacterBody2D = $Player
 @onready var floor_body: StaticBody2D = $Floor
 @onready var interactions: Node2D = $Interactions
+@onready var room_art: Sprite2D = $HubArt/Room
+@onready var foreground_art: Sprite2D = $HubArt/Foreground
 @onready var speech_bubble: Sprite2D = $HubArt/SpeechBubble
 @onready var speech_text: Label = $HubArt/SpeechText
 
@@ -27,6 +42,9 @@ var current_zone: String = ""
 var _art_origin: Vector2 = Vector2.ZERO
 var _art_scale: float = 1.0
 var _has_positioned_player := false
+var _default_room_texture: Texture2D = null
+var _default_room_position := Vector2.ZERO
+var _default_room_scale := Vector2.ONE
 
 
 func _ready() -> void:
@@ -34,8 +52,15 @@ func _ready() -> void:
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
 	GlobalAudio.play_bgm(_get_stage_bgm_key("hub_bgm_key", "hub"))
 	_hide_speech()
+	_capture_default_hub_room_art()
 
 	var rm = get_node_or_null("/root/RunManager")
+	if rm and rm.has_signal("route_changed"):
+		var route_changed_callback := Callable(self, "_on_route_changed")
+		if not rm.route_changed.is_connected(route_changed_callback):
+			rm.route_changed.connect(route_changed_callback)
+	_apply_stage_hub_background()
+
 	if rm and rm.is_run_complete:
 		GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)
 		return
@@ -47,12 +72,111 @@ func _ready() -> void:
 	_layout_scene()
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
-	var rm = get_node_or_null("/root/RunManager")
-	if rm == null or not rm.has_method("get_current_stage_visual"):
-		return fallback
-	var visual = rm.get_current_stage_visual()
+	var visual := _get_stage_visual()
 	var bgm_key = str(visual.get(key, fallback))
 	return bgm_key if bgm_key != "" else fallback
+
+
+func _get_stage_visual() -> Dictionary:
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not rm.has_method("get_current_stage_visual"):
+		return {}
+	var visual = rm.get_current_stage_visual()
+	return Dictionary(visual).duplicate(true) if visual is Dictionary else {}
+
+
+func _on_route_changed(_current_act: int, _route_index: int, _current_node: Dictionary) -> void:
+	_apply_stage_hub_background()
+
+
+func _capture_default_hub_room_art() -> void:
+	if room_art == null or _default_room_texture != null:
+		return
+	_default_room_texture = room_art.texture
+	_default_room_position = room_art.position
+	_default_room_scale = room_art.scale
+
+
+func _apply_stage_hub_background() -> void:
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not bool(rm.get("is_run_active")):
+		_restore_default_hub_background()
+		return
+
+	var visual := _get_stage_visual()
+	var configured_path := str(visual.get("hub_background_path", ""))
+	var background_key := _normalize_hub_background_key(str(visual.get("hub_background_key", "")))
+	if configured_path == "" and background_key == "":
+		_restore_default_hub_background()
+		return
+
+	var background_texture := _get_hub_background_texture(visual, background_key)
+	if room_art == null or background_texture == null:
+		_restore_default_hub_background()
+		return
+	room_art.texture = background_texture
+	_fit_hub_room_sprite(room_art, background_texture)
+
+	if foreground_art == null:
+		return
+	var foreground_texture := _get_hub_foreground_texture(visual, background_key)
+	foreground_art.texture = foreground_texture
+	foreground_art.visible = foreground_texture != null
+	if foreground_texture != null:
+		_fit_hub_room_sprite(foreground_art, foreground_texture)
+
+
+func _normalize_hub_background_key(key: String) -> String:
+	if HUB_BACKGROUND_TEXTURES.has(key):
+		return key
+	return ""
+
+
+func _get_hub_background_texture(visual: Dictionary, background_key: String) -> Texture2D:
+	var configured_path := str(visual.get("hub_background_path", ""))
+	var configured_texture := _load_texture_from_path(configured_path)
+	if configured_texture != null:
+		return configured_texture
+	if background_key == "":
+		return null
+	return HUB_BACKGROUND_TEXTURES.get(background_key, null) as Texture2D
+
+
+func _get_hub_foreground_texture(visual: Dictionary, background_key: String) -> Texture2D:
+	var configured_path := str(visual.get("hub_foreground_path", ""))
+	var configured_texture := _load_texture_from_path(configured_path)
+	if configured_texture != null:
+		return configured_texture
+	var foreground_key := _normalize_hub_background_key(str(visual.get("hub_foreground_key", background_key)))
+	return HUB_FOREGROUND_TEXTURES.get(foreground_key, null) as Texture2D
+
+
+func _restore_default_hub_background() -> void:
+	if room_art != null and _default_room_texture != null:
+		room_art.texture = _default_room_texture
+		room_art.position = _default_room_position
+		room_art.scale = _default_room_scale
+	if foreground_art != null:
+		foreground_art.texture = null
+		foreground_art.visible = false
+
+
+func _load_texture_from_path(path: String) -> Texture2D:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return load(path) as Texture2D
+
+
+func _fit_hub_room_sprite(sprite: Sprite2D, texture: Texture2D) -> void:
+	var texture_size := texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var display_scale := minf(
+		HUB_ROOM_DISPLAY_SIZE.x / texture_size.x,
+		HUB_ROOM_DISPLAY_SIZE.y / texture_size.y
+	)
+	sprite.position = HUB_ROOM_SOURCE_POS
+	sprite.scale = Vector2(display_scale, display_scale)
 
 
 func _input(event: InputEvent) -> void:

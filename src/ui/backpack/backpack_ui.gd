@@ -9,8 +9,8 @@ signal item_dropped_on_grid(item_ui: Control, grid_pos: Vector2i)
 @export var grid_container_path: NodePath = "GridContainer"
 @onready var grid_container: GridContainer = get_node(grid_container_path)
 
-const COLOR_LOCKED = Color(0, 0, 0, 0.6)
-const COLOR_EMPTY = Color(1, 1, 1, 0.05)
+const COLOR_LOCKED = Color(0, 0, 0, 0)
+const COLOR_EMPTY = Color(1, 1, 1, 0)
 const COLOR_OCCUPIED = Color(0.2, 0.5, 0.8, 0.2) # 蓝色表示已有物品
 const COLOR_VALID = Color(0.2, 0.8, 0.2, 0.4)   # 绿色表示可放置
 const COLOR_INVALID = Color(0.8, 0.2, 0.2, 0.4) # 红色表示不可用
@@ -19,6 +19,11 @@ var context: GameContext
 var manager: BackpackManager # 仅用于读取网格尺寸等基础信息
 var item_ui_map: Dictionary = {}
 var grid_step = Vector2(103.2857, 97.7142)
+
+func _ready() -> void:
+	_sync_grid_geometry()
+	if not resized.is_connected(_on_resized):
+		resized.connect(_on_resized)
 
 func setup(p_context: GameContext):
 	print("[BackpackUI] 接收到 Context，正在执行 setup...")
@@ -43,6 +48,7 @@ func _refresh_grid():
 	grid_container.columns = manager.grid_width
 	grid_container.add_theme_constant_override("h_separation", 0)
 	grid_container.add_theme_constant_override("v_separation", 0)
+	_sync_grid_geometry()
 	
 	for i in range(manager.grid_width * manager.grid_height):
 		var pos = Vector2i(i % manager.grid_width, floori(float(i) / manager.grid_width))
@@ -56,6 +62,27 @@ func _refresh_grid():
 	print("[BackpackUI] 网格刷新完成，子节点数: ", grid_container.get_child_count())
 
 ## 更新所有格子的基础颜色（锁定/空闲/占用）
+func _on_resized() -> void:
+	_sync_grid_geometry()
+	for child in grid_container.get_children():
+		if child is Control:
+			child.custom_minimum_size = grid_step
+	grid_container.queue_sort()
+
+func _sync_grid_geometry() -> void:
+	var grid_width := manager.grid_width if manager else 7
+	var grid_height := manager.grid_height if manager else 7
+	var grid_size := size
+	if grid_size.x <= 0.0 or grid_size.y <= 0.0:
+		grid_size = custom_minimum_size
+	if grid_size.x <= 0.0 or grid_size.y <= 0.0:
+		grid_size = Vector2(723.0, 684.0)
+	grid_step = Vector2(grid_size.x / float(grid_width), grid_size.y / float(grid_height))
+	grid_container.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	grid_container.position = Vector2.ZERO
+	grid_container.size = grid_size
+	grid_container.custom_minimum_size = grid_size
+
 func update_slot_visuals(ignore_item_data: ItemData = null):
 	if not manager: return
 	
@@ -75,7 +102,7 @@ func update_slot_visuals(ignore_item_data: ItemData = null):
 				slot.color = COLOR_EMPTY # 如果是自己正在被拖拽，原地显示为空闲
 				slot.tooltip_text = "可用格"
 			else:
-				slot.color = COLOR_OCCUPIED
+				slot.color = COLOR_EMPTY
 				slot.tooltip_text = occupied_item.item_name
 		else:
 			slot.color = COLOR_EMPTY
@@ -108,6 +135,17 @@ func get_slot_center_position(grid_pos: Vector2i) -> Vector2:
 	return slot.position + (slot.size / 2.0)
 
 func get_grid_pos_at(global_pos: Vector2) -> Vector2i:
+	if not manager:
+		return Vector2i(-1, -1)
+	grid_container.force_update_transform()
+	var local_pos := grid_container.get_global_transform_with_canvas().affine_inverse() * global_pos
+	if local_pos.x < 0.0 or local_pos.y < 0.0:
+		return Vector2i(-1, -1)
+	var grid_pos := Vector2i(floori(local_pos.x / grid_step.x), floori(local_pos.y / grid_step.y))
+	if grid_pos.x < 0 or grid_pos.x >= manager.grid_width or grid_pos.y < 0 or grid_pos.y >= manager.grid_height:
+		return Vector2i(-1, -1)
+	return grid_pos
+
 	var closest_pos = Vector2i(-1, -1)
 	var min_dist = 99999.0
 	var threshold = 100.0 # 缩小阈值适配更小的格子

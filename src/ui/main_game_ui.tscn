@@ -1,29 +1,30 @@
 [gd_scene format=3 uid="uid://22rxu8r6t76v"]
 
 [ext_resource type="Script" uid="uid://bl5rpy55tugiv" path="res://src/ui/main_game_ui.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ui/battle/dreamcatcher_cloud.png" id="2_dc"]
-[ext_resource type="Texture2D" path="res://assets/ui/battle/player_portrait.png" id="4_port"]
+[ext_resource type="Texture2D" uid="uid://b1tcd4w8k2mqp" path="res://assets/ui/battle/dreamcatcher_cloud.png" id="2_dc"]
+[ext_resource type="Texture2D" uid="uid://urk7lxy1nsme" path="res://assets/ui/battle/dreamcatcher_overlay.png" id="3_dc_overlay"]
+[ext_resource type="Texture2D" uid="uid://b1tpr7n2cyade" path="res://assets/ui/battle/player_portrait.png" id="4_port"]
 [ext_resource type="PackedScene" path="res://src/ui/backpack/backpack_ui.tscn" id="7_backpack"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/wood_floor.png" id="10_wood"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/red_book_cover.png" id="11_book"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/album_page.png" id="12_page"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/album_ring_right.png" id="13_ring"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/tab_back.png" id="14_tab_back"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/tab_album.png" id="15_tab_album"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/tab_backpack.png" id="16_tab_backpack"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/tab_gallery.png" id="17_tab_gallery"]
-[ext_resource type="Texture2D" path="res://assets/ui/book/tab_settings.png" id="18_tab_settings"]
-[ext_resource type="Texture2D" path="res://assets/ui/backpack/bag_base.png" id="19_bag_base"]
-[ext_resource type="Texture2D" path="res://assets/ui/backpack/bag_patch.png" id="20_bag_patch"]
-[ext_resource type="Texture2D" path="res://assets/ui/backpack/ornament_bar.png" id="21_ornament_bar"]
-[ext_resource type="Texture2D" path="res://assets/ui/backpack/stats_paper.png" id="22_stats_paper"]
-[ext_resource type="Texture2D" path="res://assets/ui/backpack/trash_icon.png" id="23_trash_icon"]
-[ext_resource type="Texture2D" path="res://assets/ui/gallery/photo_corner.png" id="24_photo_corner"]
-[ext_resource type="Texture2D" path="res://assets/ui/gallery/forget_me_not.png" id="25_forget_me_not"]
-[ext_resource type="Texture2D" path="res://assets/ui/battle/potion_100.png" id="26_potion"]
-[ext_resource type="Texture2D" path="res://assets/ui/battle/syringe.png" id="27_syringe"]
-[ext_resource type="Texture2D" path="res://assets/ui/battle/knife.png" id="28_knife"]
-[ext_resource type="Texture2D" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
+[ext_resource type="Texture2D" uid="uid://b7c4lx1nc4lex" path="res://assets/ui/book/wood_floor.png" id="10_wood"]
+[ext_resource type="Texture2D" uid="uid://wxiwu0xd4ai3" path="res://assets/ui/book/red_book_cover.png" id="11_book"]
+[ext_resource type="Texture2D" uid="uid://bur5n7xg22ams" path="res://assets/ui/book/album_page.png" id="12_page"]
+[ext_resource type="Texture2D" uid="uid://do1hrowxra3b1" path="res://assets/ui/book/album_ring_right.png" id="13_ring"]
+[ext_resource type="Texture2D" uid="uid://c13ro2n1arkox" path="res://assets/ui/book/tab_back.png" id="14_tab_back"]
+[ext_resource type="Texture2D" uid="uid://dapa0hcg0pjo8" path="res://assets/ui/book/tab_album.png" id="15_tab_album"]
+[ext_resource type="Texture2D" uid="uid://6vv7bo0dguyq" path="res://assets/ui/book/tab_backpack.png" id="16_tab_backpack"]
+[ext_resource type="Texture2D" uid="uid://rtvad6tauuut" path="res://assets/ui/book/tab_gallery.png" id="17_tab_gallery"]
+[ext_resource type="Texture2D" uid="uid://bp55p0g5btpsf" path="res://assets/ui/book/tab_settings.png" id="18_tab_settings"]
+[ext_resource type="Texture2D" uid="uid://b3h5et8toys77" path="res://assets/ui/backpack/bag_base.png" id="19_bag_base"]
+[ext_resource type="Texture2D" uid="uid://b1oipoabbvudc" path="res://assets/ui/backpack/bag_patch.png" id="20_bag_patch"]
+[ext_resource type="Texture2D" uid="uid://dng0hj676ssu8" path="res://assets/ui/backpack/ornament_bar.png" id="21_ornament_bar"]
+[ext_resource type="Texture2D" uid="uid://c3gtn5fsmfrnd" path="res://assets/ui/backpack/stats_paper.png" id="22_stats_paper"]
+[ext_resource type="Texture2D" uid="uid://401y561jeyi7" path="res://assets/ui/backpack/trash_icon.png" id="23_trash_icon"]
+[ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="24_photo_corner"]
+[ext_resource type="Texture2D" uid="uid://8jk6iec3plut" path="res://assets/ui/gallery/forget_me_not.png" id="25_forget_me_not"]
+[ext_resource type="Texture2D" uid="uid://b1tpo3q6n8vfy" path="res://assets/ui/battle/potion_100.png" id="26_potion"]
+[ext_resource type="Texture2D" uid="uid://b1tsy8m4c2rja" path="res://assets/ui/battle/syringe.png" id="27_syringe"]
+[ext_resource type="Texture2D" uid="uid://b1tkn5eaq4xul" path="res://assets/ui/battle/knife.png" id="28_knife"]
+[ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
 
 [node name="MainGameUI" type="Control" unique_id=471982305]
 layout_mode = 3
@@ -53,7 +54,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="BattleArt" type="Control" parent="ContentLayer"]
+[node name="BattleArt" type="Control" parent="ContentLayer" unique_id=730008378]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,16 +63,15 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="WoodFloor" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="WoodFloor" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1476954109]
 layout_mode = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
 mouse_filter = 2
 texture = ExtResource("10_wood")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="RedBookCover" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="RedBookCover" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1892844760]
 layout_mode = 0
 offset_left = 32.0
 offset_top = 38.0
@@ -80,21 +80,19 @@ offset_bottom = 1085.0
 mouse_filter = 2
 texture = ExtResource("11_book")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="PageBack" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="PageBack" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=177612531]
 modulate = Color(0.55, 0.5, 0.45, 1)
 layout_mode = 0
-offset_left = -78.0
-offset_top = -58.0
-offset_right = 1592.0
-offset_bottom = 1022.0
+offset_left = -34.0
+offset_top = -37.0
+offset_right = 1636.0
+offset_bottom = 1043.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="BackTab" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=2138502377]
 layout_mode = 0
 offset_left = 4.0
 offset_top = 84.0
@@ -103,9 +101,8 @@ offset_bottom = 245.0
 mouse_filter = 2
 texture = ExtResource("14_tab_back")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumTab" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="AlbumTab" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1119109342]
 layout_mode = 0
 offset_left = 76.0
 offset_top = 170.0
@@ -114,9 +111,8 @@ offset_bottom = 334.0
 mouse_filter = 2
 texture = ExtResource("15_tab_album")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="PageRouteCover" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="PageRouteCover" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=344260127]
 modulate = Color(0.66, 0.6, 0.52, 1)
 layout_mode = 0
 offset_left = 102.0
@@ -126,9 +122,8 @@ offset_bottom = 1032.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackpackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="BackpackTab" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1037137967]
 layout_mode = 0
 offset_left = 26.0
 offset_top = 282.0
@@ -137,9 +132,8 @@ offset_bottom = 461.0
 mouse_filter = 2
 texture = ExtResource("16_tab_backpack")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="PageBackpackCover" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="PageBackpackCover" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1433734187]
 modulate = Color(0.76, 0.7, 0.61, 1)
 layout_mode = 0
 offset_left = 116.0
@@ -149,9 +143,8 @@ offset_bottom = 1042.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="GalleryTab" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="GalleryTab" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=542221673]
 layout_mode = 0
 offset_left = 50.0
 offset_top = 396.0
@@ -160,9 +153,8 @@ offset_bottom = 579.0
 mouse_filter = 2
 texture = ExtResource("17_tab_gallery")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="PageMiddle" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="PageMiddle" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1520712393]
 modulate = Color(0.86, 0.79, 0.68, 1)
 layout_mode = 0
 offset_left = 130.0
@@ -172,9 +164,8 @@ offset_bottom = 1050.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="SettingsTab" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="SettingsTab" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=323044885]
 layout_mode = 0
 offset_left = 8.0
 offset_top = 510.0
@@ -183,9 +174,8 @@ offset_bottom = 696.0
 mouse_filter = 2
 texture = ExtResource("18_tab_settings")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=2010527633]
 layout_mode = 0
 offset_left = 144.0
 offset_top = -22.0
@@ -194,91 +184,84 @@ offset_bottom = 1058.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="HubRoomBackdrop" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="HubRoomBackdrop" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1337114247]
 modulate = Color(0.82, 0.76, 0.68, 1)
 layout_mode = 0
-offset_left = 304.0
-offset_top = 74.0
-offset_right = 1752.0
-offset_bottom = 982.0
+offset_left = 221.0
+offset_top = 22.0
+offset_right = 1669.0
+offset_bottom = 930.0
+scale = Vector2(1.0561501, 1.0774477)
 mouse_filter = 2
 texture = ExtResource("29_hub_room")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="CornerTopLeft" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="CornerTopLeft" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1719650359]
 layout_mode = 0
-offset_left = 264.0
-offset_top = 58.0
-offset_right = 501.0
-offset_bottom = 304.0
+offset_left = 220.0
+offset_top = 35.0
+offset_right = 457.0
+offset_bottom = 281.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="CornerTopRight" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="CornerTopRight" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=70445265]
 layout_mode = 0
-offset_left = 1598.0
-offset_top = 58.0
-offset_right = 1835.0
-offset_bottom = 304.0
+offset_left = 1518.0
+offset_top = 29.0
+offset_right = 1755.0
+offset_bottom = 275.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
-stretch_mode = 0
 flip_h = true
 
-[node name="CornerBottomLeft" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="CornerBottomLeft" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=1375917251]
 layout_mode = 0
-offset_left = 266.0
-offset_top = 834.0
-offset_right = 503.0
-offset_bottom = 1080.0
+offset_left = 214.0
+offset_top = 754.0
+offset_right = 451.0
+offset_bottom = 1000.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
-stretch_mode = 0
 flip_v = true
 
-[node name="CornerBottomRight" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="CornerBottomRight" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=861791651]
 layout_mode = 0
-offset_left = 1598.0
-offset_top = 834.0
-offset_right = 1835.0
-offset_bottom = 1080.0
+offset_left = 1497.0
+offset_top = 741.0
+offset_right = 1734.0
+offset_bottom = 987.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
-stretch_mode = 0
 flip_h = true
 flip_v = true
 
-[node name="ForgetMeNot" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="ForgetMeNot" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=188215793]
 layout_mode = 0
-offset_left = 42.0
+offset_left = 6.0
 offset_top = 584.0
-offset_right = 390.0
+offset_right = 354.0
 offset_bottom = 1074.0
 mouse_filter = 2
 texture = ExtResource("25_forget_me_not")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BattleArt"]
+[node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=128246416]
 layout_mode = 0
-offset_left = 1793.0
-offset_top = -22.0
-offset_right = 1920.0
-offset_bottom = 1058.0
+offset_left = 1798.0
+offset_top = -46.0
+offset_right = 1925.0
+offset_bottom = 1034.0
 mouse_filter = 2
 texture = ExtResource("13_ring")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackpackOverlayArt" type="Control" parent="ContentLayer"]
+[node name="BackpackOverlayArt" type="Control" parent="ContentLayer" unique_id=98539710]
 visible = false
 layout_mode = 1
 anchors_preset = 15
@@ -288,103 +271,89 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="WoodFloor" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="WoodFloor" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1910435997]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("10_wood")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="RedBookCover" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="RedBookCover" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1739390745]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("11_book")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="BackTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=327283755]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("14_tab_back")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=417020702]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BackpackTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="BackpackTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1722798881]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("16_tab_backpack")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="SettingsTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="SettingsTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=210495701]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("18_tab_settings")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="AlbumTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1437125401]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("15_tab_album")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="GalleryTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="GalleryTab" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=318012876]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("17_tab_gallery")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BagBase" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="BagBase" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=693281059]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("19_bag_base")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="BagPatch" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="BagPatch" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=2089339303]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("20_bag_patch")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="OrnamentBar" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="OrnamentBar" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1154944374]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("21_ornament_bar")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="StatsPaper" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="StatsPaper" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=138346253]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("22_stats_paper")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="TrashIcon" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="TrashIcon" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1384338210]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("23_trash_icon")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BackpackOverlayArt"]
+[node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=27588939]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("13_ring")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="DreamcatcherPanel" type="TextureRect" parent="ContentLayer" unique_id=422682609]
 layout_mode = 0
@@ -392,10 +361,22 @@ offset_left = 264.0
 offset_top = 70.0
 offset_right = 1051.0
 offset_bottom = 741.0
+scale = Vector2(0.91092926, 0.8068672)
 mouse_filter = 2
 texture = ExtResource("2_dc")
 expand_mode = 1
-stretch_mode = 0
+
+[node name="DreamcatcherOverlay" type="TextureRect" parent="ContentLayer/DreamcatcherPanel" unique_id=1411812350]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+rotation = 0.022559896
+mouse_filter = 2
+texture = ExtResource("3_dc_overlay")
+expand_mode = 1
 
 [node name="DrawButton" type="TextureButton" parent="ContentLayer/DreamcatcherPanel" unique_id=208746346]
 layout_mode = 1
@@ -404,57 +385,60 @@ anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -270.0
-offset_top = -230.0
-offset_right = 270.0
-offset_bottom = 230.0
+offset_left = -280.5
+offset_top = -243.5
+offset_right = 259.5
+offset_bottom = 216.5
 grow_horizontal = 2
 grow_vertical = 2
+rotation = 0.013532493
+scale = Vector2(1.0865488, 1.0463818)
 mouse_default_cursor_shape = 2
 
-[node name="DrawSpawnPoint" type="Control" parent="ContentLayer/DreamcatcherPanel"]
+[node name="DrawSpawnPoint" type="Control" parent="ContentLayer/DreamcatcherPanel" unique_id=578721244]
 layout_mode = 1
 anchors_preset = 8
 anchor_left = 0.5
 anchor_top = 0.5
 anchor_right = 0.5
 anchor_bottom = 0.5
-offset_left = -10.0
-offset_top = -10.0
-offset_right = 10.0
-offset_bottom = 10.0
+offset_left = -9.5
+offset_top = -20.5
+offset_right = 10.5
+offset_bottom = -0.5
 grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
 [node name="GridPanel" type="TextureRect" parent="ContentLayer" unique_id=85973878]
 layout_mode = 0
-offset_left = 966.0
-offset_top = 74.0
-offset_right = 1791.0
-offset_bottom = 981.0
+offset_left = 940.0
+offset_top = 79.0
+offset_right = 1765.0
+offset_bottom = 986.0
+scale = Vector2(0.9546806, 1.0118439)
 mouse_filter = 2
 texture = ExtResource("19_bag_base")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="GridBackground" type="TextureRect" parent="ContentLayer/GridPanel" unique_id=1001]
 layout_mode = 0
-offset_left = 80.0
-offset_top = 305.0
-offset_right = 803.0
-offset_bottom = 989.0
+offset_left = 26.186733
+offset_top = 189.7526
+offset_right = 775.1867
+offset_bottom = 873.75256
 mouse_filter = 2
 texture = ExtResource("20_bag_patch")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="BackpackUI" parent="ContentLayer/GridPanel" unique_id=175570317 instance=ExtResource("7_backpack")]
 layout_mode = 0
-offset_left = 80.0
-offset_top = 305.0
-offset_right = 803.0
-offset_bottom = 989.0
+offset_left = 87.987564
+offset_top = 238.17903
+offset_right = 727.9922
+offset_bottom = 799.5304
+rotation = 0.0048001073
+scale = Vector2(1.0043379, 1.0177745)
 
 [node name="TrashBin" type="TextureRect" parent="ContentLayer/GridPanel" unique_id=378709496]
 visible = false
@@ -466,7 +450,6 @@ offset_bottom = 769.0
 mouse_default_cursor_shape = 7
 texture = ExtResource("23_trash_icon")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="PortraitPanel" type="TextureRect" parent="ContentLayer" unique_id=1564740386]
 visible = false
@@ -478,97 +461,115 @@ offset_bottom = 924.0
 mouse_filter = 2
 texture = ExtResource("4_port")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="StatsPanel" type="TextureRect" parent="ContentLayer" unique_id=1143342326]
 layout_mode = 0
-offset_left = 324.0
-offset_top = 618.0
-offset_right = 972.0
-offset_bottom = 1034.0
+offset_left = 267.0
+offset_top = 564.0
+offset_right = 915.0
+offset_bottom = 980.0
 mouse_filter = 2
 texture = ExtResource("22_stats_paper")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="PortraitArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
+[node name="PortraitArt" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=1998474512]
 layout_mode = 0
-offset_left = 28.0
-offset_top = 46.0
-offset_right = 302.0
-offset_bottom = 320.0
+offset_left = 20.0
+offset_top = 33.0
+offset_right = 294.0
+offset_bottom = 307.0
+scale = Vector2(1.1025265, 1.2772349)
 mouse_filter = 2
 texture = ExtResource("4_port")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="PotionBag" type="TextureRect" parent="ContentLayer/StatsPanel"]
+[node name="PotionBag" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=124985778]
 layout_mode = 0
-offset_left = 264.0
-offset_top = 18.0
-offset_right = 390.0
-offset_bottom = 216.0
+offset_left = 284.99997
+offset_top = 21.0
+offset_right = 410.99997
+offset_bottom = 219.0
+scale = Vector2(0.99834, 0.90673214)
 mouse_filter = 2
 texture = ExtResource("26_potion")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="TrashIconArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
+[node name="TrashIconArt" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=1646955514]
 layout_mode = 0
-offset_left = 440.0
-offset_top = 84.0
-offset_right = 578.0
-offset_bottom = 205.0
+offset_left = 453.00003
+offset_top = 45.0
+offset_right = 591.0
+offset_bottom = 166.0
+scale = Vector2(1.1878744, 1.1633347)
 mouse_filter = 2
 texture = ExtResource("23_trash_icon")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="KnifeArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
+[node name="KnifeArt" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=147970220]
 layout_mode = 0
-offset_left = 252.0
-offset_top = 238.0
-offset_right = 608.0
-offset_bottom = 356.0
+offset_left = 239.0
+offset_top = 206.0
+offset_right = 595.0
+offset_bottom = 324.0
 mouse_filter = 2
 texture = ExtResource("28_knife")
 expand_mode = 1
 stretch_mode = 5
 
-[node name="SyringeArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
+[node name="SyringeArt" type="TextureRect" parent="ContentLayer/StatsPanel" unique_id=567823048]
 layout_mode = 0
-offset_left = 168.0
-offset_top = 306.0
-offset_right = 605.0
-offset_bottom = 543.0
+offset_left = 181.0
+offset_top = 163.0
+offset_right = 618.0
+offset_bottom = 400.0
 mouse_filter = 2
 texture = ExtResource("27_syringe")
 expand_mode = 1
-stretch_mode = 0
 
-[node name="VBox" type="VBoxContainer" parent="ContentLayer/StatsPanel"]
-layout_mode = 0
-offset_left = 326.0
-offset_top = 48.0
-offset_right = 578.0
-offset_bottom = 326.0
-theme_override_constants/separation = 86
-
-[node name="SanityLabel" type="Label" parent="ContentLayer/StatsPanel/VBox" unique_id=2001]
+[node name="SanityLabel" type="Label" parent="ContentLayer/StatsPanel" unique_id=2001]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
+offset_left = 508.0
+offset_top = -4.0
+offset_right = 648.0
+offset_bottom = 75.0
+rotation = 1.5789139
+scale = Vector2(1.3978044, 1.7782973)
+theme_type_variation = &"DisplayLabel"
 theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
-theme_override_font_sizes/font_size = 40
-text = "梦值: 100 / 100"
+theme_override_font_sizes/font_size = 32
+text = "100%"
 horizontal_alignment = 1
 vertical_alignment = 1
 
-[node name="ScoreLabel" type="Label" parent="ContentLayer/StatsPanel/VBox" unique_id=1574329851]
+[node name="ScoreLabel" type="Label" parent="ContentLayer/StatsPanel" unique_id=1574329851]
 unique_name_in_owner = true
-layout_mode = 2
+layout_mode = 0
+offset_left = 245.0
+offset_top = 174.0
+offset_right = 414.0
+offset_bottom = 272.0
+scale = Vector2(1.112051, 1.1630843)
+theme_type_variation = &"DisplayLabel"
 theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
-theme_override_font_sizes/font_size = 46
-text = "得分: 10 / 50"
+theme_override_font_sizes/font_size = 52
+text = "50"
+horizontal_alignment = 1
+vertical_alignment = 1
+
+[node name="TargetScoreLabel" type="Label" parent="ContentLayer/StatsPanel" unique_id=465605576]
+unique_name_in_owner = true
+layout_mode = 0
+offset_left = 329.0
+offset_top = 250.0
+offset_right = 539.0
+offset_bottom = 328.0
+scale = Vector2(1.2385108, 1.4011328)
+theme_type_variation = &"DisplayLabel"
+theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
+theme_override_font_sizes/font_size = 44
+text = "500"
 horizontal_alignment = 1
 vertical_alignment = 1
 
@@ -581,7 +582,6 @@ offset_bottom = 356.0
 mouse_filter = 2
 texture = ExtResource("21_ornament_bar")
 expand_mode = 1
-stretch_mode = 0
 
 [node name="Slots" type="HBoxContainer" parent="ContentLayer/OrnamentsPanel" unique_id=1640960764]
 layout_mode = 0
@@ -598,46 +598,40 @@ offset_left = 4.0
 offset_top = 80.0
 offset_right = 120.0
 offset_bottom = 184.0
+tooltip_text = "结束本局"
 focus_mode = 0
 mouse_default_cursor_shape = 2
-tooltip_text = "结束本局"
 flat = true
-text = ""
 
-[node name="PendingItemPanel" type="PanelContainer" parent="ContentLayer"]
+[node name="PendingItemPanel" type="PanelContainer" parent="ContentLayer" unique_id=1204706214]
 visible = false
 layout_mode = 1
-anchors_preset = 0
 offset_left = 328.0
 offset_top = 506.0
 offset_right = 848.0
 offset_bottom = 618.0
 mouse_filter = 1
 
-[node name="MarginContainer" type="MarginContainer" parent="ContentLayer/PendingItemPanel"]
+[node name="MarginContainer" type="MarginContainer" parent="ContentLayer/PendingItemPanel" unique_id=1906676139]
 layout_mode = 2
 theme_override_constants/margin_left = 10
 theme_override_constants/margin_top = 8
 theme_override_constants/margin_right = 10
 theme_override_constants/margin_bottom = 8
 
-[node name="VBoxContainer" type="VBoxContainer" parent="ContentLayer/PendingItemPanel/MarginContainer"]
+[node name="VBoxContainer" type="VBoxContainer" parent="ContentLayer/PendingItemPanel/MarginContainer" unique_id=1599208398]
 layout_mode = 2
 theme_override_constants/separation = 4
 
-[node name="TitleLabel" type="Label" parent="ContentLayer/PendingItemPanel/MarginContainer/VBoxContainer"]
+[node name="TitleLabel" type="Label" parent="ContentLayer/PendingItemPanel/MarginContainer/VBoxContainer" unique_id=693475109]
 layout_mode = 2
 text = "暂存物品"
 
-[node name="PendingItemArea" type="Control" parent="ContentLayer/PendingItemPanel"]
-layout_mode = 1
-offset_left = 10.0
-offset_top = 26.0
-offset_right = 496.0
-offset_bottom = 118.0
+[node name="PendingItemArea" type="Control" parent="ContentLayer/PendingItemPanel" unique_id=1882469653]
+layout_mode = 2
 mouse_filter = 2
 
-[node name="ToolPanel" type="PanelContainer" parent="ContentLayer"]
+[node name="ToolPanel" type="PanelContainer" parent="ContentLayer" unique_id=542438942]
 visible = false
 layout_mode = 0
 offset_left = 334.0
@@ -645,7 +639,7 @@ offset_top = 962.0
 offset_right = 854.0
 offset_bottom = 1038.0
 
-[node name="ToolSlots" type="HBoxContainer" parent="ContentLayer/ToolPanel"]
+[node name="ToolSlots" type="HBoxContainer" parent="ContentLayer/ToolPanel" unique_id=1014942022]
 layout_mode = 2
 theme_override_constants/separation = 8
 
