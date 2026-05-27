@@ -17,16 +17,28 @@ const BATTLE_GRID_CHILD_RECTS := {
 	"BackpackUI": Rect2(80.0, 305.0, 723.0, 684.0),
 	"TrashBin": Rect2(-188.0, 626.0, 163.0, 143.0),
 }
+const BATTLE_STATS_CHILD_RECTS := {
+	"PortraitArt": Rect2(28.0, 46.0, 274.0, 274.0),
+	"PotionBag": Rect2(264.0, 18.0, 126.0, 198.0),
+	"TrashIconArt": Rect2(440.0, 84.0, 138.0, 121.0),
+	"KnifeArt": Rect2(252.0, 238.0, 356.0, 118.0),
+	"SyringeArt": Rect2(168.0, 306.0, 437.0, 237.0),
+	"VBox": Rect2(326.0, 48.0, 252.0, 278.0),
+}
 const BATTLE_ORNAMENT_SLOTS_RECT := Rect2(62.0, 143.0, 638.0, 104.0)
 const BATTLE_ART_RECTS := {
 	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
 	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
+	"PageBack": Rect2(-78.0, -58.0, 1670.0, 1080.0),
 	"BackTab": Rect2(4.0, 84.0, 207.0, 161.0),
-	"AlbumPage": Rect2(51.0, 0.0, 1670.0, 1080.0),
 	"AlbumTab": Rect2(76.0, 170.0, 217.0, 164.0),
+	"PageRouteCover": Rect2(102.0, -48.0, 1670.0, 1080.0),
 	"BackpackTab": Rect2(26.0, 282.0, 223.0, 179.0),
+	"PageBackpackCover": Rect2(116.0, -38.0, 1670.0, 1080.0),
 	"GalleryTab": Rect2(50.0, 396.0, 205.0, 183.0),
+	"PageMiddle": Rect2(130.0, -30.0, 1670.0, 1080.0),
 	"SettingsTab": Rect2(8.0, 510.0, 214.0, 186.0),
+	"AlbumPage": Rect2(144.0, -22.0, 1670.0, 1080.0),
 	"CornerTopLeft": Rect2(264.0, 58.0, 237.0, 246.0),
 	"CornerTopRight": Rect2(1598.0, 58.0, 237.0, 246.0),
 	"CornerBottomLeft": Rect2(266.0, 834.0, 237.0, 246.0),
@@ -223,6 +235,7 @@ func _layout_battle_scene() -> void:
 	_layout_screen_control("ContentLayer/PendingItemPanel", BATTLE_PENDING_ITEMS_RECT)
 	_layout_screen_control("ContentLayer/ToolPanel", BATTLE_TOOL_PANEL_RECT)
 	_layout_grid_panel_children()
+	_layout_stats_panel_children()
 	_layout_child_control("ContentLayer/OrnamentsPanel/Slots", BATTLE_ORNAMENT_SLOTS_RECT)
 	if dreamcatcher_panel:
 		_dreamcatcher_base_scale = dreamcatcher_panel.scale
@@ -267,6 +280,10 @@ func _layout_screen_control(path: NodePath, source_rect: Rect2) -> void:
 func _layout_grid_panel_children() -> void:
 	for node_name in BATTLE_GRID_CHILD_RECTS.keys():
 		_layout_child_control("ContentLayer/GridPanel/%s" % node_name, BATTLE_GRID_CHILD_RECTS[node_name])
+
+func _layout_stats_panel_children() -> void:
+	for node_name in BATTLE_STATS_CHILD_RECTS.keys():
+		_layout_child_control("ContentLayer/StatsPanel/%s" % node_name, BATTLE_STATS_CHILD_RECTS[node_name])
 
 func _layout_child_control(path: NodePath, source_rect: Rect2) -> void:
 	var control := get_node_or_null(path) as Control

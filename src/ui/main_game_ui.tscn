@@ -74,17 +74,18 @@ texture = ExtResource("11_book")
 expand_mode = 1
 stretch_mode = 0
 
+[node name="PageBack" type="TextureRect" parent="ContentLayer/BattleArt"]
+modulate = Color(0.55, 0.5, 0.45, 1)
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_page")
+expand_mode = 1
+stretch_mode = 0
+
 [node name="BackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("14_tab_back")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt"]
-layout_mode = 0
-mouse_filter = 2
-texture = ExtResource("12_page")
 expand_mode = 1
 stretch_mode = 0
 
@@ -95,10 +96,26 @@ texture = ExtResource("15_tab_album")
 expand_mode = 1
 stretch_mode = 0
 
+[node name="PageRouteCover" type="TextureRect" parent="ContentLayer/BattleArt"]
+modulate = Color(0.66, 0.6, 0.52, 1)
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_page")
+expand_mode = 1
+stretch_mode = 0
+
 [node name="BackpackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("16_tab_backpack")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PageBackpackCover" type="TextureRect" parent="ContentLayer/BattleArt"]
+modulate = Color(0.76, 0.7, 0.61, 1)
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_page")
 expand_mode = 1
 stretch_mode = 0
 
@@ -109,10 +126,25 @@ texture = ExtResource("17_tab_gallery")
 expand_mode = 1
 stretch_mode = 0
 
+[node name="PageMiddle" type="TextureRect" parent="ContentLayer/BattleArt"]
+modulate = Color(0.86, 0.79, 0.68, 1)
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_page")
+expand_mode = 1
+stretch_mode = 0
+
 [node name="SettingsTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
 mouse_filter = 2
 texture = ExtResource("18_tab_settings")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt"]
+layout_mode = 0
+mouse_filter = 2
+texture = ExtResource("12_page")
 expand_mode = 1
 stretch_mode = 0
 
@@ -377,10 +409,10 @@ stretch_mode = 0
 
 [node name="PortraitArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
-offset_left = 46.0
-offset_top = 52.0
-offset_right = 272.0
-offset_bottom = 278.0
+offset_left = 28.0
+offset_top = 46.0
+offset_right = 302.0
+offset_bottom = 320.0
 mouse_filter = 2
 texture = ExtResource("4_port")
 expand_mode = 1
@@ -388,10 +420,10 @@ stretch_mode = 5
 
 [node name="PotionBag" type="TextureRect" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
-offset_left = 286.0
-offset_top = 20.0
-offset_right = 421.0
-offset_bottom = 233.0
+offset_left = 264.0
+offset_top = 18.0
+offset_right = 390.0
+offset_bottom = 216.0
 mouse_filter = 2
 texture = ExtResource("26_potion")
 expand_mode = 1
@@ -399,10 +431,10 @@ stretch_mode = 0
 
 [node name="TrashIconArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
-offset_left = 446.0
-offset_top = 72.0
-offset_right = 609.0
-offset_bottom = 215.0
+offset_left = 440.0
+offset_top = 84.0
+offset_right = 578.0
+offset_bottom = 205.0
 mouse_filter = 2
 texture = ExtResource("23_trash_icon")
 expand_mode = 1
@@ -410,9 +442,9 @@ stretch_mode = 0
 
 [node name="KnifeArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
-offset_left = 276.0
-offset_top = 242.0
-offset_right = 622.0
+offset_left = 252.0
+offset_top = 238.0
+offset_right = 608.0
 offset_bottom = 356.0
 mouse_filter = 2
 texture = ExtResource("28_knife")
@@ -421,10 +453,10 @@ stretch_mode = 5
 
 [node name="SyringeArt" type="TextureRect" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
-offset_left = 170.0
-offset_top = 328.0
-offset_right = 607.0
-offset_bottom = 565.0
+offset_left = 168.0
+offset_top = 306.0
+offset_right = 605.0
+offset_bottom = 543.0
 mouse_filter = 2
 texture = ExtResource("27_syringe")
 expand_mode = 1
@@ -433,10 +465,10 @@ stretch_mode = 0
 [node name="VBox" type="VBoxContainer" parent="ContentLayer/StatsPanel"]
 layout_mode = 0
 offset_left = 326.0
-offset_top = 206.0
-offset_right = 568.0
-offset_bottom = 305.0
-theme_override_constants/separation = 5
+offset_top = 48.0
+offset_right = 578.0
+offset_bottom = 326.0
+theme_override_constants/separation = 86
 
 [node name="SanityLabel" type="Label" parent="ContentLayer/StatsPanel/VBox" unique_id=2001]
 unique_name_in_owner = true
@@ -444,7 +476,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
 theme_override_font_sizes/font_size = 40
 text = "梦值: 100 / 100"
-horizontal_alignment = 2
+horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="ScoreLabel" type="Label" parent="ContentLayer/StatsPanel/VBox" unique_id=1574329851]
@@ -453,7 +485,7 @@ layout_mode = 2
 theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
 theme_override_font_sizes/font_size = 46
 text = "得分: 10 / 50"
-horizontal_alignment = 2
+horizontal_alignment = 1
 vertical_alignment = 1
 
 [node name="OrnamentsPanel" type="TextureRect" parent="ContentLayer" unique_id=80355486]
