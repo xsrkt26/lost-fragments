@@ -270,9 +270,9 @@ stretch_mode = 0
 [node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
 offset_left = 1793.0
-offset_top = 8.0
+offset_top = -22.0
 offset_right = 1920.0
-offset_bottom = 1071.0
+offset_bottom = 1058.0
 mouse_filter = 2
 texture = ExtResource("13_ring")
 expand_mode = 1

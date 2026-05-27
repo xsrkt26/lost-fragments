@@ -117,7 +117,7 @@ centered = false
 
 [node name="RingRight" type="Sprite2D" parent="HubArt"]
 z_index = 12
-position = Vector2(1468, -10)
+position = Vector2(1492, -22)
 texture = ExtResource("7_ring_right")
 centered = false
 

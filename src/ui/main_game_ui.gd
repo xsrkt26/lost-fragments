@@ -24,7 +24,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 	"OrnamentBar": Rect2(1054.0, 221.0, 320.0, 132.0),
 	"StatsPaper": Rect2(1147.0, 628.0, 648.0, 416.0),
 	"TrashIcon": Rect2(1515.0, 717.0, 163.0, 143.0),
-	"AlbumRingRight": Rect2(1793.0, 8.0, 127.0, 1063.0),
+	"AlbumRingRight": Rect2(1793.0, 0.0, 127.0, 1080.0),
 }
 
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
