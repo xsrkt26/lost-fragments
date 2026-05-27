@@ -23,6 +23,7 @@
 [ext_resource type="Texture2D" path="res://assets/ui/battle/potion_100.png" id="26_potion"]
 [ext_resource type="Texture2D" path="res://assets/ui/battle/syringe.png" id="27_syringe"]
 [ext_resource type="Texture2D" path="res://assets/ui/battle/knife.png" id="28_knife"]
+[ext_resource type="Texture2D" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
 
 [node name="MainGameUI" type="Control" unique_id=471982305]
 layout_mode = 3
@@ -192,6 +193,18 @@ offset_right = 1814.0
 offset_bottom = 1058.0
 mouse_filter = 2
 texture = ExtResource("12_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="HubRoomBackdrop" type="TextureRect" parent="ContentLayer/BattleArt"]
+modulate = Color(0.82, 0.76, 0.68, 1)
+layout_mode = 0
+offset_left = 304.0
+offset_top = 74.0
+offset_right = 1752.0
+offset_bottom = 982.0
+mouse_filter = 2
+texture = ExtResource("29_hub_room")
 expand_mode = 1
 stretch_mode = 0
 
