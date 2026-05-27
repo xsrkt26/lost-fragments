@@ -43,6 +43,7 @@ grow_vertical = 2
 color = Color(0.0431373, 0.0823529, 0.113725, 1)
 
 [node name="ContentLayer" type="Control" parent="." unique_id=921429011]
+custom_minimum_size = Vector2(1920, 1080)
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -62,6 +63,8 @@ mouse_filter = 2
 
 [node name="WoodFloor" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
 mouse_filter = 2
 texture = ExtResource("10_wood")
 expand_mode = 1
@@ -69,6 +72,10 @@ stretch_mode = 0
 
 [node name="RedBookCover" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 32.0
+offset_top = 38.0
+offset_right = 1948.0
+offset_bottom = 1085.0
 mouse_filter = 2
 texture = ExtResource("11_book")
 expand_mode = 1
@@ -77,6 +84,10 @@ stretch_mode = 0
 [node name="PageBack" type="TextureRect" parent="ContentLayer/BattleArt"]
 modulate = Color(0.55, 0.5, 0.45, 1)
 layout_mode = 0
+offset_left = -78.0
+offset_top = -58.0
+offset_right = 1592.0
+offset_bottom = 1022.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
@@ -84,6 +95,10 @@ stretch_mode = 0
 
 [node name="BackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 4.0
+offset_top = 84.0
+offset_right = 211.0
+offset_bottom = 245.0
 mouse_filter = 2
 texture = ExtResource("14_tab_back")
 expand_mode = 1
@@ -91,6 +106,10 @@ stretch_mode = 0
 
 [node name="AlbumTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 76.0
+offset_top = 170.0
+offset_right = 293.0
+offset_bottom = 334.0
 mouse_filter = 2
 texture = ExtResource("15_tab_album")
 expand_mode = 1
@@ -99,6 +118,10 @@ stretch_mode = 0
 [node name="PageRouteCover" type="TextureRect" parent="ContentLayer/BattleArt"]
 modulate = Color(0.66, 0.6, 0.52, 1)
 layout_mode = 0
+offset_left = 102.0
+offset_top = -48.0
+offset_right = 1772.0
+offset_bottom = 1032.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
@@ -106,6 +129,10 @@ stretch_mode = 0
 
 [node name="BackpackTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 26.0
+offset_top = 282.0
+offset_right = 249.0
+offset_bottom = 461.0
 mouse_filter = 2
 texture = ExtResource("16_tab_backpack")
 expand_mode = 1
@@ -114,6 +141,10 @@ stretch_mode = 0
 [node name="PageBackpackCover" type="TextureRect" parent="ContentLayer/BattleArt"]
 modulate = Color(0.76, 0.7, 0.61, 1)
 layout_mode = 0
+offset_left = 116.0
+offset_top = -38.0
+offset_right = 1786.0
+offset_bottom = 1042.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
@@ -121,6 +152,10 @@ stretch_mode = 0
 
 [node name="GalleryTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 50.0
+offset_top = 396.0
+offset_right = 255.0
+offset_bottom = 579.0
 mouse_filter = 2
 texture = ExtResource("17_tab_gallery")
 expand_mode = 1
@@ -129,6 +164,10 @@ stretch_mode = 0
 [node name="PageMiddle" type="TextureRect" parent="ContentLayer/BattleArt"]
 modulate = Color(0.86, 0.79, 0.68, 1)
 layout_mode = 0
+offset_left = 130.0
+offset_top = -30.0
+offset_right = 1800.0
+offset_bottom = 1050.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
@@ -136,6 +175,10 @@ stretch_mode = 0
 
 [node name="SettingsTab" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 8.0
+offset_top = 510.0
+offset_right = 222.0
+offset_bottom = 696.0
 mouse_filter = 2
 texture = ExtResource("18_tab_settings")
 expand_mode = 1
@@ -143,6 +186,10 @@ stretch_mode = 0
 
 [node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 144.0
+offset_top = -22.0
+offset_right = 1814.0
+offset_bottom = 1058.0
 mouse_filter = 2
 texture = ExtResource("12_page")
 expand_mode = 1
@@ -150,6 +197,10 @@ stretch_mode = 0
 
 [node name="CornerTopLeft" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 264.0
+offset_top = 58.0
+offset_right = 501.0
+offset_bottom = 304.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
@@ -157,6 +208,10 @@ stretch_mode = 0
 
 [node name="CornerTopRight" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 1598.0
+offset_top = 58.0
+offset_right = 1835.0
+offset_bottom = 304.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
@@ -165,6 +220,10 @@ flip_h = true
 
 [node name="CornerBottomLeft" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 266.0
+offset_top = 834.0
+offset_right = 503.0
+offset_bottom = 1080.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
@@ -173,6 +232,10 @@ flip_v = true
 
 [node name="CornerBottomRight" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 1598.0
+offset_top = 834.0
+offset_right = 1835.0
+offset_bottom = 1080.0
 mouse_filter = 2
 texture = ExtResource("24_photo_corner")
 expand_mode = 1
@@ -182,6 +245,10 @@ flip_v = true
 
 [node name="ForgetMeNot" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 42.0
+offset_top = 584.0
+offset_right = 390.0
+offset_bottom = 1074.0
 mouse_filter = 2
 texture = ExtResource("25_forget_me_not")
 expand_mode = 1
@@ -189,6 +256,10 @@ stretch_mode = 0
 
 [node name="AlbumRingRight" type="TextureRect" parent="ContentLayer/BattleArt"]
 layout_mode = 0
+offset_left = 1793.0
+offset_top = 8.0
+offset_right = 1920.0
+offset_bottom = 1071.0
 mouse_filter = 2
 texture = ExtResource("13_ring")
 expand_mode = 1
@@ -524,10 +595,10 @@ text = ""
 visible = false
 layout_mode = 1
 anchors_preset = 0
-offset_left = 42.0
-offset_top = 606.0
-offset_right = 548.0
-offset_bottom = 732.0
+offset_left = 328.0
+offset_top = 506.0
+offset_right = 848.0
+offset_bottom = 618.0
 mouse_filter = 1
 
 [node name="MarginContainer" type="MarginContainer" parent="ContentLayer/PendingItemPanel"]
@@ -552,6 +623,18 @@ offset_top = 26.0
 offset_right = 496.0
 offset_bottom = 118.0
 mouse_filter = 2
+
+[node name="ToolPanel" type="PanelContainer" parent="ContentLayer"]
+visible = false
+layout_mode = 0
+offset_left = 334.0
+offset_top = 962.0
+offset_right = 854.0
+offset_bottom = 1038.0
+
+[node name="ToolSlots" type="HBoxContainer" parent="ContentLayer/ToolPanel"]
+layout_mode = 2
+theme_override_constants/separation = 8
 
 [connection signal="pressed" from="ContentLayer/DreamcatcherPanel/DrawButton" to="." method="_on_draw_button_pressed"]
 [connection signal="pressed" from="ContentLayer/MenuButton" to="." method="_on_menu_button_pressed"]

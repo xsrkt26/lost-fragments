@@ -4,48 +4,7 @@ signal close_requested
 
 const MODE_BATTLE := "battle"
 const MODE_BACKPACK_OVERLAY := "backpack_overlay"
-const BATTLE_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
-const BATTLE_DREAMCATCHER_RECT := Rect2(264.0, 70.0, 787.0, 671.0)
-const BATTLE_GRID_PANEL_RECT := Rect2(966.0, 74.0, 825.0, 907.0)
-const BATTLE_STATS_RECT := Rect2(324.0, 618.0, 648.0, 416.0)
-const BATTLE_ORNAMENTS_RECT := Rect2(968.0, 42.0, 767.0, 314.0)
-const BATTLE_MENU_RECT := Rect2(4.0, 80.0, 116.0, 104.0)
-const BATTLE_PENDING_ITEMS_RECT := Rect2(328.0, 506.0, 520.0, 112.0)
-const BATTLE_TOOL_PANEL_RECT := Rect2(334.0, 962.0, 520.0, 76.0)
-const BATTLE_GRID_CHILD_RECTS := {
-	"GridBackground": Rect2(80.0, 305.0, 723.0, 684.0),
-	"BackpackUI": Rect2(80.0, 305.0, 723.0, 684.0),
-	"TrashBin": Rect2(-188.0, 626.0, 163.0, 143.0),
-}
-const BATTLE_STATS_CHILD_RECTS := {
-	"PortraitArt": Rect2(28.0, 46.0, 274.0, 274.0),
-	"PotionBag": Rect2(264.0, 18.0, 126.0, 198.0),
-	"TrashIconArt": Rect2(440.0, 84.0, 138.0, 121.0),
-	"KnifeArt": Rect2(252.0, 238.0, 356.0, 118.0),
-	"SyringeArt": Rect2(168.0, 306.0, 437.0, 237.0),
-	"VBox": Rect2(326.0, 48.0, 252.0, 278.0),
-}
-const BATTLE_ORNAMENT_SLOTS_RECT := Rect2(62.0, 143.0, 638.0, 104.0)
-const BATTLE_ART_RECTS := {
-	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
-	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
-	"PageBack": Rect2(-78.0, -58.0, 1670.0, 1080.0),
-	"BackTab": Rect2(4.0, 84.0, 207.0, 161.0),
-	"AlbumTab": Rect2(76.0, 170.0, 217.0, 164.0),
-	"PageRouteCover": Rect2(102.0, -48.0, 1670.0, 1080.0),
-	"BackpackTab": Rect2(26.0, 282.0, 223.0, 179.0),
-	"PageBackpackCover": Rect2(116.0, -38.0, 1670.0, 1080.0),
-	"GalleryTab": Rect2(50.0, 396.0, 205.0, 183.0),
-	"PageMiddle": Rect2(130.0, -30.0, 1670.0, 1080.0),
-	"SettingsTab": Rect2(8.0, 510.0, 214.0, 186.0),
-	"AlbumPage": Rect2(144.0, -22.0, 1670.0, 1080.0),
-	"CornerTopLeft": Rect2(264.0, 58.0, 237.0, 246.0),
-	"CornerTopRight": Rect2(1598.0, 58.0, 237.0, 246.0),
-	"CornerBottomLeft": Rect2(266.0, 834.0, 237.0, 246.0),
-	"CornerBottomRight": Rect2(1598.0, 834.0, 237.0, 246.0),
-	"ForgetMeNot": Rect2(42.0, 584.0, 348.0, 490.0),
-	"AlbumRingRight": Rect2(1793.0, 8.0, 127.0, 1063.0),
-}
+const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const OVERLAY_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
 const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
 const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
@@ -70,6 +29,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
 
+@onready var content_layer = $ContentLayer
 @onready var backpack_ui = $ContentLayer/GridPanel/BackpackUI
 @onready var sanity_label = $ContentLayer/StatsPanel/VBox/SanityLabel
 @onready var score_label = $ContentLayer/StatsPanel/VBox/ScoreLabel
@@ -91,8 +51,6 @@ var battle_manager: BattleManager
 var _is_battle_ended: bool = false
 var _draw_locked: bool = false
 var _dreamcatcher_base_scale := Vector2.ONE
-var _battle_art_origin := Vector2.ZERO
-var _battle_art_scale := 1.0
 var _ui_mode: String = MODE_BATTLE
 var _overlay_close_callback: Callable = Callable()
 var _selected_tool_id: String = ""
@@ -214,88 +172,38 @@ func _apply_stage_visuals() -> void:
 func _layout_battle_scene() -> void:
 	if _is_backpack_overlay_mode():
 		return
-	_update_battle_art_transform()
+	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE)
 	if battle_art:
 		battle_art.show()
-	for node_name in BATTLE_ART_RECTS.keys():
-		var node := get_node_or_null("ContentLayer/BattleArt/%s" % node_name) as Control
-		if node == null:
-			continue
-		var target := _battle_art_rect_to_viewport(BATTLE_ART_RECTS[node_name])
-		node.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-		node.position = target.position
-		node.size = target.size
-		node.scale = Vector2.ONE
-
-	_layout_scaled_control("ContentLayer/DreamcatcherPanel", BATTLE_DREAMCATCHER_RECT)
-	_layout_scaled_control("ContentLayer/GridPanel", BATTLE_GRID_PANEL_RECT)
-	_layout_scaled_control("ContentLayer/StatsPanel", BATTLE_STATS_RECT)
-	_layout_scaled_control("ContentLayer/OrnamentsPanel", BATTLE_ORNAMENTS_RECT)
-	_layout_scaled_control("ContentLayer/MenuButton", BATTLE_MENU_RECT)
-	_layout_screen_control("ContentLayer/PendingItemPanel", BATTLE_PENDING_ITEMS_RECT)
-	_layout_screen_control("ContentLayer/ToolPanel", BATTLE_TOOL_PANEL_RECT)
-	_layout_grid_panel_children()
-	_layout_stats_panel_children()
-	_layout_child_control("ContentLayer/OrnamentsPanel/Slots", BATTLE_ORNAMENT_SLOTS_RECT)
 	if dreamcatcher_panel:
 		_dreamcatcher_base_scale = dreamcatcher_panel.scale
 
-func _update_battle_art_transform() -> void:
+func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
+	if content_layer == null:
+		return
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = BATTLE_ART_BASE_SIZE
-	_battle_art_scale = minf(
-		viewport_size.x / BATTLE_ART_BASE_SIZE.x,
-		viewport_size.y / BATTLE_ART_BASE_SIZE.y
+		viewport_size = base_size
+	var scale_factor := minf(
+		viewport_size.x / base_size.x,
+		viewport_size.y / base_size.y
 	)
-	var displayed_art_size := BATTLE_ART_BASE_SIZE * _battle_art_scale
-	_battle_art_origin = (viewport_size - displayed_art_size) * 0.5
+	content_layer.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	content_layer.position = (viewport_size - base_size * scale_factor) * 0.5
+	content_layer.size = base_size
+	content_layer.scale = Vector2(scale_factor, scale_factor)
 
-func _battle_art_rect_to_viewport(source_rect: Rect2) -> Rect2:
-	return Rect2(
-		_battle_art_origin + source_rect.position * _battle_art_scale,
-		source_rect.size * _battle_art_scale
-	)
-
-func _layout_scaled_control(path: NodePath, source_rect: Rect2) -> void:
-	var control := get_node_or_null(path) as Control
-	if control == null:
+func _reset_content_layer_to_viewport() -> void:
+	if content_layer == null:
 		return
-	var target := _battle_art_rect_to_viewport(source_rect)
-	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	control.position = target.position
-	control.size = source_rect.size
-	control.scale = Vector2(_battle_art_scale, _battle_art_scale)
-
-func _layout_screen_control(path: NodePath, source_rect: Rect2) -> void:
-	var control := get_node_or_null(path) as Control
-	if control == null:
-		return
-	var target := _battle_art_rect_to_viewport(source_rect)
-	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	control.position = target.position
-	control.size = target.size
-	control.scale = Vector2.ONE
-
-func _layout_grid_panel_children() -> void:
-	for node_name in BATTLE_GRID_CHILD_RECTS.keys():
-		_layout_child_control("ContentLayer/GridPanel/%s" % node_name, BATTLE_GRID_CHILD_RECTS[node_name])
-
-func _layout_stats_panel_children() -> void:
-	for node_name in BATTLE_STATS_CHILD_RECTS.keys():
-		_layout_child_control("ContentLayer/StatsPanel/%s" % node_name, BATTLE_STATS_CHILD_RECTS[node_name])
-
-func _layout_child_control(path: NodePath, source_rect: Rect2) -> void:
-	var control := get_node_or_null(path) as Control
-	if control == null:
-		return
-	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	control.position = source_rect.position
-	control.size = source_rect.size
-	control.scale = Vector2.ONE
+	content_layer.set_anchors_preset(Control.PRESET_FULL_RECT)
+	content_layer.position = Vector2.ZERO
+	content_layer.size = get_viewport_rect().size
+	content_layer.scale = Vector2.ONE
 
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
+	_reset_content_layer_to_viewport()
 	var background = get_node_or_null("Background")
 	if background is ColorRect:
 		background.color = Color(0, 0, 0, 1)
@@ -715,11 +623,9 @@ func _ensure_tool_panel() -> void:
 	var panel = PanelContainer.new()
 	panel.name = "ToolPanel"
 	panel.custom_minimum_size = Vector2(520, 76)
-	panel.set_anchors_preset(Control.PRESET_BOTTOM_LEFT)
-	panel.offset_left = 20.0
-	panel.offset_top = -96.0
-	panel.offset_right = 540.0
-	panel.offset_bottom = -20.0
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
+	panel.position = Vector2(334.0, 962.0)
+	panel.size = Vector2(520.0, 76.0)
 	var slots = HBoxContainer.new()
 	slots.name = "ToolSlots"
 	slots.alignment = BoxContainer.ALIGNMENT_BEGIN
