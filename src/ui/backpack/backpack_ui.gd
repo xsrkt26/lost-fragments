@@ -103,10 +103,10 @@ func get_grid_cell_size_for_parent(target_parent: Node) -> Vector2:
 func configure_item_for_grid(item_ui: Control, target_parent: Node = null) -> void:
 	if item_ui == null or not item_ui.has_method("set_cell_size"):
 		return
-	var parent_for_size := target_parent
+	var parent_for_size: Node = target_parent
 	if parent_for_size == null:
 		parent_for_size = item_ui.get_parent()
-	var item_cell_size := grid_step
+	var item_cell_size: Vector2 = grid_step
 	if parent_for_size != null and parent_for_size != self:
 		item_cell_size = get_grid_cell_size_for_parent(parent_for_size)
 	else:
@@ -168,30 +168,30 @@ func get_slot_center_position(grid_pos: Vector2i) -> Vector2:
 func get_grid_pos_at(global_pos: Vector2) -> Vector2i:
 	if not manager:
 		return Vector2i(-1, -1)
+	_sync_grid_geometry()
 	grid_container.force_update_transform()
-	var local_pos := grid_container.get_global_transform_with_canvas().affine_inverse() * global_pos
+	var local_pos := grid_container.get_global_transform().affine_inverse() * global_pos
+	var grid_pos := _grid_pos_from_local(local_pos)
+	if grid_pos != Vector2i(-1, -1):
+		return grid_pos
+
+	local_pos = grid_container.get_global_transform_with_canvas().affine_inverse() * global_pos
+	grid_pos = _grid_pos_from_local(local_pos)
+	if grid_pos != Vector2i(-1, -1):
+		return grid_pos
+
+	if is_inside_tree():
+		local_pos = grid_container.get_global_transform_with_canvas().affine_inverse() * get_viewport().get_mouse_position()
+		grid_pos = _grid_pos_from_local(local_pos)
+	return grid_pos
+
+func _grid_pos_from_local(local_pos: Vector2) -> Vector2i:
 	if local_pos.x < 0.0 or local_pos.y < 0.0:
 		return Vector2i(-1, -1)
 	var grid_pos := Vector2i(floori(local_pos.x / grid_step.x), floori(local_pos.y / grid_step.y))
 	if grid_pos.x < 0 or grid_pos.x >= manager.grid_width or grid_pos.y < 0 or grid_pos.y >= manager.grid_height:
 		return Vector2i(-1, -1)
 	return grid_pos
-
-	var closest_pos = Vector2i(-1, -1)
-	var min_dist = 99999.0
-	var threshold = 100.0 # 缩小阈值适配更小的格子
-	
-	for i in range(grid_container.get_child_count()):
-		var slot = grid_container.get_child(i) as Control
-		var slot_center = slot.global_position + (slot.size / 2.0)
-		var dist = global_pos.distance_to(slot_center)
-		if dist < min_dist and dist < threshold:
-			min_dist = dist
-			closest_pos = Vector2i(i % manager.grid_width, int(float(i) / manager.grid_width))
-	
-	if closest_pos != Vector2i(-1, -1):
-		print("[BackpackUI] 捕捉到最近格子: ", closest_pos, " 距离: ", min_dist)
-	return closest_pos
 
 ## 将物品 UI 添加并对齐到网格
 func add_item_visual(item_ui: Control, grid_pos: Vector2i):

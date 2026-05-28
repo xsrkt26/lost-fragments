@@ -2,7 +2,7 @@
 
 本文档记录当前代码与最新策划案之间的系统级差距。前 13 项为主流程、局内规则、长期构筑与体验表现的基础版本；后续细化项用于记录基础版本之后继续迭代的需求，道具系统从后续细化阶段重新纳入。
 
-后续 Agent 接手开发时，先阅读 `spec/Docs/02_Tech/04_Agent_Development_Workflow.md`，再按本文档优先级推进。`spec/Docs/01_Design/temp` 不作为当前需求来源，除非用户明确要求。2026-05-14 的策划提交变更整理见 `spec/Docs/01_Design/PlanningChangeRequirements_2026-05-14.md`。
+后续 Agent 接手开发时，先阅读 `spec/Docs/02_Tech/04_Agent_Development_Workflow.md`，再按本文档优先级推进。大型模块拆分前先阅读 `spec/Docs/02_Tech/06_Refactor_Split_Plan_2026-05-28.md`。`spec/Docs/01_Design/temp` 不作为当前需求来源，除非用户明确要求。2026-05-14 的策划提交变更整理见 `spec/Docs/01_Design/PlanningChangeRequirements_2026-05-14.md`。
 
 ## 优先级说明
 
@@ -960,7 +960,7 @@
 
 自动化测试：
 
-- `python -m unittest test.tools.test_design_config_scripts`
+- `python -m unittest discover -s test\tools -p "test_*.py"`
 - `python -B scripts/design_config/validate_design_config.py`
 
 ## 2026-05-21 物品与道具逐项审计记录

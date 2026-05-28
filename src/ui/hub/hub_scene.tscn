@@ -195,7 +195,7 @@ position = Vector2(360, 638)
 script = ExtResource("2_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player"]
-position = Vector2(0, -42)
+position = Vector2(0, -68)
 scale = Vector2(0.3, 0.3)
 sprite_frames = ExtResource("3_player_frames")
 animation = &"idle"

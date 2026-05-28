@@ -33,5 +33,6 @@ func _replace_with_random_one_slot_items(instance: BackpackManager.ItemInstance,
 	for cell in occupied_cells:
 		if backpack.grid.has(cell):
 			continue
-		var chosen = candidates[randi() % candidates.size()].duplicate(true)
+		var random_index := context.random_index(candidates.size()) if context != null else randi() % candidates.size()
+		var chosen = candidates[random_index].duplicate(true)
 		backpack.place_item(chosen, cell)

@@ -29,7 +29,7 @@ func bind_buttons(root: Node) -> void:
 		bind_buttons(child)
 
 func bind_button(button: BaseButton) -> void:
-	if button == null or button.has_meta(BUTTON_FEEDBACK_META):
+	if button == null or not is_instance_valid(button) or button.has_meta(BUTTON_FEEDBACK_META):
 		return
 	button.set_meta(BUTTON_FEEDBACK_META, true)
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
@@ -42,7 +42,12 @@ func bind_button(button: BaseButton) -> void:
 
 func _on_node_added(node: Node) -> void:
 	if node is BaseButton:
-		bind_button(node)
+		call_deferred("_bind_button_deferred", node)
+
+func _bind_button_deferred(button: Variant) -> void:
+	if button == null or not is_instance_valid(button) or not (button is BaseButton):
+		return
+	bind_button(button as BaseButton)
 
 func _on_button_hovered(button: BaseButton) -> void:
 	if button == null or button.disabled or not is_inside_tree():

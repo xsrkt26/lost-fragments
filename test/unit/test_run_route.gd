@@ -5,6 +5,7 @@ const RouteConfig = preload("res://src/core/route/route_config.gd")
 var run_manager
 
 func before_each():
+	RouteConfig.clear_cache_for_tests()
 	run_manager = autofree(load("res://src/autoload/run_manager.gd").new())
 	run_manager.reset_route_progress()
 	run_manager.is_run_active = true
@@ -25,6 +26,17 @@ func test_default_route_loads_from_external_config():
 	assert_true(routes.has(RouteConfig.DEFAULT_ROUTE_ID))
 	assert_eq(RouteConfig.get_max_act(), 6)
 	assert_eq(RouteConfig.get_route_size(), 9)
+
+func test_route_config_cache_returns_defensive_copies():
+	var table = RouteConfig.load_route_table_from_path(RouteConfig.ROUTE_DATA_PATH)
+	var routes = table.get("routes", {})
+	assert_true(routes is Dictionary)
+	routes.clear()
+
+	var cached_table = RouteConfig.load_route_table_from_path(RouteConfig.ROUTE_DATA_PATH)
+	var cached_routes = cached_table.get("routes", {})
+	assert_true(cached_routes is Dictionary)
+	assert_true(cached_routes.has(RouteConfig.DEFAULT_ROUTE_ID))
 
 func test_route_config_falls_back_when_file_is_missing():
 	var table = RouteConfig.load_route_table_from_path("user://missing_routes_for_test.json")
@@ -158,6 +170,27 @@ func test_boss_target_scales_by_act():
 	run_manager.current_route_index = 6
 	run_manager.current_act = 3
 	assert_eq(run_manager.get_current_battle_target_score(), 90)
+
+func test_run_random_helpers_are_seeded_and_serializable():
+	run_manager.set_random_seed(4242)
+	var first_shuffle = run_manager.shuffle_array_for_run(["a", "b", "c", "d"] as Array, true)
+	var first_next = run_manager.random_int_for_run(100, true)
+	var serialized = run_manager.serialize_run()
+	var first_after_snapshot = run_manager.random_int_for_run(100, true)
+
+	var restored = autofree(load("res://src/autoload/run_manager.gd").new())
+	restored.deserialize_run(serialized)
+	var restored_after_snapshot = restored.random_int_for_run(100, true)
+
+	var repeated = autofree(load("res://src/autoload/run_manager.gd").new())
+	repeated.is_run_active = true
+	repeated.set_random_seed(4242)
+	var repeated_shuffle = repeated.shuffle_array_for_run(["a", "b", "c", "d"] as Array, true)
+	var repeated_next = repeated.random_int_for_run(100, true)
+
+	assert_eq(first_shuffle, repeated_shuffle)
+	assert_eq(first_next, repeated_next)
+	assert_eq(restored_after_snapshot, first_after_snapshot)
 
 func _write_route_table(path: String, table: Dictionary) -> void:
 	var file = FileAccess.open(path, FileAccess.WRITE)

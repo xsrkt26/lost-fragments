@@ -9,6 +9,8 @@ var rm_snapshot := {}
 var gs_snapshot := {}
 
 func before_each():
+	StageConfig.clear_cache_for_tests()
+	RouteConfig.clear_cache_for_tests()
 	var rm = get_node_or_null("/root/RunManager")
 	var gs = get_node_or_null("/root/GameState")
 	if rm:
@@ -70,6 +72,17 @@ func test_stage_config_falls_back_when_file_is_missing():
 	assert_eq(StageConfig.get_max_act("user://missing_stages_for_test.json"), 6)
 	assert_eq(stage.get("id"), "act_6")
 	assert_eq(StageConfig.get_boss_score_target_rule(6, "user://missing_stages_for_test.json").target, 150)
+
+func test_stage_config_cache_returns_defensive_copies():
+	var table = StageConfig.load_stage_table_from_path(StageConfig.STAGE_DATA_PATH)
+	var stages = table.get("stages", {})
+	assert_true(stages is Dictionary)
+	stages.clear()
+
+	var cached_table = StageConfig.load_stage_table_from_path(StageConfig.STAGE_DATA_PATH)
+	var cached_stages = cached_table.get("stages", {})
+	assert_true(cached_stages is Dictionary)
+	assert_true(cached_stages.has("1"))
 
 func test_stage_config_supports_custom_route_and_weight_modifiers():
 	var path = "user://custom_stages_for_test.json"

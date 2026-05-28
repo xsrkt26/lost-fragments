@@ -48,6 +48,10 @@ const DEFAULT_CONFIG := {
 	},
 }
 
+static var _config_cache: Dictionary = {}
+
+static func clear_cache_for_tests() -> void:
+	_config_cache.clear()
 
 static func battle_reward_shards(act: int, is_boss: bool) -> int:
 	var config = load_config_from_path()
@@ -113,16 +117,23 @@ static func act_economy_snapshot(act: int) -> Dictionary:
 
 
 static func load_config_from_path(path: String = ECONOMY_CONFIG_PATH) -> Dictionary:
+	if _config_cache.has(path):
+		return Dictionary(_config_cache[path]).duplicate(true)
 	var config = DEFAULT_CONFIG.duplicate(true)
 	if path == "" or not FileAccess.file_exists(path):
+		_config_cache[path] = config.duplicate(true)
 		return config
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
+		_config_cache[path] = config.duplicate(true)
 		return config
 	var parsed = JSON.parse_string(file.get_as_text())
 	if not (parsed is Dictionary):
+		_config_cache[path] = config.duplicate(true)
 		return config
-	return _normalize_config(parsed)
+	config = _normalize_config(parsed)
+	_config_cache[path] = config.duplicate(true)
+	return config.duplicate(true)
 
 
 static func _normalize_config(raw: Dictionary) -> Dictionary:

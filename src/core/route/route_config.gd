@@ -32,7 +32,19 @@ const FALLBACK_ROUTES := {
 	]
 }
 
+static var _route_table_cache: Dictionary = {}
+
+static func clear_cache_for_tests() -> void:
+	_route_table_cache.clear()
+
 static func load_route_table_from_path(path: String = ROUTE_DATA_PATH) -> Dictionary:
+	if _route_table_cache.has(path):
+		return Dictionary(_route_table_cache[path]).duplicate(true)
+	var table = _load_route_table_uncached(path)
+	_route_table_cache[path] = table.duplicate(true)
+	return table.duplicate(true)
+
+static func _load_route_table_uncached(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return _fallback_route_table()
 

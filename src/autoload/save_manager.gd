@@ -39,6 +39,6 @@ func load_run() -> Dictionary:
 ## 删除存档 (用于一局结束或失败)
 func delete_save():
 	if has_save():
-		var err = DirAccess.remove_absolute(SAVE_PATH)
+		var err = DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE_PATH))
 		if err == OK:
 			print("[SaveManager] 存档已销毁 (Permadeath生效)")

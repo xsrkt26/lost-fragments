@@ -72,6 +72,26 @@ func test_restore_backpack_adds_root_dream_for_old_saves():
 	assert_eq(root.root_pos, Vector2i(1, 3))
 	assert_eq(root.data.direction, ItemData.Direction.RIGHT)
 
+func test_restore_required_item_does_not_mutate_database_resource():
+	var root_resource: ItemData = item_db.get_item_by_id("root_dream")
+	var original_direction = root_resource.direction
+	var original_shape = root_resource.shape.duplicate()
+	root_resource.direction = ItemData.Direction.DOWN
+	root_resource.shape = [Vector2i(0, 0), Vector2i(0, 1)] as Array[Vector2i]
+
+	run_manager.current_backpack_items.clear()
+	var backpack = autofree(BackpackManager.new())
+	backpack.setup_grid(7, 7, 5, 5)
+	run_manager.restore_backpack_state(backpack, item_db)
+
+	var observed_direction = root_resource.direction
+	var observed_shape = root_resource.shape.duplicate()
+	root_resource.direction = original_direction
+	root_resource.shape = original_shape
+
+	assert_eq(observed_direction, ItemData.Direction.DOWN)
+	assert_eq(observed_shape, [Vector2i(0, 0), Vector2i(0, 1)] as Array[Vector2i])
+
 func _find_instance(backpack: BackpackManager, item_id: String):
 	for instance in backpack.get_all_instances():
 		if instance.data.id == item_id:

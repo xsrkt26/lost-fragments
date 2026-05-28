@@ -37,7 +37,19 @@ const DEFAULT_STAGE := {
 	},
 }
 
+static var _stage_table_cache: Dictionary = {}
+
+static func clear_cache_for_tests() -> void:
+	_stage_table_cache.clear()
+
 static func load_stage_table_from_path(path: String = STAGE_DATA_PATH) -> Dictionary:
+	if _stage_table_cache.has(path):
+		return Dictionary(_stage_table_cache[path]).duplicate(true)
+	var table = _load_stage_table_uncached(path)
+	_stage_table_cache[path] = table.duplicate(true)
+	return table.duplicate(true)
+
+static func _load_stage_table_uncached(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
 		return _fallback_stage_table()
 

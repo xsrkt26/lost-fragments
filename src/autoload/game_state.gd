@@ -10,9 +10,10 @@ signal game_over
 @export var max_sanity: int = 100
 var current_sanity: int = 100:
 	set(v):
+		var was_alive := current_sanity > 0
 		current_sanity = clamp(v, 0, max_sanity)
 		sanity_changed.emit(current_sanity)
-		if current_sanity <= 0:
+		if was_alive and current_sanity <= 0:
 			game_over.emit()
 
 var current_score: int = 0:

@@ -20,6 +20,13 @@ func test_can_place_item_out_of_bounds():
 	assert_false(backpack.can_place_item(item, Vector2i(-1, 0)), "Should not place at negative x")
 	assert_false(backpack.can_place_item(item, Vector2i(5, 5)), "Should not place outside bounds")
 
+func test_can_place_item_rejects_null_or_empty_shape():
+	var empty_shape_item = ItemData.new()
+	empty_shape_item.shape = [] as Array[Vector2i]
+
+	assert_false(backpack.can_place_item(null, Vector2i.ZERO))
+	assert_false(backpack.can_place_item(empty_shape_item, Vector2i.ZERO))
+
 func test_can_place_item_overlap():
 	var item1 = ItemData.new()
 	var s1: Array[Vector2i] = [Vector2i(0, 0)]

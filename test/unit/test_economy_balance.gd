@@ -10,6 +10,7 @@ var ornament_db
 
 
 func before_each():
+	EconomyConfigScript.clear_cache_for_tests()
 	item_db = get_node_or_null("/root/ItemDatabase")
 	ornament_db = get_node_or_null("/root/OrnamentDatabase")
 	if item_db and item_db.items.is_empty():
@@ -62,6 +63,13 @@ func test_economy_config_uses_json_and_fallback_defaults():
 	var fallback = EconomyConfigScript.load_config_from_path("res://missing/economy.json")
 	assert_eq(int(fallback.battle_rewards.normal_base), EconomyConfigScript.NORMAL_BATTLE_SHARDS_BASE)
 	assert_eq(int(fallback.shop.refresh_base_cost), EconomyConfigScript.SHOP_REFRESH_BASE_COST)
+
+func test_economy_config_cache_returns_defensive_copies():
+	var config = EconomyConfigScript.load_config_from_path()
+	config.battle_rewards.normal_base = 999
+
+	var cached_config = EconomyConfigScript.load_config_from_path()
+	assert_eq(int(cached_config.battle_rewards.normal_base), 8)
 
 
 func test_reward_shards_use_economy_config_for_normal_and_boss_nodes():

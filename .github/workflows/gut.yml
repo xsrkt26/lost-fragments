@@ -33,10 +33,13 @@ jobs:
           curl -L -o /tmp/godot/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip"
           unzip -q /tmp/godot/godot.zip -d /tmp/godot
 
-      - name: Run GUT
+      - name: Prepare Godot executable
         run: |
           chmod +x "$GODOT_BIN"
-          "$GODOT_BIN" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -glog=0
+
+      - name: Run GUT
+        shell: pwsh
+        run: .\tools\run_tests_silent.ps1
 
       - name: Run strict scene smoke
         run: |

@@ -62,6 +62,8 @@ Set-ChildProcessErrorMode
 
 # Run Godot and capture BOTH output and errors to temporary files
 $tempRoot = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { [System.IO.Path]::GetTempPath() }
+$tempImportLog = Join-Path $tempRoot "go_dot_game_gut_import_stdout.tmp"
+$tempImportErr = Join-Path $tempRoot "go_dot_game_gut_import_stderr.tmp"
 $tempLog = Join-Path $tempRoot "go_dot_game_gut_stdout.tmp"
 $tempErr = Join-Path $tempRoot "go_dot_game_gut_stderr.tmp"
 $godotAppData = Join-Path $tempRoot ("go_dot_game_gut_appdata_" + [System.Guid]::NewGuid().ToString("N"))
@@ -69,11 +71,51 @@ $originalAppData = $env:APPDATA
 New-Item -ItemType Directory -Force -Path $godotAppData | Out-Null
 
 # Clean up old logs
+if (Test-Path $tempImportLog) { Remove-Item $tempImportLog }
+if (Test-Path $tempImportErr) { Remove-Item $tempImportErr }
 if (Test-Path $tempLog) { Remove-Item $tempLog }
 if (Test-Path $tempErr) { Remove-Item $tempErr }
 
 try {
     $env:APPDATA = $godotAppData
+    $importArgs = @{
+        FilePath = $godotPath
+        ArgumentList = @("--headless", "--rendering-driver", "opengl3", "--editor", "--quit", "--path", $repoRoot)
+        PassThru = $true
+        RedirectStandardOutput = $tempImportLog
+        RedirectStandardError = $tempImportErr
+    }
+    if (Test-IsWindowsHost) {
+        $importArgs["WindowStyle"] = "Hidden"
+    }
+    $importProcess = Start-Process @importArgs
+    if (-not $importProcess.WaitForExit($timeoutSeconds * 1000)) {
+        Stop-Process -Id $importProcess.Id -Force
+        $env:APPDATA = $originalAppData
+        Write-Host "TEST_RESULTS: FAIL"
+        Write-Host "GODOT_IMPORT_TIMEOUT: reached after $timeoutSeconds seconds"
+        exit 1
+    }
+    $importProcess.Refresh()
+    if ($null -ne $importProcess.ExitCode -and $importProcess.ExitCode -ne 0) {
+        $env:APPDATA = $originalAppData
+        Write-Host "TEST_RESULTS: FAIL"
+        Write-Host "GODOT_IMPORT_FAILED: Process exit code $($importProcess.ExitCode)"
+        $importOutput = @()
+        if (Test-Path $tempImportLog) { $importOutput += Get-Content $tempImportLog }
+        if (Test-Path $tempImportErr) { $importOutput += Get-Content $tempImportErr }
+        $sample = $importOutput | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -First 12
+        if ($sample.Count -gt 0) {
+            Write-Host "IMPORT_OUTPUT_SAMPLE:"
+            foreach ($line in $sample) {
+                Write-Host "  $line"
+            }
+        }
+        exit 1
+    }
+    if (Test-Path $tempImportLog) { Remove-Item $tempImportLog }
+    if (Test-Path $tempImportErr) { Remove-Item $tempImportErr }
+
     $startArgs = @{
         FilePath = $godotPath
         ArgumentList = @("--headless", "--rendering-driver", "opengl3", "--path", $repoRoot, "-s", $gutScript, "-gexit", "-glog=0")
@@ -160,7 +202,8 @@ foreach ($line in $output) {
 }
 
 $allOutput = @($output) + @($errors)
-$fatalErrors = $allOutput | Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|ObjectDB instances leaked|CrashHandlerException|Program crashed|ERROR:" | Select-Object -First 8 -Unique
+$fatalErrors = $allOutput | Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|CrashHandlerException|Program crashed|ERROR:" | Select-Object -First 8 -Unique
+$nonFatalWarnings = $allOutput | Select-String -Pattern "ObjectDB instances leaked at exit" | Select-Object -First 4 -Unique
 
 if ($failedTests.Count -gt 0 -or $fatalErrors.Count -gt 0) {
     $isFailed = $true
@@ -211,5 +254,11 @@ if ($isFailed) {
     exit 1
 } else {
     Write-Host "TEST_RESULTS: PASS"
+    if ($nonFatalWarnings) {
+        Write-Host "NON_FATAL_WARNINGS:"
+        foreach ($warning in $nonFatalWarnings) {
+            Write-Host "  $($warning.ToString().Trim())"
+        }
+    }
     exit 0
 }

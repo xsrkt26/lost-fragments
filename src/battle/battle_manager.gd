@@ -84,14 +84,33 @@ func _initialize_battle_data():
 	if rm:
 		_battle_modifiers = rm.get_current_battle_modifiers() if rm.has_method("get_current_battle_modifiers") else {}
 		_apply_backpack_grid_config(rm)
-		_current_battle_deck = Array(rm.current_deck).duplicate()
-		_current_battle_deck.shuffle()
+		_refill_battle_deck_from_run(rm)
 		_load_ornaments_from_run(rm)
 		_restore_backpack_from_run(rm)
 		_apply_ornament_battle_started()
 		print("[BattleManager] 洗牌完成，当前战斗卡包大小: ", _current_battle_deck.size())
 	else:
 		print("[BattleManager] 警告: 未找到 RunManager，使用空卡包运行。")
+
+func _make_battle_deck_from_run(rm) -> Array[String]:
+	var source_deck := Array(rm.current_deck).duplicate()
+	var shuffled: Array = source_deck
+	if rm.has_method("shuffle_array_for_run"):
+		shuffled = rm.shuffle_array_for_run(source_deck, true)
+	else:
+		shuffled.shuffle()
+	var result: Array[String] = []
+	for item_id in shuffled:
+		result.append(str(item_id))
+	return result
+
+func _refill_battle_deck_from_run(rm = null) -> void:
+	if rm == null:
+		rm = get_node_or_null("/root/RunManager")
+	if rm == null:
+		_current_battle_deck.clear()
+		return
+	_current_battle_deck = _make_battle_deck_from_run(rm)
 
 func _apply_backpack_grid_config(rm) -> void:
 	if rm == null or not rm.has_method("get_backpack_grid_config"):
@@ -439,7 +458,7 @@ func _get_item_ui_global_cell_size(item_ui: Control) -> Vector2:
 	if item_ui == null:
 		return Vector2.ONE
 	var local_cell_size := _get_item_ui_cell_size(item_ui)
-	var transform := item_ui.get_global_transform_with_canvas()
+	var transform := item_ui.get_global_transform()
 	var origin := transform * Vector2.ZERO
 	var right := transform * Vector2(local_cell_size.x, 0.0)
 	var down := transform * Vector2(0.0, local_cell_size.y)
@@ -567,7 +586,7 @@ func request_draw():
 		return
 	battle_state = BattleState.DRAWING
 	if _current_battle_deck.is_empty():
-		_initialize_battle_data()
+		_refill_battle_deck_from_run()
 	if _current_battle_deck.is_empty():
 		_settle_interactive_state()
 		return

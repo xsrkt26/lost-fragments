@@ -6,7 +6,7 @@ func test_global_theme_builds_without_font_files() -> void:
 	assert_true(GlobalTheme.get_display_font_path() is String)
 
 func test_global_theme_applies_to_controls() -> void:
-	var control := autofree(Control.new())
+	var control: Control = autofree(Control.new())
 
 	GlobalTheme.apply_theme(control)
 

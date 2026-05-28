@@ -53,9 +53,8 @@ jobs:
         run: chmod +x "$GODOT_BIN"
 
       - name: Run GUT
-        shell: bash
-        run: |
-          "$GODOT_BIN" --headless --path . -s addons/gut/gut_cmdln.gd -gexit -glog=0
+        shell: pwsh
+        run: .\tools\run_tests_silent.ps1
 
       - name: Run strict scene smoke
         shell: bash

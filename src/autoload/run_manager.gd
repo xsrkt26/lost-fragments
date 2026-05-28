@@ -150,12 +150,13 @@ func add_to_deck(item_id: String, cost: int):
 		return true
 	return false
 
-func add_ornament(ornament_id: String) -> bool:
+func add_ornament(ornament_id: String, save_after: bool = true) -> bool:
 	if ornament_id == "" or current_ornaments.has(ornament_id):
 		return false
 	current_ornaments.append(ornament_id)
 	ornaments_changed.emit(current_ornaments)
-	save_current_state()
+	if save_after:
+		save_current_state()
 	return true
 
 func has_ornament(ornament_id: String) -> bool:
@@ -175,7 +176,7 @@ func generate_current_reward_options(item_db: Node, ornament_db: Node, count: in
 	save_current_state()
 	return options
 
-func apply_reward(reward: Dictionary, item_db: Node = null) -> bool:
+func apply_reward(reward: Dictionary, item_db: Node = null, save_after: bool = true) -> bool:
 	var reward_type = str(reward.get("type", ""))
 	match reward_type:
 		RewardGenerator.TYPE_SHARDS:
@@ -189,9 +190,8 @@ func apply_reward(reward: Dictionary, item_db: Node = null) -> bool:
 				return false
 		RewardGenerator.TYPE_ORNAMENT:
 			var ornament_id = str(reward.get("id", ""))
-			if not add_ornament(ornament_id):
+			if not add_ornament(ornament_id, false):
 				return false
-			return true
 		RewardGenerator.TYPE_TOOL:
 			var tool_id = str(reward.get("id", ""))
 			var amount = max(1, int(reward.get("amount", 1)))
@@ -200,7 +200,8 @@ func apply_reward(reward: Dictionary, item_db: Node = null) -> bool:
 				return false
 		_:
 			return false
-	save_current_state()
+	if save_after:
+		save_current_state()
 	return true
 
 func generate_current_shop_offers(item_db: Node, ornament_db: Node, count: int = 4) -> Array[Dictionary]:
@@ -547,7 +548,7 @@ func _apply_event_effect(effect: Dictionary) -> bool:
 	match effect_type:
 		RewardGenerator.TYPE_SHARDS, RewardGenerator.TYPE_ITEM, RewardGenerator.TYPE_ORNAMENT, RewardGenerator.TYPE_TOOL:
 			var item_db = get_node_or_null("/root/ItemDatabase") if is_inside_tree() else null
-			return apply_reward(effect, item_db)
+			return apply_reward(effect, item_db, false)
 		"sanity":
 			var amount = int(effect.get("amount", 0))
 			if amount == 0:
@@ -849,16 +850,17 @@ func _place_required_backpack_item(backpack: BackpackManager, item_db: Node, ent
 	if item_data == null:
 		return false
 
-	item_data.direction = int(entry.get("direction", item_data.direction))
-	item_data.shape = _deserialize_shape(Array(entry.get("shape", [])), item_data.shape)
+	var runtime_data: ItemData = item_data.duplicate(true)
+	runtime_data.direction = int(entry.get("direction", runtime_data.direction))
+	runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
 
 	var root_pos = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
-	if backpack.can_place_item(item_data, root_pos):
-		return backpack.place_item(item_data, root_pos)
+	if backpack.can_place_item(runtime_data, root_pos):
+		return backpack.place_item(runtime_data, root_pos)
 
-	var fallback_pos = backpack.find_available_pos(item_data)
+	var fallback_pos = backpack.find_available_pos(runtime_data)
 	if fallback_pos != Vector2i(-1, -1):
-		return backpack.place_item(item_data, fallback_pos)
+		return backpack.place_item(runtime_data, fallback_pos)
 	return false
 
 func _is_derived_item(instance: BackpackManager.ItemInstance) -> bool:
@@ -1129,6 +1131,40 @@ func _get_random_source() -> RandomNumberGenerator:
 
 func _sync_random_state() -> void:
 	rng_state = _run_rng.state
+
+func random_float_for_run(save_after: bool = false) -> float:
+	var rng := _get_random_source()
+	var value := rng.randf()
+	_sync_random_state()
+	if save_after:
+		save_current_state()
+	return value
+
+func random_int_for_run(max_exclusive: int, save_after: bool = false) -> int:
+	if max_exclusive <= 0:
+		return 0
+	var rng := _get_random_source()
+	var value := rng.randi_range(0, max_exclusive - 1)
+	_sync_random_state()
+	if save_after:
+		save_current_state()
+	return value
+
+func shuffle_array_for_run(values: Array, save_after: bool = false) -> Array:
+	var result := values.duplicate()
+	if result.size() <= 1:
+		return result
+	var rng := _get_random_source()
+	for index in range(result.size() - 1, 0, -1):
+		var swap_index := rng.randi_range(0, index)
+		var current = result[index]
+		result[index] = result[swap_index]
+		result[swap_index] = current
+	_sync_random_state()
+	if save_after:
+		save_current_state()
+	return result
+
 ## 获取当前战斗的目标分数。无分数目标时返回 NO_SCORE_TARGET。
 func get_target_score() -> int:
 	return get_current_battle_target_score()

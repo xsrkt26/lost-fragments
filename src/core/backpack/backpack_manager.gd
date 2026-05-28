@@ -93,6 +93,8 @@ func is_pos_usable(pos: Vector2i) -> bool:
 
 ## 检查指定位置是否可以放置该物品
 func can_place_item(item_data: ItemData, root_pos: Vector2i) -> bool:
+	if item_data == null or item_data.shape.is_empty():
+		return false
 	for offset in item_data.shape:
 		var target_pos = root_pos + offset
 		

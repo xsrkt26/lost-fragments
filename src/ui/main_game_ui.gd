@@ -798,7 +798,7 @@ func _on_tool_button_gui_input(event: InputEvent, tool_id: String, button: Butto
 
 func _get_tool_event_position(event: InputEventMouseButton, button: Button) -> Vector2:
 	if button != null and button.is_inside_tree():
-		return button.get_global_transform_with_canvas() * event.position
+		return button.get_global_transform() * event.position
 	return event.position
 
 func _try_use_tool_at_mouse(tool_id: String, mouse_pos: Vector2) -> bool:
