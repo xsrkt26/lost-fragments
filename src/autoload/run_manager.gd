@@ -7,6 +7,9 @@ const RouteConfig = preload("res://src/core/route/route_config.gd")
 const RewardGenerator = preload("res://src/core/rewards/reward_generator.gd")
 const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
+const RunPersistenceCodec = preload("res://src/core/run/run_persistence_codec.gd")
+const RunRouteProgress = preload("res://src/core/run/run_route_progress.gd")
+const RunRngService = preload("res://src/core/run/run_rng_service.gd")
 
 # --- 核心信号 ---
 signal run_started
@@ -72,7 +75,8 @@ var is_run_active: bool = false
 var is_run_complete: bool = false
 
 var saver: SaveManager = null
-var _run_rng := RandomNumberGenerator.new()
+var _route_progress: RunRouteProgress = RunRouteProgress.new()
+var _rng_service: RunRngService = RunRngService.new()
 
 func _ready():
 	if saver == null:
@@ -867,128 +871,59 @@ func _is_derived_item(instance: BackpackManager.ItemInstance) -> bool:
 	return instance != null and instance.data != null and instance.data.tags.has("衍生物品")
 
 func reset_route_progress(route_id: String = RouteConfig.DEFAULT_ROUTE_ID):
-	current_route_id = RouteConfig.normalize_route_id(route_id)
-	current_act = 1
-	current_route_index = 0
-	completed_route_nodes = []
-	is_run_complete = false
+	_route_progress.reset_route_progress(self, route_id)
 	_emit_route_changed()
 
 func get_current_stage_route_id() -> String:
-	return RouteConfig.normalize_route_id(StageConfig.get_route_id_for_act(current_act, current_route_id))
+	return _route_progress.get_current_stage_route_id(self)
 
 func get_current_stage_config() -> Dictionary:
-	return StageConfig.get_stage(current_act)
+	return _route_progress.get_current_stage_config(self)
 
 func get_current_stage_visual() -> Dictionary:
-	return StageConfig.get_visual(current_act)
+	return _route_progress.get_current_stage_visual(self)
 
 func get_current_battle_modifiers() -> Dictionary:
-	return StageConfig.get_battle_modifiers(current_act)
+	return _route_progress.get_current_battle_modifiers(self)
 
 func get_route_nodes() -> Array:
-	return RouteConfig.get_route_nodes(get_current_stage_route_id())
+	return _route_progress.get_route_nodes(self)
 
 func get_current_route_node() -> Dictionary:
-	return RouteConfig.get_route_node(get_current_stage_route_id(), current_route_index)
+	return _route_progress.get_current_route_node(self)
 
 func get_current_route_node_type() -> String:
-	return get_current_route_node().get("type", "")
+	return _route_progress.get_current_route_node_type(self)
 
 func can_enter_route_node(index: int) -> bool:
-	return is_run_active and index == current_route_index and not get_current_route_node().is_empty()
+	return _route_progress.can_enter_route_node(self, index)
 
 func get_scene_type_for_node(node: Dictionary) -> int:
-	var scene_key = RouteConfig.get_scene_key_for_node(node)
-	match scene_key:
-		RouteConfig.SCENE_BATTLE:
-			return GlobalScene.SceneType.BATTLE
-		RouteConfig.SCENE_SHOP:
-			return GlobalScene.SceneType.SHOP
-		RouteConfig.SCENE_EVENT:
-			return GlobalScene.SceneType.EVENT
-		RouteConfig.SCENE_HUB:
-			return GlobalScene.SceneType.HUB
-	return GlobalScene.SceneType.HUB
+	return _route_progress.get_scene_type_for_node(node)
 
 func get_current_node_scene_type() -> int:
-	return get_scene_type_for_node(get_current_route_node())
+	return _route_progress.get_current_node_scene_type(self)
 
 func get_current_battle_config() -> Dictionary:
-	var node_type = get_current_route_node_type()
-	var node = get_current_route_node()
-	var score_rule = RouteConfig.get_score_target_rule(node, current_act)
-	if RouteConfig.is_boss_node_type(node_type):
-		var stage_score_rule = StageConfig.get_boss_score_target_rule(current_act)
-		if bool(stage_score_rule.get("enabled", false)):
-			score_rule = stage_score_rule
-	var has_target = bool(score_rule.get("enabled", false))
-	return {
-		"act": current_act,
-		"stage": get_current_stage_config(),
-		"node_type": node_type,
-		"is_boss": RouteConfig.is_boss_node_type(node_type),
-		"has_score_target": has_target,
-		"target_score": int(score_rule.get("target", NO_SCORE_TARGET)) if has_target else NO_SCORE_TARGET,
-		"battle_modifiers": get_current_battle_modifiers(),
-		"visual": get_current_stage_visual(),
-		"boss": StageConfig.get_boss_config(current_act),
-	}
+	return _route_progress.get_current_battle_config(self)
 
 func current_battle_has_score_target() -> bool:
-	return bool(get_current_battle_config().get("has_score_target", false))
+	return _route_progress.current_battle_has_score_target(self)
 
 func get_current_battle_target_score() -> int:
-	return int(get_current_battle_config().get("target_score", NO_SCORE_TARGET))
+	return _route_progress.get_current_battle_target_score(self)
 
 func is_current_battle_score_success(score: int) -> bool:
-	var config = get_current_battle_config()
-	if not config.get("has_score_target", false):
-		return true
-	return score >= int(config.get("target_score", NO_SCORE_TARGET))
+	return _route_progress.is_current_battle_score_success(self, score)
 
 func has_empty_dream_trophy_reward_bonus(score: int) -> bool:
-	if not current_ornaments.has("empty_dream_trophy"):
-		return false
-	var config = get_current_battle_config()
-	if not bool(config.get("has_score_target", false)):
-		return false
-	return score > int(config.get("target_score", NO_SCORE_TARGET)) + 50
+	return _route_progress.has_empty_dream_trophy_reward_bonus(self, score)
 
 func _get_boss_target_score() -> int:
-	var node = get_current_route_node()
-	var score_rule = RouteConfig.get_score_target_rule(node, current_act)
-	var stage_score_rule = StageConfig.get_boss_score_target_rule(current_act)
-	if bool(stage_score_rule.get("enabled", false)):
-		score_rule = stage_score_rule
-	if bool(score_rule.get("enabled", false)):
-		return int(score_rule.get("target", NO_SCORE_TARGET))
-	return NO_SCORE_TARGET
+	return _route_progress.get_boss_target_score(self)
 
 func advance_route_node(expected_node_id: String = "") -> Dictionary:
-	if not is_run_active:
-		return {}
-	var current_node = get_current_route_node()
-	if current_node.is_empty():
-		return {}
-	if expected_node_id != "" and current_node.get("id", "") != expected_node_id:
-		return {}
-	if not completed_route_nodes.has(current_route_index):
-		completed_route_nodes.append(current_route_index)
-	current_route_index += 1
-
-	if current_route_index >= RouteConfig.get_route_size(get_current_stage_route_id()):
-		if current_act >= StageConfig.get_max_act():
-			_complete_run()
-			_emit_route_changed()
-			return current_node
-		current_act += 1
-		current_route_index = 0
-		completed_route_nodes = []
-
-	save_current_state()
-	_emit_route_changed()
-	return current_node
+	return _route_progress.advance_route_node(self, expected_node_id)
 
 func _complete_run() -> void:
 	print("[RunManager] 已完成全部 ", StageConfig.get_max_act(), " 个场景，整局胜利。")
@@ -1011,60 +946,11 @@ func save_current_state():
 		saver.save_run(serialize_run())
 
 func serialize_run() -> Dictionary:
-	return {
-		"shards": current_shards,
-		"deck": current_deck,
-		"backpack_items": current_backpack_items,
-		"pending_item_rewards": pending_item_rewards,
-		"next_pending_item_uid": next_pending_item_uid,
-		"tools": current_tools,
-		"backpack_locked_cells": backpack_locked_cells,
-		"backpack_deleted_cells": backpack_deleted_cells,
-		"temporary_backpack_locked_cells": temporary_backpack_locked_cells,
-		"ornaments": current_ornaments,
-		"backpack_usable_width": backpack_usable_width,
-		"backpack_usable_height": backpack_usable_height,
-		"shop_purchase_state": shop_purchase_state,
-		"event_node_state": event_node_state,
-		"seen_event_ids": seen_event_ids,
-		"rng_seed": rng_seed,
-		"rng_state": rng_state,
-		"depth": current_depth,
-		"route_id": current_route_id,
-		"act": current_act,
-		"route_index": current_route_index,
-		"completed_route_nodes": completed_route_nodes,
-		"is_active": is_run_active,
-		"is_complete": is_run_complete
-	}
+	return RunPersistenceCodec.serialize(self)
 
 func deserialize_run(data: Dictionary):
-	if data.is_empty(): return
-	current_shards = data.get("shards", INITIAL_SHARDS)
-	current_deck = _to_string_array(data.get("deck", INITIAL_DECK))
-	current_backpack_items = _to_dictionary_array(data.get("backpack_items", []))
-	pending_item_rewards = _to_dictionary_array(data.get("pending_item_rewards", []))
-	next_pending_item_uid = max(int(data.get("next_pending_item_uid", 1)), _get_next_pending_uid_from_entries())
-	current_tools = _to_tool_counts(data.get("tools", {}))
-	backpack_locked_cells = _to_dictionary_array(data.get("backpack_locked_cells", []))
-	backpack_deleted_cells = _to_dictionary_array(data.get("backpack_deleted_cells", []))
-	temporary_backpack_locked_cells = _to_dictionary_array(data.get("temporary_backpack_locked_cells", []))
-	current_ornaments = _to_string_array(data.get("ornaments", []))
-	backpack_usable_width = clampi(int(data.get("backpack_usable_width", INITIAL_BACKPACK_USABLE_WIDTH)), 1, BACKPACK_GRID_WIDTH)
-	backpack_usable_height = clampi(int(data.get("backpack_usable_height", INITIAL_BACKPACK_USABLE_HEIGHT)), 1, BACKPACK_GRID_HEIGHT)
-	shop_purchase_state = Dictionary(data.get("shop_purchase_state", {}))
-	event_node_state = Dictionary(data.get("event_node_state", {}))
-	seen_event_ids = _to_string_array(data.get("seen_event_ids", []))
-	_restore_random_source(int(data.get("rng_seed", 0)), int(data.get("rng_state", 0)))
-	current_depth = data.get("depth", 1)
-	current_route_id = RouteConfig.normalize_route_id(data.get("route_id", RouteConfig.DEFAULT_ROUTE_ID))
-	current_act = max(1, int(data.get("act", 1)))
-	current_route_index = clampi(int(data.get("route_index", 0)), 0, max(0, RouteConfig.get_route_size(get_current_stage_route_id()) - 1))
-	completed_route_nodes = []
-	for index in Array(data.get("completed_route_nodes", [])):
-		completed_route_nodes.append(int(index))
-	is_run_active = data.get("is_active", true)
-	is_run_complete = data.get("is_complete", false)
+	if not RunPersistenceCodec.deserialize_into(self, data):
+		return
 	pending_items_changed.emit(get_pending_item_rewards())
 	tools_changed.emit(get_current_tools())
 	_emit_route_changed()
@@ -1108,33 +994,30 @@ func set_random_seed(seed_value: int) -> void:
 	_initialize_random_source(seed_value)
 
 func _initialize_random_source(seed_value: int = 0) -> void:
-	rng_seed = seed_value if seed_value != 0 else int(Time.get_ticks_usec())
-	_run_rng.seed = rng_seed
-	rng_state = _run_rng.state
+	_rng_service.set_seed(seed_value)
+	_sync_random_state()
 
 func _restore_random_source(seed_value: int, state_value: int) -> void:
-	if seed_value == 0:
-		_initialize_random_source()
-		return
-	rng_seed = seed_value
-	_run_rng.seed = rng_seed
-	if state_value != 0:
-		_run_rng.state = state_value
-	rng_state = _run_rng.state
+	_rng_service.restore(seed_value, state_value)
+	_sync_random_state()
 
 func _get_random_source() -> RandomNumberGenerator:
+	return _get_random_service().get_rng()
+
+func _get_random_service() -> RunRngService:
 	if rng_seed == 0:
 		_initialize_random_source()
-	elif rng_state != 0:
-		_run_rng.state = rng_state
-	return _run_rng
+	else:
+		_rng_service.restore(rng_seed, rng_state)
+	return _rng_service
 
 func _sync_random_state() -> void:
-	rng_state = _run_rng.state
+	var serialized_rng := _rng_service.serialize()
+	rng_seed = int(serialized_rng.get("rng_seed", 0))
+	rng_state = int(serialized_rng.get("rng_state", 0))
 
 func random_float_for_run(save_after: bool = false) -> float:
-	var rng := _get_random_source()
-	var value := rng.randf()
+	var value := _get_random_service().randf_for_run()
 	_sync_random_state()
 	if save_after:
 		save_current_state()
@@ -1143,23 +1026,14 @@ func random_float_for_run(save_after: bool = false) -> float:
 func random_int_for_run(max_exclusive: int, save_after: bool = false) -> int:
 	if max_exclusive <= 0:
 		return 0
-	var rng := _get_random_source()
-	var value := rng.randi_range(0, max_exclusive - 1)
+	var value := _get_random_service().randi_index(max_exclusive)
 	_sync_random_state()
 	if save_after:
 		save_current_state()
 	return value
 
 func shuffle_array_for_run(values: Array, save_after: bool = false) -> Array:
-	var result := values.duplicate()
-	if result.size() <= 1:
-		return result
-	var rng := _get_random_source()
-	for index in range(result.size() - 1, 0, -1):
-		var swap_index := rng.randi_range(0, index)
-		var current = result[index]
-		result[index] = result[swap_index]
-		result[swap_index] = current
+	var result := _get_random_service().shuffle(values)
 	_sync_random_state()
 	if save_after:
 		save_current_state()

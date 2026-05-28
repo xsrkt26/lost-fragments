@@ -571,7 +571,32 @@ git diff --check
 
 ## 下一步建议
 
-下一次真正动代码时，从 Phase 0 开始。先补契约测试，然后抽 `RunRngService` 和 `RunPersistenceCodec`。这两个阶段不需要改 scene，风险最低，能为后续拆 `RunManager` 建立稳定基础。
+Phase 0、Phase 1 和 Phase 2 已启动并完成首轮低风险拆分：
+
+- 新增 `test/unit/test_run_persistence_contract.gd`，固定 `serialize_run()` schema key、旧存档默认值、legacy tool 数组兼容和 `rng_seed/rng_state` roundtrip。
+- 新增 `test/unit/test_run_facade_contract.gd`，固定 `RunManager` facade 方法和 public signals。
+- 新增 `test/unit/test_battle_public_api_contract.gd`，固定 `BattleManager` 当前 public API 和 signals，为后续 Battle 拆分做保护。
+- 新增 `src/core/run/run_rng_service.gd`，`RunManager.random_*_for_run()` 和 `shuffle_array_for_run()` 保持原入口，内部委托给 RNG 服务。
+- 新增 `src/core/run/run_persistence_codec.gd`，`RunManager.serialize_run()` / `deserialize_run()` 保持原入口，内部委托给 codec。
+- `RunPersistenceCodec.serialize()` 对可变数组和字典返回防御性拷贝，避免外部修改 save snapshot 污染运行态。
+- 新增 `src/core/run/run_route_progress.gd`，`RunManager` 的路线读取、当前节点、场景类型、战斗配置、分数目标和路线推进方法保持原入口，内部委托给 route progress。
+- 扩展 `test/unit/test_run_facade_contract.gd`，把路线相关 facade 方法也纳入契约保护。
+- 已修复拆分过程中暴露出的 GDScript typed-array 回写问题：`completed_route_nodes` 必须通过 `Array[int]` 临时变量恢复，不能用未类型化 `Array` 直接赋值。
+
+验证结果：
+
+```powershell
+$env:GODOT_BIN='D:\Workspaces\Library\Software\Installers\DevTools\Godot_v4.6.2-stable_win64.exe\Godot_v4.6.2-stable_win64_console.exe'
+.\tools\run_tests_silent.ps1
+python -B scripts\run_scene_smoke_tests.py --fail-on-engine-error
+python -B scripts\design_config\validate_design_config.py
+python -m unittest discover -s test\tools -p "test_*.py"
+git diff --check
+```
+
+上述命令均通过。`run_tests_silent.ps1` 和 scene smoke 仍会输出 Godot 退出阶段的 `ObjectDB instances leaked at exit` warning，当前按既有策略视为非 fatal。
+
+下一步建议进入 Phase 3，并拆成三个独立小步：先抽 `run_inventory_state.gd` 的 backpack/pending/tool 纯状态 helpers，再抽 `run_shop_state.gd`，最后抽 `run_event_transaction.gd`。Phase 3 会触碰奖励、背包、商店和事件事务，风险明显高于前两轮，必须继续保持 `RunManager` facade、save schema 和 signal 由 `RunManager` 对外承载。
 
 ## 架构补充与改进建议 (Godot / GDScript 特有)
 
