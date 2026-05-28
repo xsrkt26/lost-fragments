@@ -23,6 +23,9 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 		assert_not_null(art, "Gallery split art should expose %s" % node_name)
 		assert_not_null(art.texture)
 		assert_true(art.texture.resource_path != "res://assets/ui/gallery/gallery_background.png")
+	var rope_grid := gallery.get_node_or_null("ArtLayer/GridBackdrop") as Control
+	assert_not_null(rope_grid)
+	assert_not_null(rope_grid.get_script())
 
 	var back_button := gallery.get_node_or_null("UiLayer/BackButton") as Button
 	assert_not_null(back_button)
@@ -37,6 +40,13 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_not_null(first_button)
 	assert_true(first_button.has_meta("item_id"))
 	assert_true(first_button.tooltip_text.length() > 0)
+	assert_not_null(first_button.get_node_or_null("PhotoCorner"))
+	assert_not_null(first_button.get_node_or_null("SelectionPin"))
+
+	var selected_paper := gallery.get_node_or_null("UiLayer/SelectedPaper") as Control
+	var memory_paper := gallery.get_node_or_null("UiLayer/MemoryPaper") as Control
+	assert_not_null(selected_paper)
+	assert_not_null(memory_paper)
 
 	var detail_name := gallery.get_node_or_null("UiLayer/DetailName") as Label
 	assert_not_null(detail_name)

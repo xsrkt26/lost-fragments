@@ -13,6 +13,10 @@ const RESOLUTION_OPTIONS := [
 	Vector2i(1600, 900),
 	Vector2i(1920, 1080),
 ]
+const REQUIRED_AUDIO_BUSES := [
+	"Music",
+	"SFX",
+]
 
 var config = ConfigFile.new()
 
@@ -20,7 +24,7 @@ var audio_settings = {
 	"master_volume": 0.8,
 	"music_volume": 0.7,
 	"sfx_volume": 0.9,
-	"is_muted": false,
+	"is_muted": true,
 }
 
 var display_settings = {
@@ -33,6 +37,7 @@ var game_settings = {
 }
 
 func _ready():
+	_ensure_audio_buses()
 	load_settings()
 	apply_audio_settings()
 	apply_display_settings()
@@ -64,6 +69,7 @@ func load_settings():
 		print("[Settings] 未发现旧设置，使用默认配置")
 
 func apply_audio_settings():
+	_ensure_audio_buses()
 	_set_bus_vol("Master", audio_settings["master_volume"])
 	_set_bus_vol("Music", audio_settings["music_volume"])
 	_set_bus_vol("SFX", audio_settings["sfx_volume"])
@@ -71,7 +77,7 @@ func apply_audio_settings():
 	AudioServer.set_bus_mute(0, audio_settings["is_muted"])
 
 func apply_display_settings():
-	if DisplayServer.get_name() == "headless":
+	if not _can_control_window():
 		return
 	var window_mode := str(display_settings["window_mode"])
 	if window_mode == WINDOW_MODE_FULLSCREEN:
@@ -135,7 +141,7 @@ func reset_to_defaults() -> void:
 		"master_volume": 0.8,
 		"music_volume": 0.7,
 		"sfx_volume": 0.9,
-		"is_muted": false,
+		"is_muted": true,
 	}
 	display_settings = {
 		"window_mode": WINDOW_MODE_WINDOWED,
@@ -149,10 +155,20 @@ func reset_to_defaults() -> void:
 	save_settings()
 
 func _set_audio_volume(key: String, bus_name: String, val: float) -> void:
+	_ensure_audio_buses()
 	var clamped := clampf(val, 0.0, 1.0)
 	audio_settings[key] = clamped
 	_set_bus_vol(bus_name, clamped)
 	save_settings()
+
+func _ensure_audio_buses() -> void:
+	for bus_name in REQUIRED_AUDIO_BUSES:
+		if AudioServer.get_bus_index(bus_name) != -1:
+			continue
+		var bus_index := AudioServer.get_bus_count()
+		AudioServer.add_bus(bus_index)
+		AudioServer.set_bus_name(bus_index, bus_name)
+		AudioServer.set_bus_send(bus_index, "Master")
 
 func _normalize_window_mode(value: String) -> String:
 	return WINDOW_MODE_FULLSCREEN if value == WINDOW_MODE_FULLSCREEN else WINDOW_MODE_WINDOWED
@@ -172,6 +188,12 @@ func _normalize_resolution(value) -> Vector2i:
 		if parts.size() == 2:
 			return Vector2i(int(parts[0]), int(parts[1]))
 	return RESOLUTION_OPTIONS[0]
+
+func _can_control_window() -> bool:
+	if DisplayServer.get_name() == "headless":
+		return false
+	# Editor embedded game windows are owned by the editor and cannot be resized or moved.
+	return not OS.has_feature("editor")
 
 func _center_window(resolution: Vector2i) -> void:
 	var screen := DisplayServer.window_get_current_screen()

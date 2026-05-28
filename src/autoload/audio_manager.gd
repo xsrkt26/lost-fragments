@@ -19,6 +19,10 @@ const SFX_PATHS = {
 	"score": "res://assets/audio/sfx/score_up.wav",
 	"error": "res://assets/audio/sfx/ui_error.wav"
 }
+const REQUIRED_AUDIO_BUSES := [
+	"Music",
+	"SFX",
+]
 
 var _bgm_player: AudioStreamPlayer
 var _sfx_pool: Array[AudioStreamPlayer] = []
@@ -27,13 +31,13 @@ var _fade_tween: Tween = null
 var _audio_disabled: bool = false
 
 func _ready():
+	_ensure_audio_buses()
 	_audio_disabled = DisplayServer.get_name() == "headless"
 	if _audio_disabled:
 		AudioServer.set_bus_mute(0, true)
 		print("[GlobalAudio] 音频管理器已就绪。")
 		return
 	_setup_audio_nodes()
-	AudioServer.set_bus_mute(0, true)
 	print("[GlobalAudio] 音频管理器已就绪。")
 
 func _setup_audio_nodes():
@@ -124,6 +128,7 @@ func _play_stream_from_pool(stream: AudioStream, pitch_range: float):
 	_sfx_pool[0].play()
 
 func set_volume(bus_type: Bus, volume: float):
+	_ensure_audio_buses()
 	var bus_name = "Master"
 	match bus_type:
 		Bus.MUSIC: bus_name = "Music"
@@ -132,3 +137,12 @@ func set_volume(bus_type: Bus, volume: float):
 	if idx != -1:
 		# 转换到分贝
 		AudioServer.set_bus_volume_db(idx, linear_to_db(volume))
+
+func _ensure_audio_buses() -> void:
+	for bus_name in REQUIRED_AUDIO_BUSES:
+		if AudioServer.get_bus_index(bus_name) != -1:
+			continue
+		var bus_index := AudioServer.get_bus_count()
+		AudioServer.add_bus(bus_index)
+		AudioServer.set_bus_name(bus_index, bus_name)
+		AudioServer.set_bus_send(bus_index, "Master")

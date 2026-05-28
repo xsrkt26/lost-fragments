@@ -1,0 +1,121 @@
+extends Node
+
+## 全局 UI 字体主题管理器。
+## 字体文件可后续放入 assets/fonts/，缺失时自动回退到 Godot 默认字体。
+
+const BODY_FONT_CANDIDATES := [
+	"res://assets/fonts/ChillHuoSong_F_Regular.otf",
+	"res://assets/fonts/ChillHuoSong_F_ConRegular.otf",
+	"res://assets/fonts/LXGWWenKaiLite-Regular.ttf",
+	"res://assets/fonts/LXGWWenKaiLite-Regular.otf",
+	"res://assets/fonts/LXGWWenKai-Regular.ttf",
+	"res://assets/fonts/LXGWWenKai-Regular.otf",
+	"res://assets/fonts/NotoSerifSC-Regular.otf",
+	"res://assets/fonts/NotoSerifSC-Regular.ttf",
+	"res://assets/fonts/NotoSansCJKsc-Regular.otf",
+	"res://assets/fonts/NotoSansCJKsc-Regular.ttf",
+	"res://assets/fonts/NotoSansSC-Regular.otf",
+	"res://assets/fonts/NotoSansSC-Regular.ttf",
+]
+const DISPLAY_FONT_CANDIDATES := [
+	"res://assets/fonts/ChillHuoSong_F_ExBold.otf",
+	"res://assets/fonts/ChillHuoSong_F_Bold.otf",
+	"res://assets/fonts/SmileySans-Oblique.ttf",
+	"res://assets/fonts/SmileySans-Oblique.otf",
+	"res://assets/fonts/SmileySans.ttf",
+	"res://assets/fonts/SmileySans.otf",
+]
+const FALLBACK_FONT_CANDIDATES := [
+	"res://assets/fonts/ChillHuoSong_F_Regular.otf",
+	"res://assets/fonts/ChillHuoSong_F_ConRegular.otf",
+	"res://assets/fonts/NotoSansCJKsc-Regular.otf",
+	"res://assets/fonts/NotoSansCJKsc-Regular.ttf",
+	"res://assets/fonts/NotoSansSC-Regular.otf",
+	"res://assets/fonts/NotoSansSC-Regular.ttf",
+	"res://assets/fonts/NotoSerifSC-Regular.otf",
+	"res://assets/fonts/NotoSerifSC-Regular.ttf",
+]
+const THEME_META := "_lost_fragments_theme_applied"
+
+var ui_theme: Theme
+var body_font: Font
+var display_font: Font
+var fallback_font: Font
+
+func _ready() -> void:
+	reload_theme()
+	if get_tree() and not get_tree().node_added.is_connected(_on_node_added):
+		get_tree().node_added.connect(_on_node_added)
+	call_deferred("apply_theme_to_tree", get_tree().root)
+
+func reload_theme() -> void:
+	body_font = _load_first_font(BODY_FONT_CANDIDATES)
+	display_font = _load_first_font(DISPLAY_FONT_CANDIDATES)
+	fallback_font = _load_first_font(FALLBACK_FONT_CANDIDATES)
+	ui_theme = _build_theme()
+
+func apply_theme_to_tree(root: Node) -> void:
+	if root == null:
+		return
+	if root is Control:
+		apply_theme(root)
+	for child in root.get_children():
+		apply_theme_to_tree(child)
+
+func apply_theme(control: Control) -> void:
+	if control == null or ui_theme == null:
+		return
+	if control.theme == null:
+		control.theme = ui_theme
+	control.set_meta(THEME_META, true)
+
+func get_body_font_path() -> String:
+	return body_font.resource_path if body_font != null else ""
+
+func get_display_font_path() -> String:
+	return display_font.resource_path if display_font != null else ""
+
+func _build_theme() -> Theme:
+	var theme := Theme.new()
+	var readable_font: Font = body_font if body_font != null else fallback_font
+	var accent_font: Font = display_font if display_font != null else readable_font
+
+	if readable_font != null:
+		theme.default_font = readable_font
+		for type_name in [
+			"Label",
+			"OptionButton",
+			"CheckButton",
+			"LineEdit",
+			"TextEdit",
+			"PopupMenu",
+			"ItemList",
+			"Tree",
+		]:
+			theme.set_font("font", type_name, readable_font)
+		for rich_font_name in ["normal_font", "italics_font", "mono_font"]:
+			theme.set_font(rich_font_name, "RichTextLabel", readable_font)
+		theme.set_font("bold_font", "RichTextLabel", accent_font if accent_font != null else readable_font)
+		theme.set_font("bold_italics_font", "RichTextLabel", accent_font if accent_font != null else readable_font)
+
+	if accent_font != null:
+		theme.set_font("font", "Button", accent_font)
+		theme.set_type_variation("DisplayLabel", "Label")
+		theme.set_type_variation("DisplayButton", "Button")
+		theme.set_font("font", "DisplayLabel", accent_font)
+		theme.set_font("font", "DisplayButton", accent_font)
+
+	return theme
+
+func _load_first_font(paths: Array) -> Font:
+	for path in paths:
+		if not FileAccess.file_exists(path):
+			continue
+		var font := load(path) as Font
+		if font != null:
+			return font
+	return null
+
+func _on_node_added(node: Node) -> void:
+	if node is Control:
+		apply_theme(node)

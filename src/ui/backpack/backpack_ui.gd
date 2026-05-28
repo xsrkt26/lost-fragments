@@ -83,6 +83,37 @@ func _sync_grid_geometry() -> void:
 	grid_container.size = grid_size
 	grid_container.custom_minimum_size = grid_size
 
+func get_grid_cell_size() -> Vector2:
+	_sync_grid_geometry()
+	return grid_step
+
+func get_grid_cell_size_for_parent(target_parent: Node) -> Vector2:
+	_sync_grid_geometry()
+	if not (target_parent is CanvasItem):
+		return grid_step
+	grid_container.force_update_transform()
+	var target_canvas_item := target_parent as CanvasItem
+	var grid_transform := grid_container.get_global_transform_with_canvas()
+	var parent_inverse := target_canvas_item.get_global_transform_with_canvas().affine_inverse()
+	var origin := parent_inverse * (grid_transform * Vector2.ZERO)
+	var right := parent_inverse * (grid_transform * Vector2(grid_step.x, 0.0))
+	var down := parent_inverse * (grid_transform * Vector2(0.0, grid_step.y))
+	return Vector2(origin.distance_to(right), origin.distance_to(down))
+
+func configure_item_for_grid(item_ui: Control, target_parent: Node = null) -> void:
+	if item_ui == null or not item_ui.has_method("set_cell_size"):
+		return
+	var parent_for_size := target_parent
+	if parent_for_size == null:
+		parent_for_size = item_ui.get_parent()
+	var item_cell_size := grid_step
+	if parent_for_size != null and parent_for_size != self:
+		item_cell_size = get_grid_cell_size_for_parent(parent_for_size)
+	else:
+		_sync_grid_geometry()
+		item_cell_size = grid_step
+	item_ui.set_cell_size(item_cell_size)
+
 func update_slot_visuals(ignore_item_data: ItemData = null):
 	if not manager: return
 	
@@ -173,7 +204,8 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 		if item_ui.get_parent(): item_ui.get_parent().remove_child(item_ui)
 		add_child(item_ui)
 	
-	# 重置本地缩放，因为它现在继承了 BackpackUI 的父级缩放 (0.7)
+	# 放入网格后使用背包自己的本地格子尺寸，父级缩放由场景层处理。
+	configure_item_for_grid(item_ui, self)
 	item_ui.scale = Vector2.ONE
 	
 	grid_container.force_update_transform()

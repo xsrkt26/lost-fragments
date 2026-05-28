@@ -1,67 +1,16 @@
 extends Control
 
-## 设置界面：在正式书页美术上放置可交互控件。
-
+## 设置界面：节点坐标保存在场景文件中，脚本只负责整张设计稿缩放。
 const BASE_SIZE := Vector2(1920.0, 1080.0)
-const ART_RECTS := {
-	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
-	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
-	"BackTab": Rect2(4.0, 68.0, 207.0, 161.0),
-	"AlbumPage": Rect2(51.0, 0.0, 1670.0, 1080.0),
-	"AlbumTab": Rect2(1604.0, 191.0, 217.0, 164.0),
-	"BackpackTab": Rect2(1554.0, 294.0, 223.0, 179.0),
-	"GalleryTab": Rect2(1580.0, 419.0, 205.0, 183.0),
-	"SettingsTab": Rect2(8.0, 497.0, 214.0, 186.0),
-	"AlbumRingRight": Rect2(1793.0, 1.0, 127.0, 1063.0),
-}
-const CONTROL_RECTS := {
-	"BackButton": Rect2(0.0, 70.0, 92.0, 112.0),
-	"ResolutionOption": Rect2(780.0, 215.0, 270.0, 56.0),
-	"WindowModeOption": Rect2(1068.0, 215.0, 250.0, 56.0),
-	"MasterSlider": Rect2(754.0, 497.0, 520.0, 48.0),
-	"MasterValue": Rect2(1302.0, 492.0, 160.0, 58.0),
-	"MusicSlider": Rect2(754.0, 586.0, 520.0, 48.0),
-	"MusicValue": Rect2(1302.0, 580.0, 160.0, 58.0),
-	"SfxSlider": Rect2(754.0, 696.0, 520.0, 48.0),
-	"SfxValue": Rect2(1302.0, 690.0, 160.0, 58.0),
-	"MuteButton": Rect2(1320.0, 760.0, 150.0, 54.0),
-	"AnimationSpeedOption": Rect2(872.0, 914.0, 360.0, 62.0),
-	"ResetButton": Rect2(1326.0, 904.0, 126.0, 54.0),
-	"CloseButton": Rect2(1464.0, 904.0, 126.0, 54.0),
-}
-const STATIC_LABEL_RECTS := {
-	"LabelVideo": Rect2(350.0, 148.0, 220.0, 70.0),
-	"LabelResolution": Rect2(350.0, 226.0, 220.0, 52.0),
-	"LabelAudio": Rect2(350.0, 432.0, 220.0, 70.0),
-	"LabelMaster": Rect2(350.0, 508.0, 220.0, 52.0),
-	"LabelMusic": Rect2(350.0, 610.0, 220.0, 52.0),
-	"LabelSfx": Rect2(350.0, 708.0, 220.0, 52.0),
-	"LabelGame": Rect2(350.0, 842.0, 220.0, 70.0),
-	"LabelAnimation": Rect2(350.0, 928.0, 250.0, 52.0),
-	"LabelSpeedChoices": Rect2(882.0, 928.0, 330.0, 52.0),
-}
-const STATIC_LABEL_TEXT := {
-	"LabelVideo": "视频:",
-	"LabelResolution": "分辨率:",
-	"LabelAudio": "音频:",
-	"LabelMaster": "主音量:",
-	"LabelMusic": "BGM:",
-	"LabelSfx": "音效:",
-	"LabelGame": "游戏:",
-	"LabelAnimation": "动画速度:",
-	"LabelSpeedChoices": "慢  /  中  /  快",
-}
-const ZIPPER_VISUAL_RECTS := {
-	"Master": Rect2(754.0, 480.0, 520.0, 86.0),
-	"Music": Rect2(754.0, 587.0, 520.0, 86.0),
-	"Sfx": Rect2(754.0, 679.0, 520.0, 86.0),
-}
-
 const SPEED_IDS := [
 	"slow",
 	"normal",
 	"fast",
 ]
+const POPUP_PANEL_COLOR := Color(0.91, 0.79, 0.58, 0.96)
+const POPUP_HOVER_COLOR := Color(0.58, 0.36, 0.18, 0.28)
+const POPUP_BORDER_COLOR := Color(0.16, 0.09, 0.04, 0.0)
+const POPUP_FONT_COLOR := Color(0.05, 0.035, 0.02, 1.0)
 
 @onready var master_slider: HSlider = $UiLayer/MasterSlider
 @onready var music_slider: HSlider = $UiLayer/MusicSlider
@@ -83,8 +32,8 @@ var _is_updating := false
 
 func _ready() -> void:
 	resized.connect(_layout_controls)
-	_ensure_static_labels()
 	_populate_options()
+	_style_dropdown_popups()
 	_connect_controls()
 	_update_ui()
 	call_deferred("_layout_controls")
@@ -107,6 +56,54 @@ func _populate_options() -> void:
 	animation_speed_option.add_item("慢")
 	animation_speed_option.add_item("中")
 	animation_speed_option.add_item("快")
+
+func _style_dropdown_popups() -> void:
+	for dropdown in [resolution_option, window_mode_option, animation_speed_option]:
+		_style_dropdown_popup(dropdown)
+
+func _style_dropdown_popup(dropdown: OptionButton) -> void:
+	var popup := dropdown.get_popup()
+	popup.borderless = true
+	popup.transparent = true
+	popup.transparent_bg = true
+	popup.add_theme_stylebox_override("embedded_border", StyleBoxEmpty.new())
+	popup.add_theme_stylebox_override("embedded_unfocused_border", StyleBoxEmpty.new())
+	popup.add_theme_stylebox_override("panel", _make_dropdown_stylebox(POPUP_PANEL_COLOR, POPUP_BORDER_COLOR, 0, 6, false))
+	popup.add_theme_stylebox_override("hover", _make_dropdown_stylebox(POPUP_HOVER_COLOR, Color(0, 0, 0, 0), 0, 4, false))
+	popup.add_theme_color_override("font_color", POPUP_FONT_COLOR)
+	popup.add_theme_color_override("font_hover_color", POPUP_FONT_COLOR)
+	popup.add_theme_color_override("font_outline_color", Color(0, 0, 0, 0))
+	popup.add_theme_color_override("font_disabled_color", Color(0.22, 0.16, 0.1, 0.45))
+	popup.add_theme_font_size_override("font_size", 26)
+	popup.add_theme_constant_override("outline_size", 0)
+	popup.add_theme_constant_override("v_separation", 8)
+	popup.add_theme_constant_override("item_start_padding", 18)
+	popup.add_theme_constant_override("item_end_padding", 18)
+	var restyle_callback := Callable(self, "_style_dropdown_popup").bind(dropdown)
+	if not popup.about_to_popup.is_connected(restyle_callback):
+		popup.about_to_popup.connect(restyle_callback)
+
+func _make_dropdown_stylebox(bg_color: Color, border_color: Color, border_width: int, radius: int, with_shadow: bool) -> StyleBoxFlat:
+	var style := StyleBoxFlat.new()
+	style.bg_color = bg_color
+	style.border_color = border_color
+	style.border_width_left = border_width
+	style.border_width_top = border_width
+	style.border_width_right = border_width
+	style.border_width_bottom = border_width
+	style.corner_radius_top_left = radius
+	style.corner_radius_top_right = radius
+	style.corner_radius_bottom_right = radius
+	style.corner_radius_bottom_left = radius
+	style.content_margin_left = 12.0
+	style.content_margin_top = 8.0
+	style.content_margin_right = 12.0
+	style.content_margin_bottom = 8.0
+	if with_shadow:
+		style.shadow_color = Color(0.2, 0.12, 0.06, 0.14)
+		style.shadow_size = 4
+		style.shadow_offset = Vector2(0.0, 1.0)
+	return style
 
 func _connect_controls() -> void:
 	master_slider.value_changed.connect(_on_master_changed)
@@ -136,7 +133,6 @@ func _update_ui() -> void:
 	_is_updating = false
 
 func _layout_controls() -> void:
-	_layout_art_nodes()
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = BASE_SIZE
@@ -144,78 +140,14 @@ func _layout_controls() -> void:
 	var displayed_art_size := BASE_SIZE * scale_factor
 	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
 
-	for node_name in CONTROL_RECTS.keys():
-		var node := get_node_or_null("UiLayer/%s" % node_name) as Control
-		if node == null:
-			continue
-		var source_rect: Rect2 = CONTROL_RECTS[node_name]
-		var target_rect := Rect2(
-			displayed_art_origin + source_rect.position * scale_factor,
-			source_rect.size * scale_factor
-		)
-		node.position = target_rect.position
-		node.size = target_rect.size
-	for node_name in STATIC_LABEL_RECTS.keys():
-		var label := get_node_or_null("UiLayer/%s" % node_name) as Label
-		if label == null:
-			continue
-		var label_source_rect: Rect2 = STATIC_LABEL_RECTS[node_name]
-		var label_target_rect := Rect2(
-			displayed_art_origin + label_source_rect.position * scale_factor,
-			label_source_rect.size * scale_factor
-		)
-		label.position = label_target_rect.position
-		label.size = label_target_rect.size
-		label.add_theme_font_size_override("font_size", roundi(_label_base_font_size(node_name) * scale_factor))
+	_layout_design_layer(art_layer, displayed_art_origin, scale_factor)
+	_layout_design_layer(ui_layer, displayed_art_origin, scale_factor)
 	_update_zipper_heads()
 
-func _layout_art_nodes() -> void:
-	for node_name in ART_RECTS.keys():
-		var node := get_node_or_null("ArtLayer/%s" % node_name) as Control
-		if node == null:
-			continue
-		_layout_art_control(node, ART_RECTS[node_name])
-	for track_name in ZIPPER_VISUAL_RECTS.keys():
-		var visual := get_node_or_null("ArtLayer/ZipperVisual%s" % track_name) as Control
-		if visual:
-			_layout_art_control(visual, ZIPPER_VISUAL_RECTS[track_name])
-	_update_zipper_heads()
-
-func _layout_art_control(control: Control, source_rect: Rect2) -> void:
-	var target := _art_rect_to_viewport(source_rect)
-	control.position = target.position
-	control.size = target.size
-
-func _art_rect_to_viewport(source_rect: Rect2) -> Rect2:
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = BASE_SIZE
-	var scale_factor: float = maxf(viewport_size.x / BASE_SIZE.x, viewport_size.y / BASE_SIZE.y)
-	var displayed_art_size := BASE_SIZE * scale_factor
-	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
-	return Rect2(
-		displayed_art_origin + source_rect.position * scale_factor,
-		source_rect.size * scale_factor
-	)
-
-func _ensure_static_labels() -> void:
-	for node_name in STATIC_LABEL_RECTS.keys():
-		if ui_layer.has_node(node_name):
-			continue
-		var label := Label.new()
-		label.name = node_name
-		label.text = STATIC_LABEL_TEXT[node_name]
-		label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		label.add_theme_color_override("font_color", Color(0.03, 0.02, 0.015, 1))
-		label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-		ui_layer.add_child(label)
-
-func _label_base_font_size(node_name: String) -> int:
-	if node_name in ["LabelVideo", "LabelAudio", "LabelGame"]:
-		return 48
-	if node_name == "LabelSpeedChoices":
-		return 34
-	return 36
+func _layout_design_layer(layer: Control, origin: Vector2, scale_factor: float) -> void:
+	layer.position = origin
+	layer.size = BASE_SIZE
+	layer.scale = Vector2(scale_factor, scale_factor)
 
 func _update_zipper_heads() -> void:
 	_set_zipper_visual_value("Master", master_slider.value)

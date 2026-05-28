@@ -431,7 +431,12 @@ class DesignConfigValidator:
         if not isinstance(visual, dict):
             self.result.add_error(entry_path, "visual must be an object")
             return
-        for key in ["battle_bgm_key", "hub_bgm_key", "ui_tint"]:
+        for key in [
+            "battle_bgm_key",
+            "hub_bgm_key",
+            "ui_tint",
+            "dreamcatcher_net_path",
+        ]:
             if key in visual and not isinstance(visual.get(key), str):
                 self.result.add_error(entry_path, f"{key} must be a string")
 

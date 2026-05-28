@@ -1,6 +1,7 @@
 extends GutTest
 
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
+const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
 
 func after_each():
 	GlobalTooltip.hide()
@@ -25,6 +26,36 @@ func test_item_ui_updates_pollution_badge_when_instance_changes():
 	instance.current_pollution = 0
 
 	assert_false(ui.pollution_label.visible)
+
+func test_item_ui_uses_configured_grid_cell_size_for_shape_size():
+	var item = _make_item_data()
+	item.shape = [Vector2i(0, 0), Vector2i(1, 0), Vector2i(1, 1)] as Array[Vector2i]
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+	ui.set_cell_size(Vector2(80.0, 72.0))
+
+	assert_eq(ui.cell_size, Vector2(80.0, 72.0))
+	assert_eq(ui.custom_minimum_size, Vector2(160.0, 144.0))
+	assert_eq(ui.size, Vector2(160.0, 144.0))
+
+func test_backpack_configures_item_ui_with_grid_cell_size():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	backpack.custom_minimum_size = Vector2(700.0, 490.0)
+	backpack.size = Vector2(700.0, 490.0)
+	await get_tree().process_frame
+
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	backpack.configure_item_for_grid(ui, backpack)
+
+	assert_eq(backpack.get_grid_cell_size(), Vector2(100.0, 70.0))
+	assert_eq(ui.cell_size, Vector2(100.0, 70.0))
+	assert_eq(ui.custom_minimum_size, Vector2(100.0, 70.0))
 
 func test_global_tooltip_shows_dynamic_pollution_status():
 	var item = _make_item_data()

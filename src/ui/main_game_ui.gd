@@ -6,6 +6,7 @@ const MODE_BATTLE := "battle"
 const MODE_BACKPACK_OVERLAY := "backpack_overlay"
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const OVERLAY_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
+const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
 const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
 const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
 const BACKPACK_OVERLAY_EFFECTS_RECT := Rect2(1060.0, 220.0, 455.0, 420.0)
@@ -51,6 +52,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 @onready var potion_bag = get_node_or_null("ContentLayer/StatsPanel/PotionBag") as TextureRect
 @onready var draw_button = $ContentLayer/DreamcatcherPanel/DrawButton
 @onready var dreamcatcher_panel = $ContentLayer/DreamcatcherPanel
+@onready var dreamcatcher_net = get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherNet") as Sprite2D
 @onready var draw_spawn_point = get_node_or_null(draw_spawn_point_path)
 @onready var trash_bin = $ContentLayer/GridPanel/TrashBin
 @onready var ornaments_area = $ContentLayer/OrnamentsPanel/Slots
@@ -66,7 +68,9 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 var battle_manager: BattleManager
 var _is_battle_ended: bool = false
 var _draw_locked: bool = false
-var _dreamcatcher_base_scale := Vector2.ONE
+var _dreamcatcher_net_base_position := Vector2.ZERO
+var _dreamcatcher_net_base_rotation := 0.0
+var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _ui_mode: String = MODE_BATTLE
 var _overlay_close_callback: Callable = Callable()
 var _selected_tool_id: String = ""
@@ -84,8 +88,7 @@ func _ready():
 	if not resized.is_connected(_layout_battle_scene):
 		resized.connect(_layout_battle_scene)
 	_layout_battle_scene()
-	if dreamcatcher_panel:
-		_dreamcatcher_base_scale = dreamcatcher_panel.scale
+	_capture_dreamcatcher_net_pose()
 	if _is_backpack_overlay_mode():
 		_apply_backpack_overlay_mode()
 	
@@ -179,11 +182,22 @@ func _apply_stage_visuals() -> void:
 		return
 	var visual = rm.get_current_stage_visual()
 	var tint = str(visual.get("ui_tint", ""))
-	if tint == "":
-		return
 	var background = get_node_or_null("Background")
-	if background is ColorRect:
+	if tint != "" and background is ColorRect:
 		background.color = Color.html(tint)
+	_apply_dreamcatcher_stage_visual(visual)
+	_configure_dreamcatcher_swing_pivot()
+	_capture_dreamcatcher_net_pose()
+
+func _apply_dreamcatcher_stage_visual(visual: Dictionary) -> void:
+	if dreamcatcher_net == null:
+		return
+	var texture_path := str(visual.get("dreamcatcher_net_path", ""))
+	if texture_path == "":
+		return
+	var texture := load(texture_path)
+	if texture is Texture2D:
+		dreamcatcher_net.texture = texture
 
 func _layout_battle_scene() -> void:
 	if _is_backpack_overlay_mode():
@@ -191,12 +205,39 @@ func _layout_battle_scene() -> void:
 	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE)
 	if battle_art:
 		battle_art.show()
-	if dreamcatcher_panel:
-		_dreamcatcher_base_scale = dreamcatcher_panel.scale
+	_configure_dreamcatcher_swing_pivot()
+	_capture_dreamcatcher_net_pose()
+
+func _capture_dreamcatcher_net_pose() -> void:
+	if dreamcatcher_net == null:
+		return
+	_dreamcatcher_net_base_position = dreamcatcher_net.position
+	_dreamcatcher_net_base_rotation = dreamcatcher_net.rotation
+	_dreamcatcher_net_base_offset = dreamcatcher_net.offset
+
+func _configure_dreamcatcher_swing_pivot() -> void:
+	if dreamcatcher_net == null or dreamcatcher_net.texture == null:
+		return
+	var texture_size: Vector2 = dreamcatcher_net.texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var visual_center: Vector2 = _get_dreamcatcher_net_visual_center()
+	var pivot_distance: float = texture_size.y * DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO
+	dreamcatcher_net.centered = true
+	dreamcatcher_net.offset = Vector2(0.0, pivot_distance)
+	dreamcatcher_net.position = visual_center - dreamcatcher_net.offset.rotated(dreamcatcher_net.rotation)
+
+func _get_dreamcatcher_net_visual_center() -> Vector2:
+	if dreamcatcher_panel is TextureRect and dreamcatcher_panel.texture != null:
+		return dreamcatcher_panel.texture.get_size() * 0.5
+	if dreamcatcher_net != null:
+		return dreamcatcher_net.position + dreamcatcher_net.offset.rotated(dreamcatcher_net.rotation)
+	return Vector2.ZERO
 
 func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
 	if content_layer == null:
 		return
+	content_layer.custom_minimum_size = base_size
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = base_size
@@ -212,15 +253,17 @@ func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
 func _reset_content_layer_to_viewport() -> void:
 	if content_layer == null:
 		return
+	content_layer.custom_minimum_size = Vector2.ZERO
 	content_layer.scale = Vector2.ONE
 	content_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	content_layer.position = Vector2.ZERO
 
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
 	_reset_content_layer_to_viewport()
 	var background = get_node_or_null("Background")
 	if background is ColorRect:
-		background.color = Color(0, 0, 0, 1)
+		background.color = Color(0.17, 0.12, 0.075, 1)
 	if battle_art:
 		battle_art.hide()
 	if backpack_overlay_art:
@@ -252,6 +295,8 @@ func _apply_backpack_overlay_mode() -> void:
 	_position_backpack_overlay_panel()
 
 func _position_backpack_overlay_panel() -> void:
+	if _is_backpack_overlay_mode():
+		_reset_content_layer_to_viewport()
 	_layout_backpack_overlay_art()
 	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
 	if grid_panel == null:
@@ -547,13 +592,13 @@ func _on_item_drawn(item_data: ItemData):
 	# 将卡牌放入 UI 层
 	add_child(card)
 	card.setup(item_data, battle_manager.context)
+	_configure_item_ui_for_backpack_grid(card)
 	
 	# 注册到管理器以便自动清理
 	if battle_manager:
 		battle_manager.managed_item_uis.append(card)
 	
-	# --- 核心适配：同步背包缩放 ---
-	card.scale = Vector2(0.7, 0.7)
+	card.scale = Vector2.ONE
 	
 	# 初始位置：抽卡区中心
 	card.global_position = _get_draw_spawn_position(card)
@@ -561,6 +606,11 @@ func _on_item_drawn(item_data: ItemData):
 	
 	# 连接拖拽信号
 	_connect_item_ui_signals(card)
+
+func _configure_item_ui_for_backpack_grid(card: Control) -> void:
+	if card == null or backpack_ui == null or not backpack_ui.has_method("configure_item_for_grid"):
+		return
+	backpack_ui.configure_item_for_grid(card, card.get_parent())
 
 func _render_existing_backpack_items():
 	if not battle_manager or not backpack_ui:
@@ -869,12 +919,26 @@ func _sync_draw_button_state() -> void:
 		draw_button.disabled = _draw_locked or _is_battle_ended or battle_manager == null or battle_manager.battle_state != BattleManager.BattleState.INTERACTIVE
 
 func _play_dreamcatcher_animation() -> void:
-	if dreamcatcher_panel == null or not is_inside_tree():
+	if dreamcatcher_net == null or not is_inside_tree():
 		return
+	dreamcatcher_net.position = _dreamcatcher_net_base_position
+	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
+	dreamcatcher_net.offset = _dreamcatcher_net_base_offset
+
+	var base_position := _dreamcatcher_net_base_position
+	var base_rotation := _dreamcatcher_net_base_rotation
+	var base_offset := _dreamcatcher_net_base_offset
 	var tween = create_tween()
-	tween.tween_property(dreamcatcher_panel, "scale", _dreamcatcher_base_scale * 1.04, 0.08)
-	tween.tween_property(dreamcatcher_panel, "scale", _dreamcatcher_base_scale, 0.12)
+	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
+	tween.tween_property(dreamcatcher_net, "rotation", base_rotation - 0.085, 0.16)
+	tween.tween_property(dreamcatcher_net, "rotation", base_rotation + 0.075, 0.2)
+	tween.tween_property(dreamcatcher_net, "rotation", base_rotation - 0.048, 0.17)
+	tween.tween_property(dreamcatcher_net, "rotation", base_rotation + 0.022, 0.14)
+	tween.tween_property(dreamcatcher_net, "rotation", base_rotation, 0.12)
 	await tween.finished
+	dreamcatcher_net.position = base_position
+	dreamcatcher_net.rotation = base_rotation
+	dreamcatcher_net.offset = base_offset
 
 func _get_draw_spawn_position(card: Control) -> Vector2:
 	var spawn_center: Vector2

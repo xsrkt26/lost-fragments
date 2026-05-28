@@ -408,7 +408,7 @@ func _rotate_outside_item(item_ui: Control, _mouse_global_pos: Vector2, pivot_of
 		item_ui._sync_visuals()
 	
 	var pivot_delta = Vector2(pivot_offset.x - new_pivot_offset.x, pivot_offset.y - new_pivot_offset.y)
-	_move_item_visual_outside(item_ui, item_ui.global_position + pivot_delta * Vector2(100.0, 94.0) * 0.7)
+	_move_item_visual_outside(item_ui, item_ui.global_position + pivot_delta * _get_item_ui_global_cell_size(item_ui))
 	GlobalAudio.play_sfx("place")
 	print("[BattleManager] Outside item rotated")
 
@@ -419,9 +419,41 @@ func _move_item_visual_outside(item_ui: Control, global_pos: Vector2):
 			item_ui.get_parent().remove_child(item_ui)
 		target_parent.add_child(item_ui)
 	
-	item_ui.scale = Vector2(0.7, 0.7)
+	_configure_item_visual_for_current_parent(item_ui)
+	item_ui.scale = Vector2.ONE
 	item_ui.global_position = global_pos
 	item_ui.z_index = 0
+
+func _configure_item_visual_for_current_parent(item_ui: Control) -> void:
+	if item_ui == null:
+		return
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("configure_item_for_grid"):
+		backpack_ui.configure_item_for_grid(item_ui, item_ui.get_parent())
+
+func _get_item_ui_global_cell_size(item_ui: Control) -> Vector2:
+	if item_ui == null:
+		return Vector2.ONE
+	var local_cell_size := _get_item_ui_cell_size(item_ui)
+	var transform := item_ui.get_global_transform_with_canvas()
+	var origin := transform * Vector2.ZERO
+	var right := transform * Vector2(local_cell_size.x, 0.0)
+	var down := transform * Vector2(0.0, local_cell_size.y)
+	return Vector2(origin.distance_to(right), origin.distance_to(down))
+
+func _get_item_ui_cell_size(item_ui: Control) -> Vector2:
+	var configured_cell_size = item_ui.get("cell_size")
+	if configured_cell_size is Vector2:
+		var cell_size := configured_cell_size as Vector2
+		if cell_size.x > 0.0 and cell_size.y > 0.0:
+			return cell_size
+	var item_data = item_ui.get("item_data") as ItemData
+	if item_data != null:
+		var rect = item_data.get_bounding_rect()
+		if rect.size.x > 0 and rect.size.y > 0 and item_ui.size.x > 0.0 and item_ui.size.y > 0.0:
+			return Vector2(item_ui.size.x / rect.size.x, item_ui.size.y / rect.size.y)
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("get_grid_cell_size_for_parent"):
+		return backpack_ui.get_grid_cell_size_for_parent(item_ui.get_parent())
+	return Vector2.ONE
 
 func _get_outside_item_parent() -> Node:
 	if is_instance_valid(backpack_ui):
@@ -494,15 +526,16 @@ func _handle_place_failure(item_ui: Control, old_pos: Vector2i, _old_shape: Arra
 				get_parent().add_child(item_ui)
 				
 		item_ui.set("item_instance", null)
-		item_ui.scale = Vector2(0.7, 0.7)
+		_configure_item_visual_for_current_parent(item_ui)
+		item_ui.scale = Vector2.ONE
 		
 		# 统一弹出位置：背包左侧一点 (相对 GridPanel 坐标系)
 		var bp_rect = backpack_ui.get_global_rect() if is_instance_valid(backpack_ui) else Rect2(Vector2(500, 300), Vector2(1,1))
 		item_ui.global_position = Vector2(bp_rect.position.x - 180, bp_rect.position.y + 150)
 		
 		var tween = create_tween()
-		tween.tween_property(item_ui, "scale", Vector2(0.77, 0.77), 0.1)
-		tween.tween_property(item_ui, "scale", Vector2(0.7, 0.7), 0.1)
+		tween.tween_property(item_ui, "scale", Vector2(1.1, 1.1), 0.1)
+		tween.tween_property(item_ui, "scale", Vector2.ONE, 0.1)
 
 func trigger_impact_at(pos: Vector2i):
 	queue_impact_at(pos, -1, null, "direct")

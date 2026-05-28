@@ -4,6 +4,8 @@ extends Control
 ## 物品 UI 脚本：负责物品的视觉表现和拖拽信号
 
 @export var item_data: ItemData
+
+var cell_size: Vector2 = Vector2.ZERO
 var item_instance: BackpackManager.ItemInstance: # 逻辑实例
 	set(v):
 		if item_instance and item_instance.pollution_changed.is_connected(_on_item_pollution_changed):
@@ -34,6 +36,7 @@ var _held_pivot_offset: Vector2i = Vector2i.ZERO # 拖拽时鼠标按在哪个�
 
 func _ready():
 	add_to_group("item_uis")
+	_init_cell_size_from_scene()
 	if item_data:
 		setup(item_data)
 	
@@ -52,9 +55,25 @@ func setup(p_data: ItemData, _context: GameContext = null):
 	item_data = p_data
 	_sync_visuals()
 
+func set_cell_size(p_cell_size: Vector2) -> void:
+	if p_cell_size.x <= 0.0 or p_cell_size.y <= 0.0:
+		return
+	cell_size = p_cell_size
+	_sync_visuals()
+
+func _init_cell_size_from_scene() -> void:
+	if cell_size.x > 0.0 and cell_size.y > 0.0:
+		return
+	cell_size = size
+	if cell_size.x <= 0.0 or cell_size.y <= 0.0:
+		cell_size = custom_minimum_size
+	if cell_size.x <= 0.0 or cell_size.y <= 0.0:
+		cell_size = Vector2.ONE
+
 func _sync_visuals():
 	if not is_node_ready(): return
 	if not item_data: return
+	_init_cell_size_from_scene()
 	
 	# 0. 设置名称
 	if name_label:
@@ -62,8 +81,8 @@ func _sync_visuals():
 	
 	# 1. 根据 Shape 设置 UI 尺寸
 	var rect = item_data.get_bounding_rect()
-	# UI 物理像素 = 格子数 * 基础步进 (100x100)
-	custom_minimum_size = Vector2(rect.size.x * 100, rect.size.y * 94) 
+	# UI 物理像素 = 格子数 * 当前背包网格步进
+	custom_minimum_size = Vector2(rect.size.x * cell_size.x, rect.size.y * cell_size.y)
 	size = custom_minimum_size
 	
 	# 2. 设置颜色和方向
@@ -141,10 +160,10 @@ func _refresh_hover_tooltip():
 func _start_drag():
 	_is_dragging = true
 	var local_mouse = get_local_mouse_position()
-	# UI格子基础尺寸为 100x94
+	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	_held_pivot_offset = Vector2i(
-		floori(local_mouse.x / 100.0),
-		floori(local_mouse.y / 94.0)
+		floori(local_mouse.x / safe_cell_size.x),
+		floori(local_mouse.y / safe_cell_size.y)
 	)
 	_drag_offset = get_global_mouse_position() - global_position
 	z_index = 100 # 确保在最上方
@@ -161,9 +180,10 @@ func _request_rotation():
 	# 旋转时停止拖拽
 	_is_dragging = false
 	var local_mouse = get_local_mouse_position()
+	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	var pivot_offset = Vector2i(
-		floori(local_mouse.x / 100.0),
-		floori(local_mouse.y / 94.0)
+		floori(local_mouse.x / safe_cell_size.x),
+		floori(local_mouse.y / safe_cell_size.y)
 	)
 	rotation_requested.emit(self, get_global_mouse_position(), pivot_offset)
 

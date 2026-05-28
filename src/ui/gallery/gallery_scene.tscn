@@ -12,17 +12,11 @@
 [ext_resource type="Texture2D" path="res://assets/ui/book/tab_settings.png" id="10_tab_settings"]
 [ext_resource type="Texture2D" path="res://assets/ui/gallery/magnifier.png" id="11_magnifier"]
 [ext_resource type="Texture2D" path="res://assets/ui/gallery/forget_me_not.png" id="12_flower"]
+[ext_resource type="Script" path="res://src/ui/gallery/rope_grid.gd" id="13_rope_grid"]
+[ext_resource type="Script" path="res://src/ui/gallery/torn_paper.gd" id="14_torn_paper"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
 bg_color = Color(1, 1, 1, 0)
-
-[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_item_button"]
-bg_color = Color(0.78, 0.63, 0.43, 0.18)
-border_width_left = 1
-border_width_top = 1
-border_width_right = 1
-border_width_bottom = 1
-border_color = Color(0.24, 0.14, 0.08, 0.32)
 
 [node name="GalleryScene" type="Control"]
 layout_mode = 3
@@ -98,10 +92,10 @@ texture = ExtResource("7_tab_album")
 expand_mode = 1
 stretch_mode = 0
 
-[node name="GridBackdrop" type="ColorRect" parent="ArtLayer"]
+[node name="GridBackdrop" type="Control" parent="ArtLayer"]
 layout_mode = 0
 mouse_filter = 2
-color = Color(0.62, 0.46, 0.28, 0.23)
+script = ExtResource("13_rope_grid")
 
 [node name="Magnifier" type="TextureRect" parent="ArtLayer"]
 layout_mode = 0
@@ -145,12 +139,63 @@ text = ""
 [node name="ItemScroll" type="ScrollContainer" parent="UiLayer"]
 layout_mode = 0
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 1
 
 [node name="ItemGrid" type="GridContainer" parent="UiLayer/ItemScroll"]
 layout_mode = 2
-theme_override_constants/h_separation = 12
-theme_override_constants/v_separation = 12
+theme_override_constants/h_separation = 0
+theme_override_constants/v_separation = 0
 columns = 7
+
+[node name="SelectedPaper" type="Control" parent="UiLayer"]
+layout_mode = 0
+mouse_filter = 2
+script = ExtResource("14_torn_paper")
+fill_color = Color(0.80, 0.75, 0.64, 0.96)
+edge_color = Color(0.26, 0.19, 0.13, 0.26)
+grain_color = Color(0.32, 0.22, 0.14, 0.10)
+
+[node name="SelectedName" type="Label" parent="UiLayer/SelectedPaper"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 20.0
+offset_right = -18.0
+offset_bottom = -78.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.08, 0.055, 0.032, 1)
+theme_override_font_sizes/font_size = 24
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="SelectedMeta" type="Label" parent="UiLayer/SelectedPaper"]
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+offset_left = 18.0
+offset_top = 112.0
+offset_right = -18.0
+offset_bottom = -20.0
+grow_horizontal = 2
+grow_vertical = 2
+theme_override_colors/font_color = Color(0.17, 0.12, 0.075, 0.86)
+theme_override_font_sizes/font_size = 16
+horizontal_alignment = 1
+vertical_alignment = 1
+autowrap_mode = 3
+
+[node name="MemoryPaper" type="Control" parent="UiLayer"]
+layout_mode = 0
+mouse_filter = 2
+script = ExtResource("14_torn_paper")
+fill_color = Color(0.43, 0.31, 0.21, 0.90)
+edge_color = Color(0.16, 0.10, 0.06, 0.32)
+grain_color = Color(0.96, 0.84, 0.58, 0.07)
 
 [node name="DetailName" type="Label" parent="UiLayer"]
 layout_mode = 0

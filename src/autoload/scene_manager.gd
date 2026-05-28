@@ -39,6 +39,8 @@ var _overlay: ColorRect
 var _page_texture_rect: TextureRect
 var _page_material: ShaderMaterial
 var _is_transitioning := false
+var _page_turn_progress := 0.0
+var _preloaded_scenes: Dictionary = {}
 
 func _ready():
 	_setup_transition_ui()
@@ -46,6 +48,7 @@ func _ready():
 		get_tree().root.size_changed.connect(_sync_transition_ui_to_viewport)
 	# 初始判断当前是哪个场景
 	_detect_initial_scene()
+	call_deferred("_preload_transition_targets")
 
 func _setup_transition_ui():
 	# 创建一个最高层级的画布
@@ -95,6 +98,33 @@ func _detect_initial_scene():
 			current_scene_type = type
 			break
 
+func _preload_transition_targets() -> void:
+	await get_tree().process_frame
+	for target in SCENE_PATHS.keys():
+		if target != current_scene_type:
+			preload_scene(target)
+
+func preload_scene(target: SceneType) -> void:
+	if not SCENE_PATHS.has(target) or _preloaded_scenes.has(target):
+		return
+	var scene_path: String = SCENE_PATHS[target]
+	if ResourceLoader.has_cached(scene_path):
+		var cached_resource: Resource = load(scene_path)
+		if cached_resource is PackedScene:
+			_preloaded_scenes[target] = cached_resource
+		return
+	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
+	if status == ResourceLoader.THREAD_LOAD_LOADED:
+		var loaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
+		if loaded_resource is PackedScene:
+			_preloaded_scenes[target] = loaded_resource
+		return
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		return
+	var request_error: int = ResourceLoader.load_threaded_request(scene_path, "PackedScene", true)
+	if request_error != OK:
+		push_warning("[SceneManager] Failed to preload scene: %s" % scene_path)
+
 ## 核心跳转方法：带有淡入淡出动画
 func transition_to(target: SceneType, push_to_history: bool = true):
 	if _is_transitioning:
@@ -138,12 +168,7 @@ func transition_with_page_turn(change_callback: Callable) -> void:
 		_is_transitioning = false
 		return
 
-	_page_texture_rect.texture = snapshot_texture
-	_page_texture_rect.visible = true
-	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_STOP
-	_page_material.set_shader_parameter("progress", 0.0)
-	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	_overlay.color = Color(0, 0, 0, 0)
+	_show_page_turn_overlay(snapshot_texture)
 
 	if change_callback.is_valid():
 		change_callback.call()
@@ -152,22 +177,21 @@ func transition_with_page_turn(change_callback: Callable) -> void:
 	await get_tree().process_frame
 	_sync_transition_ui_to_viewport()
 
-	var tween = create_tween()
-	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	var tween: Tween = _start_page_turn_tween()
 	await tween.finished
 	_clear_page_turn_overlay()
 	_is_transitioning = false
 
 func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) -> void:
-	_page_texture_rect.texture = snapshot_texture
-	_page_texture_rect.visible = true
-	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_STOP
-	_page_material.set_shader_parameter("progress", 0.0)
-	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	_overlay.color = Color(0, 0, 0, 0)
+	_show_page_turn_overlay(snapshot_texture)
+	var packed_scene: PackedScene = await _get_scene_for_transition(target)
+	if packed_scene == null:
+		push_error("[SceneManager] Failed to load scene: %s" % SCENE_PATHS[target])
+		_clear_page_turn_overlay()
+		return
 
 	current_scene_type = target
-	var error = get_tree().change_scene_to_file(SCENE_PATHS[target])
+	var error: int = get_tree().change_scene_to_packed(packed_scene)
 	if error != OK:
 		push_error("[SceneManager] Failed to change scene: %s" % SCENE_PATHS[target])
 		_clear_page_turn_overlay()
@@ -177,10 +201,41 @@ func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) 
 	await get_tree().process_frame
 	_sync_transition_ui_to_viewport()
 
-	var tween = create_tween()
-	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	var tween: Tween = _start_page_turn_tween()
 	await tween.finished
 	_clear_page_turn_overlay()
+
+func _show_page_turn_overlay(snapshot_texture: Texture2D) -> void:
+	_page_texture_rect.texture = snapshot_texture
+	_page_texture_rect.visible = true
+	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	_overlay.color = Color(0, 0, 0, 0)
+	_set_page_turn_progress(0.0)
+
+func _start_page_turn_tween() -> Tween:
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, _get_page_turn_duration()).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
+	return tween
+
+func _get_scene_for_transition(target: SceneType) -> PackedScene:
+	if _preloaded_scenes.has(target) and _preloaded_scenes[target] is PackedScene:
+		return _preloaded_scenes[target] as PackedScene
+	var scene_path: String = SCENE_PATHS[target]
+	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
+	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
+		await get_tree().process_frame
+		status = ResourceLoader.load_threaded_get_status(scene_path)
+	if status == ResourceLoader.THREAD_LOAD_LOADED:
+		var threaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
+		if threaded_resource is PackedScene:
+			_preloaded_scenes[target] = threaded_resource
+			return threaded_resource as PackedScene
+	var loaded_resource: Resource = load(scene_path)
+	if loaded_resource is PackedScene:
+		_preloaded_scenes[target] = loaded_resource
+		return loaded_resource as PackedScene
+	return null
 
 func _transition_with_fade(target: SceneType) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -202,7 +257,11 @@ func _transition_with_fade(target: SceneType) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 
 func _capture_current_scene_texture() -> Texture2D:
-	await RenderingServer.frame_post_draw
+	if DisplayServer.get_name() == "headless":
+		await get_tree().process_frame
+		return null
+	else:
+		await RenderingServer.frame_post_draw
 	var viewport_texture = get_viewport().get_texture()
 	if viewport_texture == null:
 		return null
@@ -217,6 +276,7 @@ func _make_fallback_page_texture() -> Texture2D:
 	return ImageTexture.create_from_image(image)
 
 func _set_page_turn_progress(value: float) -> void:
+	_page_turn_progress = value
 	if _page_material:
 		_page_material.set_shader_parameter("progress", value)
 
@@ -232,6 +292,7 @@ func _clear_page_turn_overlay() -> void:
 	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	_overlay.color = Color(0, 0, 0, 0)
+	_set_page_turn_progress(0.0)
 
 ## 智能回退：回到上一级
 func go_back():

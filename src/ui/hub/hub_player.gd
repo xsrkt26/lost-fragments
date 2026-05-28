@@ -1,5 +1,7 @@
 extends CharacterBody2D
 
+signal move_target_reached(target_x: float)
+
 const ANIM_IDLE: StringName = &"idle"
 const ANIM_WALK: StringName = &"walk"
 
@@ -62,8 +64,10 @@ func _physics_process(delta: float) -> void:
 	elif has_move_target:
 		var distance := move_target_x - global_position.x
 		if abs(distance) <= click_stop_distance:
+			var reached_target_x := move_target_x
 			clear_move_target()
 			velocity.x = 0.0
+			move_target_reached.emit(reached_target_x)
 		else:
 			var move_dir: float = sign(distance)
 			velocity.x = move_dir * speed

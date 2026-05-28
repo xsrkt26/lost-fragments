@@ -2,7 +2,7 @@
 
 [ext_resource type="Script" uid="uid://bl5rpy55tugiv" path="res://src/ui/main_game_ui.gd" id="1_script"]
 [ext_resource type="Texture2D" uid="uid://b1tcd4w8k2mqp" path="res://assets/ui/battle/dreamcatcher_cloud.png" id="2_dc"]
-[ext_resource type="Texture2D" uid="uid://urk7lxy1nsme" path="res://assets/ui/battle/dreamcatcher_overlay.png" id="3_dc_overlay"]
+[ext_resource type="Texture2D" uid="uid://c17ulsa3cl4db" path="res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png" id="3_dc_net"]
 [ext_resource type="Texture2D" uid="uid://b1tpr7n2cyade" path="res://assets/ui/battle/player_portrait.png" id="4_port"]
 [ext_resource type="PackedScene" path="res://src/ui/backpack/backpack_ui.tscn" id="7_backpack"]
 [ext_resource type="Texture2D" uid="uid://b7c4lx1nc4lex" path="res://assets/ui/book/wood_floor.png" id="10_wood"]
@@ -357,26 +357,19 @@ expand_mode = 1
 
 [node name="DreamcatcherPanel" type="TextureRect" parent="ContentLayer" unique_id=422682609]
 layout_mode = 0
-offset_left = 264.0
+offset_left = 246.0
 offset_top = 70.0
-offset_right = 1051.0
-offset_bottom = 741.0
+offset_right = 1078.1174
+offset_bottom = 782.6328
 scale = Vector2(0.91092926, 0.8068672)
 mouse_filter = 2
 texture = ExtResource("2_dc")
 expand_mode = 1
 
-[node name="DreamcatcherOverlay" type="TextureRect" parent="ContentLayer/DreamcatcherPanel" unique_id=1411812350]
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
+[node name="DreamcatcherNet" type="Sprite2D" parent="ContentLayer/DreamcatcherPanel" unique_id=1744137438]
+position = Vector2(393.5, 335.5)
 rotation = 0.022559896
-mouse_filter = 2
-texture = ExtResource("3_dc_overlay")
-expand_mode = 1
+texture = ExtResource("3_dc_net")
 
 [node name="DrawButton" type="TextureButton" parent="ContentLayer/DreamcatcherPanel" unique_id=208746346]
 layout_mode = 1

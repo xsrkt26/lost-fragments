@@ -35,11 +35,36 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"AnimationSpeedOption",
 		"ResetButton",
 		"CloseButton",
+		"LabelMaster",
+		"LabelWindowMode",
 	]:
 		var node := ui.get_node_or_null("UiLayer/%s" % node_name) as Control
 		assert_not_null(node, "Settings UI should expose %s" % node_name)
 		assert_true(node.size.x > 0.0)
 		assert_true(node.size.y > 0.0)
+
+	var master_visual := ui.get_node("ArtLayer/ZipperVisualMaster") as Control
+	assert_almost_eq(master_visual.position.x, 754.0, 0.01)
+	assert_almost_eq(master_visual.size.x, 520.0, 0.01)
+	assert_almost_eq(art_layer.size.x, 1920.0, 0.01)
+	assert_true(art_layer.scale.x > 0.0)
+
+	var label_video := ui.get_node("UiLayer/LabelVideo") as Label
+	var label_resolution := ui.get_node("UiLayer/LabelResolution") as Label
+	var label_master := ui.get_node("UiLayer/LabelMaster") as Label
+	assert_true(label_resolution.position.x > label_video.position.x)
+	assert_true(label_master.position.x > (ui.get_node("UiLayer/LabelAudio") as Label).position.x)
+	assert_false(label_resolution.text.contains(":"))
+	assert_false(label_master.text.contains(":"))
+
+	var mute_button := ui.get_node("UiLayer/MuteButton") as Button
+	var reset_button := ui.get_node("UiLayer/ResetButton") as Button
+	var close_button := ui.get_node("UiLayer/CloseButton") as Button
+	var master_value := ui.get_node("UiLayer/MasterValue") as Label
+	assert_almost_eq(mute_button.position.x, master_value.position.x, 0.01)
+	assert_almost_eq(mute_button.position.x + mute_button.size.x, master_value.position.x + master_value.size.x, 0.01)
+	assert_almost_eq(reset_button.position.y, close_button.position.y, 0.01)
+	assert_true(reset_button.position.x < close_button.position.x)
 
 func test_settings_scene_updates_audio_values() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())
@@ -54,6 +79,67 @@ func test_settings_scene_updates_audio_values() -> void:
 	assert_almost_eq(float(SettingsManager.audio_settings["master_volume"]), 0.42, 0.001)
 	SettingsManager.set_master_volume(previous)
 
+func test_settings_manager_applies_audio_to_real_buses() -> void:
+	var previous_audio := SettingsManager.audio_settings.duplicate(true)
+
+	SettingsManager.set_music_volume(0.25)
+	SettingsManager.set_sfx_volume(0.35)
+	SettingsManager.set_muted(true)
+
+	var music_bus := AudioServer.get_bus_index("Music")
+	var sfx_bus := AudioServer.get_bus_index("SFX")
+	assert_true(music_bus != -1)
+	assert_true(sfx_bus != -1)
+	assert_almost_eq(db_to_linear(AudioServer.get_bus_volume_db(music_bus)), 0.25, 0.01)
+	assert_almost_eq(db_to_linear(AudioServer.get_bus_volume_db(sfx_bus)), 0.35, 0.01)
+	assert_true(AudioServer.is_bus_mute(0))
+
+	_restore_settings(previous_audio, SettingsManager.display_settings, SettingsManager.game_settings)
+
+func test_settings_defaults_start_muted() -> void:
+	var previous_audio := SettingsManager.audio_settings.duplicate(true)
+	var previous_display := SettingsManager.display_settings.duplicate(true)
+	var previous_game := SettingsManager.game_settings.duplicate(true)
+
+	SettingsManager.reset_to_defaults()
+
+	assert_true(bool(SettingsManager.audio_settings["is_muted"]))
+	assert_true(AudioServer.is_bus_mute(0))
+
+	_restore_settings(previous_audio, previous_display, previous_game)
+
+func test_settings_scene_updates_all_setting_categories() -> void:
+	var previous_audio := SettingsManager.audio_settings.duplicate(true)
+	var previous_display := SettingsManager.display_settings.duplicate(true)
+	var previous_game := SettingsManager.game_settings.duplicate(true)
+	var ui = add_child_autofree(SettingsScene.instantiate())
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var music_slider := ui.get_node("UiLayer/MusicSlider") as HSlider
+	var sfx_slider := ui.get_node("UiLayer/SfxSlider") as HSlider
+	var mute_button := ui.get_node("UiLayer/MuteButton") as Button
+	var resolution_option := ui.get_node("UiLayer/ResolutionOption") as OptionButton
+	var window_mode_option := ui.get_node("UiLayer/WindowModeOption") as OptionButton
+	var animation_speed_option := ui.get_node("UiLayer/AnimationSpeedOption") as OptionButton
+
+	music_slider.value = 0.31
+	sfx_slider.value = 0.47
+	mute_button.emit_signal("pressed")
+	resolution_option.emit_signal("item_selected", 1)
+	window_mode_option.emit_signal("item_selected", 1)
+	animation_speed_option.emit_signal("item_selected", 2)
+	await get_tree().process_frame
+
+	assert_almost_eq(float(SettingsManager.audio_settings["music_volume"]), 0.31, 0.001)
+	assert_almost_eq(float(SettingsManager.audio_settings["sfx_volume"]), 0.47, 0.001)
+	assert_ne(bool(SettingsManager.audio_settings["is_muted"]), bool(previous_audio["is_muted"]))
+	assert_eq(SettingsManager.display_settings["resolution"], SettingsManager.RESOLUTION_OPTIONS[1])
+	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_FULLSCREEN)
+	assert_eq(str(SettingsManager.game_settings["animation_speed"]), SettingsManager.ANIMATION_SPEED_FAST)
+
+	_restore_settings(previous_audio, previous_display, previous_game)
+
 func test_settings_zipper_tracks_open_when_slider_is_lowered() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())
 	await get_tree().process_frame
@@ -67,12 +153,22 @@ func test_settings_zipper_tracks_open_when_slider_is_lowered() -> void:
 	await get_tree().process_frame
 	var closed_layout: Dictionary = visual.call("get_debug_layout")
 	assert_almost_eq(float(closed_layout["open_width"]), 0.0, 0.01)
-	assert_true(float(closed_layout["closed_gap"]) > 0.0)
+	assert_true(float(closed_layout["closed_overlap"]) >= 6.0)
+	assert_true(float(closed_layout["closed_gap"]) <= 0.0)
 
 	slider.value = 0.2
 	await get_tree().process_frame
 	var open_layout: Dictionary = visual.call("get_debug_layout")
+	assert_true(float(open_layout["open_start_x"]) >= float(open_layout["head_right_x"]) - 0.01)
 	assert_true(float(open_layout["closed_width"]) > 0.0)
 	assert_true(float(open_layout["open_width"]) > 0.0)
 	assert_almost_eq(float(open_layout["closed_width"]) + float(open_layout["open_width"]), (visual as Control).size.x, 0.01)
 	SettingsManager.set_master_volume(previous)
+
+func _restore_settings(audio: Dictionary, display: Dictionary, game: Dictionary) -> void:
+	SettingsManager.audio_settings = audio.duplicate(true)
+	SettingsManager.display_settings = display.duplicate(true)
+	SettingsManager.game_settings = game.duplicate(true)
+	SettingsManager.apply_audio_settings()
+	SettingsManager.apply_display_settings()
+	SettingsManager.save_settings()

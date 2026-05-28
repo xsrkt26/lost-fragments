@@ -1,9 +1,10 @@
-[gd_scene load_steps=3 format=3 uid="uid://ui_demo_01"]
+[gd_scene format=3 uid="uid://swwt8nn3o5ke"]
 
-[ext_resource type="Script" path="res://src/ui/ui_demo_scene.gd" id="1_script"]
+[ext_resource type="Script" uid="uid://dv714llsw13ow" path="res://src/ui/ui_demo_scene.gd" id="1_script"]
 [ext_resource type="PackedScene" uid="uid://22rxu8r6t76v" path="res://src/ui/main_game_ui.tscn" id="2_main_ui"]
 
-[node name="UIDemo" type="Node2D"]
+[node name="UIDemo" type="Node2D" unique_id=1044992802]
 script = ExtResource("1_script")
 
-[node name="MainGameUI" parent="." instance=ExtResource("2_main_ui")]
+[node name="MainGameUI" parent="." unique_id=893192748 instance=ExtResource("2_main_ui")]
+scale = Vector2(1, 0.97471267)

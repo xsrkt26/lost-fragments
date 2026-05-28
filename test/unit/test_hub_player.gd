@@ -20,6 +20,14 @@ func after_each():
 	rm_snapshot = {}
 
 
+func _assert_dreamcatcher_net_centered_on_cloud(panel: TextureRect, net: Sprite2D) -> void:
+	var expected_center := panel.texture.get_size() * 0.5
+	var actual_center := net.position + net.offset.rotated(net.rotation)
+	assert_almost_eq(actual_center.x, expected_center.x, 0.01)
+	assert_almost_eq(actual_center.y, expected_center.y, 0.01)
+	assert_gt(net.offset.y, net.texture.get_size().y * 0.75)
+
+
 func test_mouse_move_target_is_set_and_cleared():
 	player.move_to_global_x(420.0)
 	assert_true(player.has_move_target)
@@ -49,6 +57,13 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 
 	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 	assert_not_null(ui.get_node_or_null("ContentLayer/CloseBackpackButton"))
+	var viewport_size: Vector2 = ui.get_viewport_rect().size
+	var content_layer := ui.get_node_or_null("ContentLayer") as Control
+	assert_not_null(content_layer)
+	assert_eq(content_layer.position, Vector2.ZERO)
+	assert_eq(content_layer.scale, Vector2.ONE)
+	assert_almost_eq(content_layer.size.x, viewport_size.x, 0.01)
+	assert_almost_eq(content_layer.size.y, viewport_size.y, 0.01)
 	var overlay_art := ui.get_node_or_null("ContentLayer/BackpackOverlayArt") as Control
 	assert_not_null(overlay_art)
 	assert_true(overlay_art.visible)
@@ -66,13 +81,24 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 		assert_not_null(art, "Backpack overlay split art should expose %s" % node_name)
 		assert_not_null(art.texture)
 		assert_true(art.texture.resource_path != "res://assets/ui/backpack/backpack_overlay_background.png")
+	var wood_floor := ui.get_node_or_null("ContentLayer/BackpackOverlayArt/WoodFloor") as TextureRect
+	assert_not_null(wood_floor)
+	var wood_rect: Rect2 = wood_floor.get_global_rect()
+	assert_lte(wood_rect.position.x, 0.01)
+	assert_lte(wood_rect.position.y, 0.01)
+	assert_gte(wood_rect.end.x, viewport_size.x - 0.01)
+	assert_gte(wood_rect.end.y, viewport_size.y - 0.01)
 	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayEffectsList"))
 	assert_not_null(ui.get_node_or_null("ContentLayer/OverlayStatsLabel"))
 	assert_false(ui.get_node("ContentLayer/DreamcatcherPanel").visible)
 	assert_false(ui.get_node("ContentLayer/MenuButton").visible)
 
 
-func test_main_game_dreamcatcher_overlay_sits_above_cloud():
+func test_main_game_dreamcatcher_net_sits_above_cloud():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	if rm:
+		rm.current_act = 1
 	var ui = MainGameUI.instantiate()
 	add_child_autofree(ui)
 	await get_tree().create_timer(0.2).timeout
@@ -82,15 +108,67 @@ func test_main_game_dreamcatcher_overlay_sits_above_cloud():
 	assert_not_null(panel.texture)
 	assert_eq(panel.texture.resource_path, "res://assets/ui/battle/dreamcatcher_cloud.png")
 
-	var overlay := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherOverlay") as TextureRect
-	assert_not_null(overlay)
-	assert_not_null(overlay.texture)
-	assert_eq(overlay.texture.resource_path, "res://assets/ui/battle/dreamcatcher_overlay.png")
-	assert_eq(overlay.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+	assert_null(ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherOverlay"))
+
+	var net := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	assert_not_null(net.texture)
+	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png")
+	assert_eq(net.texture.get_size(), Vector2(456.0, 605.0))
+	_assert_dreamcatcher_net_centered_on_cloud(panel, net)
+	assert_false(net.region_enabled)
+	assert_null(net.material)
 
 	var draw_button := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DrawButton") as TextureButton
 	assert_not_null(draw_button)
-	assert_true(overlay.get_index() < draw_button.get_index())
+	assert_true(net.get_index() < draw_button.get_index())
+
+
+func test_main_game_dreamcatcher_net_tracks_current_stage():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	if rm:
+		rm.current_act = 4
+	var ui = MainGameUI.instantiate()
+	add_child_autofree(ui)
+	await get_tree().create_timer(0.2).timeout
+
+	var panel := ui.get_node_or_null("ContentLayer/DreamcatcherPanel") as TextureRect
+	assert_not_null(panel)
+	var net := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	assert_not_null(net.texture)
+	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_4_parents.png")
+	assert_eq(net.texture.get_size(), Vector2(410.0, 469.0))
+	_assert_dreamcatcher_net_centered_on_cloud(panel, net)
+
+
+func test_dreamcatcher_animation_swings_net_from_high_pivot_without_moving_cloud():
+	var ui = MainGameUI.instantiate()
+	add_child_autofree(ui)
+	await get_tree().create_timer(0.2).timeout
+
+	var panel := ui.get_node_or_null("ContentLayer/DreamcatcherPanel") as TextureRect
+	var net := ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherNet") as Sprite2D
+	assert_not_null(panel)
+	assert_null(ui.get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherOverlay"))
+	assert_not_null(net)
+
+	var panel_position: Vector2 = panel.position
+	var panel_rotation: float = panel.rotation
+	var panel_scale: Vector2 = panel.scale
+	var net_position: Vector2 = net.position
+	var net_rotation: float = net.rotation
+	var net_offset: Vector2 = net.offset
+	assert_gt(net_offset.y, net.texture.get_size().y * 0.75)
+	await ui._play_dreamcatcher_animation()
+
+	assert_eq(panel.position, panel_position)
+	assert_almost_eq(panel.rotation, panel_rotation, 0.001)
+	assert_eq(panel.scale, panel_scale)
+	assert_eq(net.position, net_position)
+	assert_almost_eq(net.rotation, net_rotation, 0.001)
+	assert_eq(net.offset, net_offset)
 
 
 func test_hub_backpack_overlay_close_button_restores_world_context():
@@ -109,8 +187,10 @@ func test_hub_backpack_overlay_close_button_restores_world_context():
 	assert_not_null(close_button)
 
 	close_button.pressed.emit()
-	await get_tree().process_frame
+	assert_eq(overlay_root.get_child_count(), 1)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.LOCKED))
 
+	await get_tree().create_timer(2.0).timeout
 	assert_eq(overlay_root.get_child_count(), 0)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 
@@ -152,6 +232,94 @@ func test_hub_player_uses_character_animation_frames():
 	assert_eq(animated_sprite.scale, Vector2(0.3, 0.3))
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("idle", 0))
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
+
+
+func test_hub_shows_merchant_animation_on_shop_node():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 1
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var merchant_sprite := hub.get_node_or_null("HubArt/MerchantSprite") as AnimatedSprite2D
+	assert_not_null(merchant_sprite)
+	assert_true(merchant_sprite.visible)
+	assert_not_null(merchant_sprite.sprite_frames)
+	assert_true(merchant_sprite.sprite_frames.has_animation("idle"))
+	assert_eq(merchant_sprite.sprite_frames.get_frame_count("idle"), 11)
+	assert_false(merchant_sprite.sprite_frames.get_animation_loop("idle"))
+	assert_eq(
+		merchant_sprite.sprite_frames.get_frame_texture("idle", 0).resource_path,
+		"res://assets/characters/merchant/cat/cat_0000.png"
+	)
+	assert_false(merchant_sprite.is_playing())
+	assert_eq(merchant_sprite.frame, 0)
+
+	merchant_sprite.speed_scale = 100.0
+	hub._on_merchant_button_mouse_entered()
+	assert_true(merchant_sprite.is_playing())
+	await get_tree().create_timer(0.2).timeout
+	assert_false(merchant_sprite.is_playing())
+	assert_eq(merchant_sprite.frame, merchant_sprite.sprite_frames.get_frame_count("idle") - 1)
+
+	var merchant_button := hub.get_node_or_null("CanvasLayer/MerchantButton") as Button
+	assert_not_null(merchant_button)
+	assert_true(merchant_button.visible)
+	assert_false(merchant_button.disabled)
+	assert_true(merchant_button.size.x > 0.0)
+	assert_true(merchant_button.size.y > 0.0)
+
+
+func test_hub_keeps_merchant_visible_before_shop_node_but_disables_entry():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var merchant_sprite := hub.get_node_or_null("HubArt/MerchantSprite") as AnimatedSprite2D
+	var merchant_button := hub.get_node_or_null("CanvasLayer/MerchantButton") as Button
+	assert_not_null(merchant_sprite)
+	assert_not_null(merchant_button)
+	assert_true(merchant_sprite.visible)
+	assert_true(merchant_button.visible)
+	assert_false(merchant_button.disabled)
+	assert_false(merchant_sprite.is_playing())
+
+	hub._on_merchant_button_pressed()
+	assert_eq(rm.current_route_index, 0)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
+
+
+func test_hub_zone_triggers_do_not_show_current_prompt_bubbles():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var speech_bubble := hub.get_node_or_null("HubArt/SpeechBubble") as Sprite2D
+	var speech_text := hub.get_node_or_null("HubArt/SpeechText") as Label
+	assert_not_null(speech_bubble)
+	assert_not_null(speech_text)
+
+	hub._on_battle_trigger_body_entered(null)
+	assert_false(speech_bubble.visible)
+	assert_false(speech_text.visible)
+
+	hub._on_shop_trigger_body_entered(null)
+	assert_false(speech_bubble.visible)
+	assert_false(speech_text.visible)
+
+	hub._on_gallery_trigger_body_entered(null)
+	assert_false(speech_bubble.visible)
+	assert_false(speech_text.visible)
 
 
 func test_hub_scene_applies_stage_background_and_foreground():

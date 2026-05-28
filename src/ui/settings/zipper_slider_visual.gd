@@ -1,14 +1,16 @@
+@tool
 extends Control
 
 @export var top_texture: Texture2D
 @export var bottom_texture: Texture2D
 @export var head_texture: Texture2D
 
-const CLOSED_GAP := 2.0
+const CLOSED_CHAIN_OVERLAP := 8.0
 const TRACK_TOP_HEIGHT := 24.0
 const TRACK_BOTTOM_HEIGHT := 20.0
 const HEAD_HEIGHT := 30.0
-const MAX_OPEN_ROTATION := 0.18
+const MAX_OPEN_ROTATION := 0.06
+const OPEN_START_HEAD_OFFSET := 0.5
 
 var zipper_value := 1.0:
 	set(new_value):
@@ -21,13 +23,17 @@ func set_zipper_value(new_value: float) -> void:
 func get_debug_layout() -> Dictionary:
 	var head_w: float = _head_width()
 	var head_center_x: float = head_w * 0.5 + zipper_value * maxf(0.0, size.x - head_w)
-	var seam_x: float = size.x if zipper_value >= 0.995 else head_center_x
+	var open_start_x: float = _open_start_x(head_center_x, head_w)
 	return {
 		"value": zipper_value,
 		"head_center_x": head_center_x,
-		"closed_width": seam_x,
-		"open_width": maxf(0.0, size.x - seam_x),
-		"closed_gap": CLOSED_GAP,
+		"head_right_x": minf(size.x, head_center_x + head_w * 0.5),
+		"open_start_x": open_start_x,
+		"closed_width": open_start_x,
+		"open_width": maxf(0.0, size.x - open_start_x),
+		"closed_gap": -CLOSED_CHAIN_OVERLAP,
+		"closed_overlap": CLOSED_CHAIN_OVERLAP,
+		"max_open_rotation": MAX_OPEN_ROTATION,
 	}
 
 func _ready() -> void:
@@ -44,15 +50,15 @@ func _draw() -> void:
 	var head_w: float = _head_width()
 	var head_h: float = _head_height()
 	var head_center_x: float = head_w * 0.5 + zipper_value * maxf(0.0, size.x - head_w)
-	var seam_x: float = size.x if zipper_value >= 0.995 else head_center_x
+	var open_start_x: float = _open_start_x(head_center_x, head_w)
 	var center_y: float = size.y * 0.5
-	var top_join_y: float = center_y - CLOSED_GAP * 0.5
-	var bottom_join_y: float = center_y + CLOSED_GAP * 0.5
-	var open_width: float = maxf(0.0, size.x - seam_x)
+	var top_join_y: float = center_y + CLOSED_CHAIN_OVERLAP * 0.5
+	var bottom_join_y: float = center_y - CLOSED_CHAIN_OVERLAP * 0.5
+	var open_width: float = maxf(0.0, size.x - open_start_x)
 
-	_draw_closed_segment(seam_x, top_h, bottom_h, top_join_y, bottom_join_y)
+	_draw_closed_segment(open_start_x, top_h, bottom_h, top_join_y, bottom_join_y)
 	if open_width > 0.5:
-		_draw_open_segment(seam_x, open_width, top_h, bottom_h, top_join_y, bottom_join_y)
+		_draw_open_segment(open_start_x, open_width, top_h, bottom_h, top_join_y, bottom_join_y)
 	_draw_head(head_center_x, center_y, head_w, head_h)
 
 func _draw_closed_segment(width: float, top_h: float, bottom_h: float, top_join_y: float, bottom_join_y: float) -> void:
@@ -76,7 +82,7 @@ func _draw_open_segment(seam_x: float, width: float, top_h: float, bottom_h: flo
 	var src_x_bottom: float = bottom_texture.get_width() * seam_x / size.x
 	var top_src := Rect2(src_x_top, 0.0, top_texture.get_width() - src_x_top, top_texture.get_height())
 	var bottom_src := Rect2(src_x_bottom, 0.0, bottom_texture.get_width() - src_x_bottom, bottom_texture.get_height())
-	var rotation_amount: float = MAX_OPEN_ROTATION * (1.0 - zipper_value)
+	var rotation_amount: float = _open_rotation(width, top_h, bottom_h, top_join_y, bottom_join_y)
 
 	draw_set_transform(Vector2(seam_x, top_join_y), -rotation_amount, Vector2.ONE)
 	draw_texture_rect_region(top_texture, Rect2(0.0, -top_h, width, top_h), top_src)
@@ -92,6 +98,20 @@ func _draw_head(center_x: float, center_y: float, head_w: float, head_h: float) 
 		Rect2(center_x - head_w * 0.5, center_y - head_h * 0.5, head_w, head_h),
 		false
 	)
+
+func _open_start_x(head_center_x: float, head_w: float) -> float:
+	if zipper_value >= 0.995:
+		return size.x
+	return clampf(head_center_x + head_w * OPEN_START_HEAD_OFFSET, 0.0, size.x)
+
+func _open_rotation(width: float, top_h: float, bottom_h: float, top_join_y: float, bottom_join_y: float) -> float:
+	var requested_rotation: float = MAX_OPEN_ROTATION * (1.0 - zipper_value)
+	if width <= 0.5:
+		return 0.0
+	var top_clearance: float = maxf(0.0, top_join_y - top_h)
+	var bottom_clearance: float = maxf(0.0, size.y - bottom_join_y - bottom_h)
+	var bounded_rotation: float = minf(atan2(top_clearance, width), atan2(bottom_clearance, width))
+	return minf(requested_rotation, bounded_rotation)
 
 func _head_height() -> float:
 	if head_texture == null:

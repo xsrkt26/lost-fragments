@@ -122,6 +122,13 @@ position = Vector2(156, 50)
 scale = Vector2(0.82, 0.82)
 centered = false
 
+[node name="MerchantSprite" type="AnimatedSprite2D" parent="HubArt"]
+visible = false
+z_index = 14
+position = Vector2(156, 50)
+scale = Vector2(0.82, 0.82)
+centered = false
+
 [node name="RingRight" type="Sprite2D" parent="HubArt"]
 z_index = 12
 position = Vector2(1492, -22)
@@ -337,6 +344,22 @@ texture = ExtResource("12_tab_back")
 expand_mode = 1
 stretch_mode = 5
 
+[node name="MerchantButton" type="Button" parent="CanvasLayer"]
+visible = false
+z_index = 21
+offset_left = 1120.0
+offset_top = 360.0
+offset_right = 1360.0
+offset_bottom = 650.0
+focus_mode = 0
+mouse_default_cursor_shape = 2
+tooltip_text = "商店"
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = ""
+
 [node name="OverlayRoot" type="Control" parent="CanvasLayer"]
 layout_mode = 3
 anchors_preset = 15
@@ -357,3 +380,4 @@ mouse_filter = 2
 [connection signal="pressed" from="CanvasLayer/GalleryButton" to="." method="_on_gallery_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/SettingsButton" to="." method="_on_settings_button_pressed"]
 [connection signal="pressed" from="CanvasLayer/MainMenuButton" to="." method="_on_main_menu_button_pressed"]
+[connection signal="pressed" from="CanvasLayer/MerchantButton" to="." method="_on_merchant_button_pressed"]

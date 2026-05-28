@@ -41,6 +41,14 @@ func test_stage_config_loads_all_six_acts_and_metadata():
 	assert_eq(StageConfig.get_visual(4).battle_bgm_key, "battle")
 	assert_false(StageConfig.get_visual(1).has("hub_background_key"))
 	assert_eq(StageConfig.get_visual(4).hub_background_key, "cardboard")
+	assert_eq(
+		StageConfig.get_visual(1).dreamcatcher_net_path,
+		"res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png"
+	)
+	assert_eq(
+		StageConfig.get_visual(4).dreamcatcher_net_path,
+		"res://assets/ui/battle/dreamcatchers/act_4_parents.png"
+	)
 
 func test_stage_routes_point_to_distinct_content_tracks():
 	assert_eq(StageConfig.get_route_id_for_act(1), RouteConfig.DEFAULT_ROUTE_ID)
