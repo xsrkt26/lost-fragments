@@ -249,6 +249,11 @@ func request_rotate_item(item_ui: Control, mouse_global_pos: Vector2, pivot_offs
 	
 	if not is_instance_valid(backpack_ui):
 		return
+	if not backpack_ui.has_method("get_grid_pos_at"):
+		if old_pos != Vector2i(-1, -1):
+			backpack_manager.place_item(item_data, old_pos)
+		push_warning("[BattleManager] BackpackUI is missing get_grid_pos_at; rotation was cancelled.")
+		return
 		
 	# 保存旋转前的状态
 	var old_direction = item_data.direction

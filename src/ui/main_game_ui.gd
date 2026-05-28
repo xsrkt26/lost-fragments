@@ -142,7 +142,7 @@ func setup(p_battle_manager: BattleManager):
 	# 连接逻辑信号
 	if not _is_backpack_overlay_mode() and not battle_manager.item_drawn.is_connected(_on_item_drawn):
 		battle_manager.item_drawn.connect(_on_item_drawn)
-	backpack_ui.item_dropped_on_grid.connect(battle_manager.request_place_item)
+	_connect_backpack_ui_signals()
 	_render_existing_backpack_items()
 	_render_pending_items()
 	_render_ornaments()
@@ -162,6 +162,16 @@ func setup(p_battle_manager: BattleManager):
 		gs.game_over.connect(_on_game_over)
 		_update_stats_display(gs.current_sanity, gs.current_score)
 	_sync_draw_button_state()
+
+func _connect_backpack_ui_signals() -> void:
+	if backpack_ui == null or battle_manager == null:
+		return
+	if not backpack_ui.has_signal("item_dropped_on_grid"):
+		push_warning("[MainGameUI] BackpackUI script is not ready; item drop signal was not connected.")
+		return
+	var place_callback := Callable(battle_manager, "request_place_item")
+	if not backpack_ui.is_connected("item_dropped_on_grid", place_callback):
+		backpack_ui.connect("item_dropped_on_grid", place_callback)
 
 func _is_backpack_overlay_mode() -> bool:
 	return _ui_mode == MODE_BACKPACK_OVERLAY
@@ -612,6 +622,26 @@ func _configure_item_ui_for_backpack_grid(card: Control) -> void:
 		return
 	backpack_ui.configure_item_for_grid(card, card.get_parent())
 
+func _get_backpack_grid_pos_at(mouse_pos: Vector2) -> Vector2i:
+	if backpack_ui == null or not backpack_ui.has_method("get_grid_pos_at"):
+		return Vector2i(-1, -1)
+	return backpack_ui.get_grid_pos_at(mouse_pos)
+
+func _add_item_visual_to_backpack(card: Control, root_pos: Vector2i) -> void:
+	if backpack_ui == null or not backpack_ui.has_method("add_item_visual"):
+		return
+	backpack_ui.add_item_visual(card, root_pos)
+
+func _highlight_backpack_placement(root_grid_pos: Vector2i, item_data: ItemData) -> void:
+	if backpack_ui == null or not backpack_ui.has_method("highlight_placement"):
+		return
+	backpack_ui.highlight_placement(root_grid_pos, item_data)
+
+func _update_backpack_slot_visuals() -> void:
+	if backpack_ui == null or not backpack_ui.has_method("update_slot_visuals"):
+		return
+	backpack_ui.update_slot_visuals()
+
 func _render_existing_backpack_items():
 	if not battle_manager or not backpack_ui:
 		return
@@ -623,7 +653,7 @@ func _render_existing_backpack_items():
 		card.item_instance = instance
 		battle_manager.managed_item_uis.append(card)
 		_connect_item_ui_signals(card)
-		backpack_ui.add_item_visual(card, instance.root_pos)
+		_add_item_visual_to_backpack(card, instance.root_pos)
 
 func _render_pending_items():
 	if pending_item_panel == null or pending_item_area == null:
@@ -794,7 +824,7 @@ func _make_tool_target_at(mouse_pos: Vector2) -> Dictionary:
 	if trash_bin != null and trash_bin.get_global_rect().has_point(mouse_pos):
 		return {"type": "discard"}
 	if backpack_ui != null and battle_manager != null:
-		var grid_pos = backpack_ui.get_grid_pos_at(mouse_pos)
+		var grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 		if grid_pos != Vector2i(-1, -1):
 			if battle_manager.backpack_manager.grid.has(grid_pos):
 				return {
@@ -815,16 +845,16 @@ func _connect_item_ui_signals(card: Control):
 	card.rotation_requested.connect(_handle_item_rotation_requested)
 
 func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i):
-	var mouse_grid_pos = backpack_ui.get_grid_pos_at(mouse_pos)
+	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 	var root_grid_pos = mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
-	backpack_ui.highlight_placement(root_grid_pos, item_ui.item_data)
+	_highlight_backpack_placement(root_grid_pos, item_ui.item_data)
 
 func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i):
 	if battle_manager and battle_manager.has_method("request_rotate_item"):
 		battle_manager.request_rotate_item(item_ui, mouse_global_pos, pivot_offset)
 
 func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i):
-	backpack_ui.update_slot_visuals() # 清除高亮
+	_update_backpack_slot_visuals() # 清除高亮
 	
 	# 1. 检查是否掉落在垃圾桶
 	if trash_bin.get_global_rect().has_point(mouse_pos):
@@ -839,7 +869,7 @@ func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Ve
 		return
 	
 	# 3. 计算 root_pos 并交给管理器
-	var mouse_grid_pos = backpack_ui.get_grid_pos_at(mouse_pos)
+	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 	var root_grid_pos = mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
 	
 	battle_manager.request_place_item(item_ui, root_grid_pos)
