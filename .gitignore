@@ -13,3 +13,7 @@ spec/.obsidian/workspace.json
 # AI workflow local state
 .ai-state/
 .queue/
+
+# Local release/build scratch space
+/tmp/*
+!/tmp/.gdignore
