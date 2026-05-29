@@ -124,11 +124,12 @@ func _prepare_intro_animation() -> void:
 		tool_panel.modulate.a = 0.0
 
 func _start_intro_sequence() -> void:
-	# 1. 创建定格动画容器 (使用 TextureRect 保证在 UI 层级正确)
+	# 1. 创建定格动画容器 (调整尺寸为更贴合背包网格的大小)
 	var bag_rect = TextureRect.new()
 	bag_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bag_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	bag_rect.size = Vector2(800, 800) # 根据 ffprobe 结果设定一个较大的初始尺寸
+	# 视频中包的大小约为背包网格的 1.2 倍
+	bag_rect.size = battle_grid_panel.size * 1.2
 	bag_rect.pivot_offset = bag_rect.size / 2.0
 	content_layer.add_child(bag_rect)
 
@@ -143,42 +144,46 @@ func _start_intro_sequence() -> void:
 	# 计算目标位置：背包面板中心
 	var target_center = battle_grid_panel.global_position + battle_grid_panel.size * 0.5
 	# 初始位置：屏幕上方
-	bag_rect.global_position = Vector2(target_center.x - bag_rect.size.x/2.0, -800)
+	bag_rect.global_position = Vector2(target_center.x - bag_rect.size.x/2.0, -900)
 
-	# A. 物理掉落
-	var drop_tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
-	drop_tween.tween_property(bag_rect, "global_position:y", target_center.y - bag_rect.size.y/2.0, 0.45)
+	# A. 物理掉落 (增加一点等待，让背景缩放基本完成)
+	await get_tree().create_timer(0.2).timeout
+	var drop_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
+	drop_tween.tween_property(bag_rect, "global_position:y", target_center.y - bag_rect.size.y/2.0, 0.7)
 	await drop_tween.finished
 
-	# 落地弹跳微震 (定格动画质感)
+	# 落地弹跳微震 (定格感)
 	var shake_tween = create_tween()
-	shake_tween.tween_property(bag_rect, "scale", Vector2(1.1, 0.9), 0.05)
-	shake_tween.tween_property(bag_rect, "scale", Vector2(1.0, 1.0), 0.05)
+	shake_tween.tween_property(bag_rect, "scale", Vector2(1.1, 0.9), 0.08)
+	shake_tween.tween_property(bag_rect, "scale", Vector2(1.0, 1.0), 0.08)
 	await shake_tween.finished
 
-	# B. 定格动画展开 (包1 -> 包4)
+	# B. 定格动画展开 (0.2s 一帧，更有节奏感)
 	for i in range(1, 4):
-		await get_tree().create_timer(0.08).timeout # 每帧停留 0.08s
+		await get_tree().create_timer(0.2).timeout
 		bag_rect.texture = frames[i]
-		# 每一帧给一点轻微的随机位移，模拟手工定格感
-		bag_rect.position += Vector2(randf_range(-4, 4), randf_range(-4, 4))
+		# 手工抖动
+		bag_rect.position += Vector2(randf_range(-10, 10), randf_range(-10, 10))
 
-	# C. 揭开真正的背包
+	# 凝视瞬间
+	await get_tree().create_timer(0.25).timeout
+
+	# C. 揭开真正的背包 (伴随快速缩放)
 	var reveal_tween = create_tween().set_parallel(true)
-	reveal_tween.tween_property(battle_grid_panel, "modulate:a", 1.0, 0.2)
-	reveal_tween.tween_property(bag_rect, "modulate:a", 0.0, 0.15)
-	reveal_tween.tween_property(bag_rect, "scale", Vector2(1.5, 1.5), 0.25) # 扩散消失
+	reveal_tween.tween_property(battle_grid_panel, "modulate:a", 1.0, 0.25)
+	reveal_tween.tween_property(bag_rect, "modulate:a", 0.0, 0.2)
+	reveal_tween.tween_property(bag_rect, "scale", Vector2(1.4, 1.4), 0.3)
 	await reveal_tween.finished
 	bag_rect.queue_free()
 
 	# D. UI 面板滑入
 	var panel_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	if stats_panel:
-		panel_tween.tween_property(stats_panel, "position:y", stats_panel.position.y - 400, 0.6)
+		panel_tween.tween_property(stats_panel, "position:y", stats_panel.position.y - 400, 0.8)
 	if tool_panel:
-		panel_tween.tween_property(tool_panel, "modulate:a", 1.0, 0.4)
+		panel_tween.tween_property(tool_panel, "modulate:a", 1.0, 0.6)
 
-	# E. 饰品依次滑出 (每个饰品单独轨迹)
+	# E. 饰品精准滑入 (从下方垂直弹入)
 	_animate_ornaments_slide_in()
 
 	await panel_tween.finished
@@ -192,14 +197,14 @@ func _animate_ornaments_slide_in() -> void:
 		var slot = children[i] as Control
 		if slot:
 			var final_pos = slot.position
-			# 初始位置：从屏幕右侧更远处滑入
-			slot.position.x += 800
+			# 初始位置：从下方垂直弹入
+			slot.position.y += 250
 			slot.modulate.a = 0.0
-			var stween = create_tween().set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+			var stween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 			# 带有明显交错感的延迟
-			stween.set_delay(i * 0.2)
-			stween.parallel().tween_property(slot, "position:x", final_pos.x, 1.0)
-			stween.parallel().tween_property(slot, "modulate:a", 1.0, 0.6)
+			stween.set_delay(i * 0.15)
+			stween.parallel().tween_property(slot, "position:y", final_pos.y, 0.6)
+			stween.parallel().tween_property(slot, "modulate:a", 1.0, 0.4)
 
 
 func _ensure_battle_manager_setup() -> void:
