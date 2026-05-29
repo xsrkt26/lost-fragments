@@ -19,16 +19,15 @@ func is_panel_visible() -> bool:
 func show_tooltip(p_name: String, p_desc: String, instance_data: Variant = null):
 	title_label.text = p_name
 	desc_label.text = p_desc
-	
+
 	if is_instance_valid(instance_data) and instance_data.current_pollution > 0:
 		status_label.text = "当前污染: " + str(instance_data.current_pollution) + " 层"
 		status_label.show()
 	else:
 		status_label.hide()
-		
-	# 立即更新位置
+
 	_update_position()
-	
+
 	if not panel.visible:
 		panel.show()
 		var tween = create_tween()

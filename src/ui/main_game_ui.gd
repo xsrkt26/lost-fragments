@@ -4,13 +4,9 @@ signal close_requested
 
 const MODE_BATTLE := "battle"
 const MODE_BACKPACK_OVERLAY := "backpack_overlay"
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
-const OVERLAY_ART_BASE_SIZE := Vector2(1920.0, 1080.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
-const BACKPACK_OVERLAY_GRID_PANEL_RECT := Rect2(230.0, 190.0, 715.0, 846.0)
-const BACKPACK_OVERLAY_CLOSE_RECT := Rect2(0.0, 70.0, 92.0, 112.0)
-const BACKPACK_OVERLAY_EFFECTS_RECT := Rect2(1060.0, 220.0, 455.0, 420.0)
-const BACKPACK_OVERLAY_STATS_RECT := Rect2(1040.0, 720.0, 535.0, 280.0)
 const STATS_FONT_SIZE_SANITY := 32
 const STATS_FONT_SIZE_SCORE := 52
 const STATS_FONT_SIZE_TARGET := 44
@@ -25,27 +21,14 @@ const POTION_STATE_TEXTURES := [
 	preload("res://assets/ui/battle/potion_state_25.png"),
 	preload("res://assets/ui/battle/potion_state_0.png"),
 ]
-const BACKPACK_OVERLAY_ART_RECTS := {
-	"WoodFloor": Rect2(0.0, 0.0, 1920.0, 1080.0),
-	"RedBookCover": Rect2(32.0, 38.0, 1916.0, 1047.0),
-	"BackTab": Rect2(4.0, 84.0, 207.0, 161.0),
-	"AlbumPage": Rect2(51.0, 0.0, 1670.0, 1080.0),
-	"BackpackTab": Rect2(4.0, 279.0, 223.0, 179.0),
-	"SettingsTab": Rect2(8.0, 514.0, 214.0, 186.0),
-	"AlbumTab": Rect2(1608.0, 208.0, 217.0, 164.0),
-	"GalleryTab": Rect2(1553.0, 415.0, 205.0, 183.0),
-	"BagBase": Rect2(186.0, 154.0, 825.0, 907.0),
-	"BagPatch": Rect2(242.0, 389.0, 685.0, 621.0),
-	"OrnamentBar": Rect2(1054.0, 221.0, 320.0, 132.0),
-	"StatsPaper": Rect2(1147.0, 628.0, 648.0, 416.0),
-	"TrashIcon": Rect2(1515.0, 717.0, 163.0, 143.0),
-	"AlbumRingRight": Rect2(1793.0, 0.0, 127.0, 1080.0),
-}
 
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
 
 @onready var content_layer = $ContentLayer
-@onready var backpack_ui = $ContentLayer/GridPanel/BackpackUI
+@onready var battle_grid_panel: Control = get_node_or_null("ContentLayer/GridPanel") as Control
+@onready var overlay_grid_panel: Control = get_node_or_null("ContentLayer/BackpackOverlayGridPanel") as Control
+@onready var battle_backpack_ui: Control = get_node_or_null("ContentLayer/GridPanel/BackpackUI") as Control
+@onready var overlay_backpack_ui: Control = get_node_or_null("ContentLayer/BackpackOverlayGridPanel/BackpackUI") as Control
 @onready var sanity_label = $ContentLayer/StatsPanel/SanityLabel
 @onready var score_label = $ContentLayer/StatsPanel/ScoreLabel
 @onready var target_score_label = get_node_or_null("ContentLayer/StatsPanel/TargetScoreLabel") as Label
@@ -54,7 +37,7 @@ const BACKPACK_OVERLAY_ART_RECTS := {
 @onready var dreamcatcher_panel = $ContentLayer/DreamcatcherPanel
 @onready var dreamcatcher_net = get_node_or_null("ContentLayer/DreamcatcherPanel/DreamcatcherNet") as Sprite2D
 @onready var draw_spawn_point = get_node_or_null(draw_spawn_point_path)
-@onready var trash_bin = $ContentLayer/GridPanel/TrashBin
+@onready var battle_trash_bin: Control = get_node_or_null("ContentLayer/GridPanel/TrashBin") as Control
 @onready var ornaments_area = $ContentLayer/OrnamentsPanel/Slots
 @onready var pending_item_panel = get_node_or_null("ContentLayer/PendingItemPanel")
 @onready var pending_item_area = get_node_or_null("ContentLayer/PendingItemPanel/PendingItemArea")
@@ -76,6 +59,8 @@ var _overlay_close_callback: Callable = Callable()
 var _selected_tool_id: String = ""
 var _dragged_tool_id: String = ""
 var _tool_drag_start: Vector2 = Vector2.ZERO
+var backpack_ui: Control = null
+var trash_bin: Control = null
 
 func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> void:
 	_ui_mode = MODE_BACKPACK_OVERLAY
@@ -85,9 +70,10 @@ func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> vo
 
 func _ready():
 	print("[MainGameUI Debug] UI初始化开始...")
-	if not resized.is_connected(_layout_battle_scene):
-		resized.connect(_layout_battle_scene)
-	_layout_battle_scene()
+	_select_active_backpack_ui()
+	if not resized.is_connected(_layout_current_scene):
+		resized.connect(_layout_current_scene)
+	_layout_current_scene()
 	_capture_dreamcatcher_net_pose()
 	if _is_backpack_overlay_mode():
 		_apply_backpack_overlay_mode()
@@ -108,7 +94,7 @@ func _ready():
 	if trash_bin:
 		trash_bin.tooltip_text = "丢弃"
 	_ensure_tool_panel()
-	_layout_battle_scene()
+	_layout_current_scene()
 	
 	# 容错：自动初始化逻辑
 	await get_tree().create_timer(0.1).timeout
@@ -118,28 +104,27 @@ func _ready():
 		setup(mock_manager)
 
 func setup(p_battle_manager: BattleManager):
-	print("[MainGameUI] 正在执行 setup...")
+	print("[MainGameUI] Running setup...")
 	if _is_backpack_overlay_mode():
 		GlobalInput.set_context(GlobalInput.Context.UI)
 	else:
 		GlobalInput.set_context(GlobalInput.Context.BATTLE)
 		GlobalAudio.play_bgm(_get_stage_bgm_key("battle_bgm_key", "battle"))
 	battle_manager = p_battle_manager
+	_select_active_backpack_ui()
 	_apply_stage_visuals()
-	
-	# 核心修复：确保进入战斗时状态是干净的
+
 	var gs = get_node_or_null("/root/GameState")
 	if gs and not _is_backpack_overlay_mode():
 		gs.reset_game()
-	
+
 	if backpack_ui == null:
-		print("[MainGameUI] 错误: backpack_ui 引用为空！")
-	
+		print("[MainGameUI] Error: backpack_ui is null.")
+
 	battle_manager.backpack_ui = backpack_ui
 	if not _is_backpack_overlay_mode() and not battle_manager.battle_finish_requested.is_connected(_on_battle_finish_requested):
 		battle_manager.battle_finish_requested.connect(_on_battle_finish_requested)
-	
-	# 连接逻辑信号
+
 	if not _is_backpack_overlay_mode() and not battle_manager.item_drawn.is_connected(_on_item_drawn):
 		battle_manager.item_drawn.connect(_on_item_drawn)
 	_connect_backpack_ui_signals()
@@ -148,15 +133,13 @@ func setup(p_battle_manager: BattleManager):
 	_render_ornaments()
 	_connect_tool_inventory_signal()
 	_render_tools()
-	
-	# 连接状态更新信号
+
 	gs = get_node_or_null("/root/GameState")
 	if gs and not _is_backpack_overlay_mode():
-		# 断开旧连接避免重复 (容错)
 		if gs.sanity_changed.is_connected(_on_sanity_changed): gs.sanity_changed.disconnect(_on_sanity_changed)
 		if gs.score_changed.is_connected(_on_score_changed): gs.score_changed.disconnect(_on_score_changed)
 		if gs.game_over.is_connected(_on_game_over): gs.game_over.disconnect(_on_game_over)
-		
+
 		gs.sanity_changed.connect(_on_sanity_changed)
 		gs.score_changed.connect(_on_score_changed)
 		gs.game_over.connect(_on_game_over)
@@ -175,6 +158,10 @@ func _connect_backpack_ui_signals() -> void:
 
 func _is_backpack_overlay_mode() -> bool:
 	return _ui_mode == MODE_BACKPACK_OVERLAY
+
+func _select_active_backpack_ui() -> void:
+	backpack_ui = overlay_backpack_ui if _is_backpack_overlay_mode() and overlay_backpack_ui != null else battle_backpack_ui
+	trash_bin = battle_trash_bin
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
 	var rm = get_node_or_null("/root/RunManager")
@@ -212,11 +199,27 @@ func _apply_dreamcatcher_stage_visual(visual: Dictionary) -> void:
 func _layout_battle_scene() -> void:
 	if _is_backpack_overlay_mode():
 		return
+	_select_active_backpack_ui()
 	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE)
 	if battle_art:
 		battle_art.show()
+	if backpack_overlay_art:
+		backpack_overlay_art.hide()
+	if overlay_grid_panel:
+		overlay_grid_panel.hide()
+	if battle_grid_panel:
+		battle_grid_panel.show()
 	_configure_dreamcatcher_swing_pivot()
 	_capture_dreamcatcher_net_pose()
+
+func _layout_current_scene() -> void:
+	if _is_backpack_overlay_mode():
+		_layout_backpack_overlay_scene()
+	else:
+		_layout_battle_scene()
+
+func _layout_backpack_overlay_scene() -> void:
+	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE, true)
 
 func _capture_dreamcatcher_net_pose() -> void:
 	if dreamcatcher_net == null:
@@ -244,7 +247,7 @@ func _get_dreamcatcher_net_visual_center() -> Vector2:
 		return dreamcatcher_net.position + dreamcatcher_net.offset.rotated(dreamcatcher_net.rotation)
 	return Vector2.ZERO
 
-func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
+func _layout_content_layer_as_fixed_frame(base_size: Vector2, cover_viewport: bool = false) -> void:
 	if content_layer == null:
 		return
 	content_layer.custom_minimum_size = base_size
@@ -255,28 +258,28 @@ func _layout_content_layer_as_fixed_frame(base_size: Vector2) -> void:
 		viewport_size.x / base_size.x,
 		viewport_size.y / base_size.y
 	)
+	if cover_viewport:
+		scale_factor = maxf(
+			viewport_size.x / base_size.x,
+			viewport_size.y / base_size.y
+		)
 	content_layer.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
 	content_layer.position = (viewport_size - base_size * scale_factor) * 0.5
 	content_layer.size = base_size
 	content_layer.scale = Vector2(scale_factor, scale_factor)
 
-func _reset_content_layer_to_viewport() -> void:
-	if content_layer == null:
-		return
-	content_layer.custom_minimum_size = Vector2.ZERO
-	content_layer.scale = Vector2.ONE
-	content_layer.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	content_layer.position = Vector2.ZERO
-
 func _apply_backpack_overlay_mode() -> void:
 	GlobalInput.set_context(GlobalInput.Context.UI)
-	_reset_content_layer_to_viewport()
+	_select_active_backpack_ui()
+	_layout_backpack_overlay_scene()
 	var background = get_node_or_null("Background")
 	if background is ColorRect:
 		background.color = Color(0.17, 0.12, 0.075, 1)
 	if battle_art:
 		battle_art.hide()
 	if backpack_overlay_art:
+		if backpack_overlay_art.has_method("set_active_page_id"):
+			backpack_overlay_art.call("set_active_page_id", BookBackgroundConfig.PAGE_BACKPACK)
 		backpack_overlay_art.show()
 	for path in [
 		"ContentLayer/DreamcatcherPanel",
@@ -290,98 +293,56 @@ func _apply_backpack_overlay_mode() -> void:
 		var node = get_node_or_null(path)
 		if node:
 			node.hide()
-	var grid_background = get_node_or_null("ContentLayer/GridPanel/GridBackground")
-	if grid_background:
-		grid_background.hide()
-	if trash_bin:
-		trash_bin.hide()
-	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
-	if grid_panel is TextureRect:
-		grid_panel.texture = null
-	if not resized.is_connected(_position_backpack_overlay_panel):
-		resized.connect(_position_backpack_overlay_panel)
+	if battle_grid_panel:
+		battle_grid_panel.hide()
+	if overlay_grid_panel:
+		overlay_grid_panel.show()
 	_ensure_backpack_overlay_close_button()
 	_ensure_backpack_overlay_info()
-	_position_backpack_overlay_panel()
-
-func _position_backpack_overlay_panel() -> void:
-	if _is_backpack_overlay_mode():
-		_reset_content_layer_to_viewport()
-	_layout_backpack_overlay_art()
-	var grid_panel = get_node_or_null("ContentLayer/GridPanel")
-	if grid_panel == null:
-		return
-	if _is_backpack_overlay_mode():
-		var target := _overlay_art_rect_to_viewport(BACKPACK_OVERLAY_GRID_PANEL_RECT)
-		grid_panel.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-		grid_panel.position = target.position
-		var base_size: Vector2 = grid_panel.size
-		if base_size.x <= 0.0 or base_size.y <= 0.0:
-			base_size = Vector2(846.0, 1003.0)
-		grid_panel.scale = Vector2(target.size.x / base_size.x, target.size.y / base_size.y)
-		_layout_overlay_control("ContentLayer/CloseBackpackButton", BACKPACK_OVERLAY_CLOSE_RECT)
-		_layout_overlay_control("ContentLayer/OverlayEffectsList", BACKPACK_OVERLAY_EFFECTS_RECT)
-		_layout_overlay_control("ContentLayer/OverlayStatsLabel", BACKPACK_OVERLAY_STATS_RECT)
-		return
-	grid_panel.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	grid_panel.scale = Vector2(0.68, 0.68)
-	var viewport_size = get_viewport_rect().size
-	var panel_size = grid_panel.size * grid_panel.scale
-	grid_panel.position = Vector2(
-		max(24.0, (viewport_size.x - panel_size.x) * 0.5),
-		max(8.0, (viewport_size.y - panel_size.y) * 0.5)
-	)
-
-func _layout_backpack_overlay_art() -> void:
-	if backpack_overlay_art == null or not _is_backpack_overlay_mode():
-		return
-	for node_name in BACKPACK_OVERLAY_ART_RECTS.keys():
-		var node := get_node_or_null("ContentLayer/BackpackOverlayArt/%s" % node_name) as Control
-		if node == null:
-			continue
-		var target := _overlay_art_rect_to_viewport(BACKPACK_OVERLAY_ART_RECTS[node_name])
-		node.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-		node.position = target.position
-		node.size = target.size
+	_refresh_backpack_overlay_info()
 
 func _ensure_backpack_overlay_close_button() -> void:
 	var content_layer = get_node_or_null("ContentLayer")
-	if content_layer == null or content_layer.has_node("CloseBackpackButton"):
+	if content_layer == null:
 		return
-	var close_button = Button.new()
-	close_button.name = "CloseBackpackButton"
+	var close_button := content_layer.get_node_or_null("CloseBackpackButton") as Button
+	if close_button == null:
+		push_warning("[MainGameUI] CloseBackpackButton missing from main_game_ui.tscn.")
+		return
 	close_button.text = ""
 	close_button.tooltip_text = "关闭整理背包"
 	close_button.focus_mode = Control.FOCUS_NONE
 	close_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	close_button.show()
 	var transparent := StyleBoxFlat.new()
 	transparent.bg_color = Color(1, 1, 1, 0)
 	close_button.add_theme_stylebox_override("normal", transparent)
 	close_button.add_theme_stylebox_override("hover", transparent)
 	close_button.add_theme_stylebox_override("pressed", transparent)
 	close_button.add_theme_stylebox_override("disabled", transparent)
-	close_button.pressed.connect(_request_overlay_close)
-	content_layer.add_child(close_button)
+	if not close_button.pressed.is_connected(_request_overlay_close):
+		close_button.pressed.connect(_request_overlay_close)
 
 func _ensure_backpack_overlay_info() -> void:
 	var content_layer = get_node_or_null("ContentLayer")
 	if content_layer == null:
 		return
-	if not content_layer.has_node("OverlayEffectsList"):
-		var effects := VBoxContainer.new()
-		effects.name = "OverlayEffectsList"
+	var effects := content_layer.get_node_or_null("OverlayEffectsList") as VBoxContainer
+	if effects == null:
+		push_warning("[MainGameUI] OverlayEffectsList missing from main_game_ui.tscn.")
+	else:
 		effects.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		effects.add_theme_constant_override("separation", 8)
-		content_layer.add_child(effects)
-	if not content_layer.has_node("OverlayStatsLabel"):
-		var stats := Label.new()
-		stats.name = "OverlayStatsLabel"
+		effects.show()
+
+	var stats := content_layer.get_node_or_null("OverlayStatsLabel") as Label
+	if stats == null:
+		push_warning("[MainGameUI] OverlayStatsLabel missing from main_game_ui.tscn.")
+	else:
 		stats.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		stats.add_theme_color_override("font_color", Color(0.04, 0.025, 0.012, 1))
 		stats.add_theme_font_size_override("font_size", 28)
 		stats.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		content_layer.add_child(stats)
-	_refresh_backpack_overlay_info()
+		stats.show()
 
 func _refresh_backpack_overlay_info() -> void:
 	var effects = get_node_or_null("ContentLayer/OverlayEffectsList")
@@ -400,7 +361,7 @@ func _refresh_backpack_overlay_info() -> void:
 			entries.append("暂无已发动效果")
 		for entry in entries.slice(0, 8):
 			var label := Label.new()
-			label.text = "▸ " + entry
+			label.text = "- " + entry
 			label.add_theme_color_override("font_color", Color(0.05, 0.03, 0.015, 1))
 			label.add_theme_font_size_override("font_size", 24)
 			effects.add_child(label)
@@ -413,28 +374,7 @@ func _refresh_backpack_overlay_info() -> void:
 		if rm != null:
 			act = int(rm.current_act)
 			node_index = int(rm.current_route_index) + 1
-		stats.text = "累计板:\n当前场景: 第 %d 层 / 节点 %d\n背包物品会在关闭时保存\n本局时间已过去    --:--:--" % [act, node_index]
-
-func _overlay_art_rect_to_viewport(source_rect: Rect2) -> Rect2:
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = OVERLAY_ART_BASE_SIZE
-	var scale_factor: float = maxf(viewport_size.x / OVERLAY_ART_BASE_SIZE.x, viewport_size.y / OVERLAY_ART_BASE_SIZE.y)
-	var displayed_art_size := OVERLAY_ART_BASE_SIZE * scale_factor
-	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
-	return Rect2(
-		displayed_art_origin + source_rect.position * scale_factor,
-		source_rect.size * scale_factor
-	)
-
-func _layout_overlay_control(path: NodePath, source_rect: Rect2) -> void:
-	var control := get_node_or_null(path) as Control
-	if control == null:
-		return
-	var target := _overlay_art_rect_to_viewport(source_rect)
-	control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	control.position = target.position
-	control.size = target.size
+		stats.text = "累计栏\n当前场景: 第 %d 层 / 节点 %d\n背包物品会在关闭时保存。" % [act, node_index]
 
 func _request_overlay_close() -> void:
 	if battle_manager and battle_manager.has_method("persist_backpack_to_run"):
@@ -709,26 +649,10 @@ func _render_ornaments():
 func _ensure_tool_panel() -> void:
 	if _is_backpack_overlay_mode():
 		return
-	if tool_panel != null and tool_slot_area != null:
-		return
-	var content_layer = get_node_or_null("ContentLayer")
-	if content_layer == null:
-		return
-	var panel = PanelContainer.new()
-	panel.name = "ToolPanel"
-	panel.custom_minimum_size = Vector2(520, 76)
-	panel.set_anchors_preset(Control.PRESET_TOP_LEFT)
-	panel.position = Vector2(334.0, 962.0)
-	panel.size = Vector2(520.0, 76.0)
-	var slots = HBoxContainer.new()
-	slots.name = "ToolSlots"
-	slots.alignment = BoxContainer.ALIGNMENT_BEGIN
-	slots.add_theme_constant_override("separation", 8)
-	panel.add_child(slots)
-	content_layer.add_child(panel)
-	tool_panel = panel
-	tool_slot_area = slots
-	_layout_battle_scene()
+	tool_panel = get_node_or_null("ContentLayer/ToolPanel")
+	tool_slot_area = get_node_or_null("ContentLayer/ToolPanel/ToolSlots")
+	if tool_panel == null or tool_slot_area == null:
+		push_warning("[MainGameUI] ToolPanel/ToolSlots missing from main_game_ui.tscn.")
 
 func _connect_tool_inventory_signal() -> void:
 	var rm = get_node_or_null("/root/RunManager")
@@ -768,7 +692,7 @@ func _render_tools() -> void:
 		button.gui_input.connect(func(event): _on_tool_button_gui_input(event, tool_id, button))
 		tool_slot_area.add_child(button)
 	_update_tool_selection_visuals()
-	_layout_battle_scene()
+	_layout_current_scene()
 
 func _set_selected_tool(tool_id: String) -> void:
 	_selected_tool_id = "" if _selected_tool_id == tool_id else tool_id
@@ -821,7 +745,7 @@ func _make_tool_target_at(mouse_pos: Vector2) -> Dictionary:
 			if child is Control and child.get_global_rect().has_point(mouse_pos) and child.has_meta("ornament_id"):
 				return {"type": "ornament", "ornament_id": str(child.get_meta("ornament_id"))}
 		return {}
-	if trash_bin != null and trash_bin.get_global_rect().has_point(mouse_pos):
+	if not _is_backpack_overlay_mode() and trash_bin != null and trash_bin.get_global_rect().has_point(mouse_pos):
 		return {"type": "discard"}
 	if backpack_ui != null and battle_manager != null:
 		var grid_pos = _get_backpack_grid_pos_at(mouse_pos)
@@ -857,7 +781,7 @@ func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Ve
 	_update_backpack_slot_visuals() # 清除高亮
 	
 	# 1. 检查是否掉落在垃圾桶
-	if trash_bin.get_global_rect().has_point(mouse_pos):
+	if not _is_backpack_overlay_mode() and trash_bin != null and trash_bin.get_global_rect().has_point(mouse_pos):
 		if battle_manager:
 			battle_manager.request_discard_item(item_ui)
 		return
@@ -902,6 +826,8 @@ func _on_draw_button_pressed():
 		_set_draw_locked(false)
 
 func _input(event):
+	if not visible:
+		return
 	# 输入权限检查
 	if not GlobalInput.can_cancel() or _is_battle_ended: return
 

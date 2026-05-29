@@ -16,7 +16,8 @@ enum SceneType {
 	EVENT,
 	GALLERY,
 	SETTINGS,
-	DEBUG
+	DEBUG,
+	CUTSCENE
 }
 
 const SCENE_PATHS = {
@@ -27,7 +28,8 @@ const SCENE_PATHS = {
 	SceneType.EVENT: "res://src/ui/event/event_scene.tscn",
 	SceneType.GALLERY: "res://src/ui/gallery/gallery_scene.tscn",
 	SceneType.SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",
-	SceneType.DEBUG: "res://src/ui/debug/debug_sandbox.tscn"
+	SceneType.DEBUG: "res://src/ui/debug/debug_sandbox.tscn",
+	SceneType.CUTSCENE: "res://src/ui/story/cutscene_scene.tscn"
 }
 
 # 场景历史记录栈 (用于智能回退)

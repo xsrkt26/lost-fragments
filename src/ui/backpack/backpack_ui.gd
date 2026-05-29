@@ -38,7 +38,7 @@ func setup(p_context: GameContext):
 
 func _refresh_grid():
 	if not manager: 
-		print("[BackpackUI] 警告: manager 为空，无法刷新网格")
+		print("[BackpackUI] 警告: manager 为空，无法刷新网格。")
 		return
 	
 	print("[BackpackUI] 正在生成网格: ", manager.grid_width, "x", manager.grid_height)

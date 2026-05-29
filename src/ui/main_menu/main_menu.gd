@@ -1,108 +1,182 @@
 extends Control
 
-## 主菜单：使用整张正式美术图作为背景，按钮只提供透明点击热区。
+## 主菜单：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
 
-const BASE_MENU_SIZE := Vector2(1920.0, 1080.0)
-const HOTSPOT_RECTS := {
-	"NewGameButton": Rect2(1370.0, 180.0, 390.0, 125.0),
-	"ContinueButton": Rect2(1370.0, 300.0, 390.0, 125.0),
-	"GalleryButton": Rect2(1360.0, 430.0, 390.0, 155.0),
-	"SettingsButton": Rect2(1360.0, 585.0, 370.0, 165.0),
-	"QuitButton": Rect2(1605.0, 750.0, 250.0, 300.0),
-	"ContinueDisabledOverlay": Rect2(1385.0, 300.0, 230.0, 125.0),
-}
+const DESIGN_SIZE := Vector2(1920.0, 1080.0)
+const MENU_FLOAT_DURATION := 0.14
+const MENU_TEXT_HOVER_RISE := -10.0
+const MENU_LIGHTER_HOVER_RISE := -14.0
+const MENU_PRESS_DROP := 3.0
+const MENU_TEXT_HOVER_SCALE := 1.035
+const MENU_LIGHTER_HOVER_SCALE := 1.045
+const MENU_PRESS_SCALE := 0.985
+const RESPONSIVE_CONTROL_NAMES := [
+	"NewGameButton",
+	"ContinueButton",
+	"GalleryButton",
+	"SettingsButton",
+	"QuitButton",
+	"ContinueDisabledOverlay",
+]
 
-@onready var continue_button: Button = $MenuHotspots/ContinueButton
-@onready var new_game_button: Button = $MenuHotspots/NewGameButton
-@onready var gallery_button: Button = $MenuHotspots/GalleryButton
-@onready var settings_button: Button = $MenuHotspots/SettingsButton
-@onready var quit_button: Button = $MenuHotspots/QuitButton
-@onready var continue_disabled_overlay: ColorRect = $MenuHotspots/ContinueDisabledOverlay
+@onready var design_root: Control = $DesignRoot
+@onready var continue_button: Button = $DesignRoot/MenuHotspots/ContinueButton
+@onready var continue_disabled_overlay: ColorRect = $DesignRoot/MenuHotspots/ContinueDisabledOverlay
 
 var run_manager_override = null
+var _menu_control_base_positions: Dictionary = {}
+var _menu_control_base_scales: Dictionary = {}
+var _menu_control_hovered: Dictionary = {}
+var _menu_control_pressed: Dictionary = {}
+var _menu_control_tweens: Dictionary = {}
 
 func _ready() -> void:
-	print("[MainMenu] 进入主菜单")
+	print("[MainMenu] Entered main menu.")
 	GlobalInput.set_context(GlobalInput.Context.MENU)
 	GlobalAudio.play_bgm("menu")
 
-	resized.connect(_update_menu_hotspots)
-	call_deferred("_update_menu_hotspots")
-	_configure_hotspot_labels()
+	_cache_menu_control_poses()
+	resized.connect(_layout_design_root)
+	call_deferred("_layout_design_root")
+	_configure_interactive_feedback()
 	_refresh_continue_state()
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F1:
 		GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
 
-func _configure_hotspot_labels() -> void:
-	new_game_button.text = ""
-	continue_button.text = ""
-	gallery_button.text = ""
-	settings_button.text = ""
-	quit_button.text = ""
-	new_game_button.tooltip_text = "开始游戏"
-	gallery_button.tooltip_text = "图鉴"
-	settings_button.tooltip_text = "设置"
-	quit_button.tooltip_text = "退出"
+func _configure_interactive_feedback() -> void:
+	for node_name in RESPONSIVE_CONTROL_NAMES:
+		if node_name == "ContinueDisabledOverlay":
+			continue
+		var control := get_node_or_null("DesignRoot/MenuHotspots/%s" % node_name) as Control
+		if control == null or not (control is BaseButton):
+			continue
+		var button := control as BaseButton
+		button.set_meta(GlobalFeedback.BUTTON_FEEDBACK_DISABLED_META, true)
+		button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		button.mouse_entered.connect(_on_menu_control_mouse_entered.bind(control))
+		button.mouse_exited.connect(_on_menu_control_mouse_exited.bind(control))
+		button.button_down.connect(_on_menu_control_button_down.bind(control))
+		button.button_up.connect(_on_menu_control_button_up.bind(control))
+		button.tree_exiting.connect(_clear_menu_control_tween.bind(control), CONNECT_ONE_SHOT)
 
 func _refresh_continue_state() -> void:
 	var rm = _get_run_manager()
 	var has_continue_save: bool = rm != null and rm.saver != null and rm.saver.has_save() and not rm.is_run_complete
 	continue_button.disabled = not has_continue_save
 	continue_disabled_overlay.visible = not has_continue_save
-	if has_continue_save:
-		continue_button.tooltip_text = "继续游戏（第 %d 场景）" % rm.current_act
-	else:
-		continue_button.tooltip_text = "继续游戏（无存档）"
+	if continue_button.disabled:
+		var continue_key := String(continue_button.name)
+		_menu_control_hovered[continue_key] = false
+		_menu_control_pressed[continue_key] = false
+		_apply_menu_control_state(continue_button, false)
 
-func _update_menu_hotspots() -> void:
+func _cache_menu_control_poses() -> void:
+	_menu_control_base_positions.clear()
+	_menu_control_base_scales.clear()
+	for node_name in RESPONSIVE_CONTROL_NAMES:
+		var control := get_node_or_null("DesignRoot/MenuHotspots/%s" % node_name) as Control
+		if control == null:
+			continue
+		_menu_control_base_positions[node_name] = control.position
+		_menu_control_base_scales[node_name] = control.scale
+
+func _layout_design_root() -> void:
+	if design_root == null:
+		return
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = BASE_MENU_SIZE
+		viewport_size = DESIGN_SIZE
+	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
+	design_root.position = (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
+	design_root.size = DESIGN_SIZE
+	design_root.scale = Vector2(scale_factor, scale_factor)
 
-	var scale_factor: float = maxf(viewport_size.x / BASE_MENU_SIZE.x, viewport_size.y / BASE_MENU_SIZE.y)
-	var displayed_art_size: Vector2 = BASE_MENU_SIZE * scale_factor
-	var displayed_art_origin: Vector2 = (viewport_size - displayed_art_size) * 0.5
+func _on_menu_control_mouse_entered(control: Control) -> void:
+	if _is_disabled_button(control):
+		return
+	_menu_control_hovered[String(control.name)] = true
+	_apply_menu_control_state(control, true)
 
-	for node_name in HOTSPOT_RECTS.keys():
-		var node := get_node_or_null("MenuHotspots/%s" % node_name)
-		if node == null or not node is Control:
-			continue
-		var source_rect: Rect2 = HOTSPOT_RECTS[node_name]
-		var target_rect: Rect2 = Rect2(
-			displayed_art_origin + source_rect.position * scale_factor,
-			source_rect.size * scale_factor
-		)
-		var control := node as Control
-		control.position = target_rect.position
-		control.size = target_rect.size
-		control.pivot_offset = target_rect.size * 0.5
+func _on_menu_control_mouse_exited(control: Control) -> void:
+	var key := String(control.name)
+	_menu_control_hovered[key] = false
+	_menu_control_pressed[key] = false
+	_apply_menu_control_state(control, true)
+
+func _on_menu_control_button_down(control: Control) -> void:
+	if _is_disabled_button(control):
+		return
+	_menu_control_pressed[String(control.name)] = true
+	_apply_menu_control_state(control, true)
+
+func _on_menu_control_button_up(control: Control) -> void:
+	_menu_control_pressed[String(control.name)] = false
+	_apply_menu_control_state(control, true)
+
+func _apply_menu_control_state(control: Control, animate: bool) -> void:
+	if control == null:
+		return
+	var key := String(control.name)
+	var base_position: Vector2 = _menu_control_base_positions.get(key, control.position)
+	var base_scale: Vector2 = _menu_control_base_scales.get(key, control.scale)
+	var hovered := bool(_menu_control_hovered.get(key, false))
+	var pressed := bool(_menu_control_pressed.get(key, false))
+	if _is_disabled_button(control):
+		hovered = false
+		pressed = false
+
+	var target_position := base_position
+	var target_scale := base_scale
+	if pressed:
+		target_position += Vector2(0.0, MENU_PRESS_DROP)
+		target_scale = base_scale * MENU_PRESS_SCALE
+	elif hovered:
+		var hover_rise := MENU_LIGHTER_HOVER_RISE if key == "QuitButton" else MENU_TEXT_HOVER_RISE
+		var hover_scale := MENU_LIGHTER_HOVER_SCALE if key == "QuitButton" else MENU_TEXT_HOVER_SCALE
+		target_position += Vector2(0.0, hover_rise)
+		target_scale = base_scale * hover_scale
+
+	_clear_menu_control_tween(control)
+	if not animate or not is_inside_tree():
+		control.position = target_position
+		control.scale = target_scale
+		return
+
+	var tween := create_tween()
+	_menu_control_tweens[key] = tween
+	tween.set_parallel(true)
+	tween.tween_property(control, "position", target_position, MENU_FLOAT_DURATION).set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_OUT)
+	tween.tween_property(control, "scale", target_scale, MENU_FLOAT_DURATION).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _clear_menu_control_tween(control: Control) -> void:
+	if control == null:
+		return
+	var key := String(control.name)
+	if not _menu_control_tweens.has(key):
+		return
+	var tween: Tween = _menu_control_tweens[key]
+	if tween != null and tween.is_running():
+		tween.kill()
+	_menu_control_tweens.erase(key)
+
+func _is_disabled_button(control: Control) -> bool:
+	return control is BaseButton and (control as BaseButton).disabled
 
 func _on_new_game_button_pressed() -> void:
-	print("[MainMenu] 点击新游戏")
+	print("[MainMenu] New game pressed.")
 	if _start_new_run():
-		GlobalScene.transition_to(GlobalScene.SceneType.HUB)
-
-func _start_new_run() -> bool:
-	var rm = _get_run_manager()
-	if rm == null or not rm.has_method("start_new_run"):
-		push_warning("[MainMenu] RunManager missing; cannot start a new run.")
-		return false
-	rm.start_new_run()
-	return true
-
-func _get_run_manager():
-	if run_manager_override != null:
-		return run_manager_override
-	return get_node_or_null("/root/RunManager")
+		var sm = get_node_or_null("/root/StoryManager")
+		if not sm or not sm.play_sequence("beginning"):
+			GlobalScene.transition_to(GlobalScene.SceneType.HUB)
 
 func _on_continue_button_pressed() -> void:
-	print("[MainMenu] 点击继续游戏")
+	print("[MainMenu] Continue pressed.")
 	GlobalScene.transition_to(GlobalScene.SceneType.HUB)
 
 func _on_gallery_button_pressed() -> void:
-	print("[MainMenu] 进入图鉴")
+	print("[MainMenu] Gallery pressed.")
 	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
 
 func _on_settings_button_pressed() -> void:
@@ -110,3 +184,16 @@ func _on_settings_button_pressed() -> void:
 
 func _on_quit_button_pressed() -> void:
 	get_tree().quit()
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
+
+func _start_new_run() -> bool:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[MainMenu] RunManager is missing; cannot start new run.")
+		return false
+	rm.start_new_run()
+	return true

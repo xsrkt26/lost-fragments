@@ -1,0 +1,215 @@
+[gd_scene load_steps=11 format=3 uid="uid://book_background"]
+
+[ext_resource type="Script" path="res://src/ui/book/book_background.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/wood_floor.png" id="2_wood"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/red_book_cover.png" id="3_cover"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/album_page.png" id="4_page"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/album_ring_right.png" id="5_ring"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_back.png" id="6_tab_back"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_album.png" id="7_tab_album"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_backpack.png" id="8_tab_backpack"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_gallery.png" id="9_tab_gallery"]
+[ext_resource type="Texture2D" path="res://assets/ui/book/tab_settings.png" id="10_tab_settings"]
+
+[node name="ArtLayer" type="Control"]
+custom_minimum_size = Vector2(1920, 1080)
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="WoodFloor" type="TextureRect" parent="."]
+z_index = -100
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+texture = ExtResource("2_wood")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="RedBookCover" type="TextureRect" parent="."]
+z_index = -90
+layout_mode = 0
+offset_left = 32.0
+offset_top = 38.0
+offset_right = 1948.0
+offset_bottom = 1085.0
+mouse_filter = 2
+texture = ExtResource("3_cover")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackTab" type="TextureRect" parent="."]
+z_index = 1
+layout_mode = 0
+offset_left = 4.0
+offset_top = 84.0
+offset_right = 211.0
+offset_bottom = 245.0
+mouse_filter = 2
+texture = ExtResource("6_tab_back")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PageRouteCover" type="TextureRect" parent="."]
+modulate = Color(0.66, 0.6, 0.52, 1)
+z_index = 4
+layout_mode = 0
+offset_left = 102.0
+offset_top = -48.0
+offset_right = 1772.0
+offset_bottom = 1032.0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackpackTab" type="TextureRect" parent="."]
+z_index = 5
+layout_mode = 0
+offset_top = 292.0
+offset_right = 250.0
+offset_bottom = 472.0
+mouse_filter = 2
+texture = ExtResource("8_tab_backpack")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PageBackpackCover" type="TextureRect" parent="."]
+modulate = Color(0.76, 0.7, 0.61, 1)
+z_index = 6
+layout_mode = 0
+offset_left = 116.0
+offset_top = -38.0
+offset_right = 1786.0
+offset_bottom = 1042.0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="GalleryTab" type="TextureRect" parent="."]
+z_index = 7
+layout_mode = 0
+offset_top = 399.0
+offset_right = 255.0
+offset_bottom = 582.0
+mouse_filter = 2
+texture = ExtResource("9_tab_gallery")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="PageMiddle" type="TextureRect" parent="."]
+modulate = Color(0.86, 0.79, 0.68, 1)
+z_index = 8
+layout_mode = 0
+offset_left = 130.0
+offset_top = -30.0
+offset_right = 1800.0
+offset_bottom = 1050.0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="SettingsTab" type="TextureRect" parent="."]
+z_index = 9
+layout_mode = 0
+offset_top = 497.0
+offset_right = 222.0
+offset_bottom = 683.0
+mouse_filter = 2
+texture = ExtResource("10_tab_settings")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumPage" type="TextureRect" parent="."]
+z_index = 10
+layout_mode = 0
+offset_left = 144.0
+offset_top = -22.0
+offset_right = 1814.0
+offset_bottom = 1058.0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumTab" type="TextureRect" parent="."]
+z_index = 3
+layout_mode = 0
+offset_top = 191.0
+offset_right = 217.0
+offset_bottom = 355.0
+mouse_filter = 2
+texture = ExtResource("7_tab_album")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumTabRight" type="TextureRect" parent="."]
+visible = false
+z_index = 12
+layout_mode = 0
+offset_left = 1604.0
+offset_top = 191.0
+offset_right = 1821.0
+offset_bottom = 355.0
+mouse_filter = 2
+texture = ExtResource("7_tab_album")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="BackpackTabRight" type="TextureRect" parent="."]
+visible = false
+z_index = 12
+layout_mode = 0
+offset_left = 1554.0
+offset_top = 292.0
+offset_right = 1804.0
+offset_bottom = 472.0
+mouse_filter = 2
+texture = ExtResource("8_tab_backpack")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="GalleryTabRight" type="TextureRect" parent="."]
+visible = false
+z_index = 12
+layout_mode = 0
+offset_left = 1580.0
+offset_top = 399.0
+offset_right = 1835.0
+offset_bottom = 582.0
+mouse_filter = 2
+texture = ExtResource("9_tab_gallery")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="SettingsTabRight" type="TextureRect" parent="."]
+visible = false
+z_index = 12
+layout_mode = 0
+offset_left = 1700.0
+offset_top = 497.0
+offset_right = 1922.0
+offset_bottom = 683.0
+mouse_filter = 2
+texture = ExtResource("10_tab_settings")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="AlbumRingRight" type="TextureRect" parent="."]
+z_index = 13
+layout_mode = 0
+offset_left = 1793.0
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+texture = ExtResource("5_ring")
+expand_mode = 1
+stretch_mode = 0

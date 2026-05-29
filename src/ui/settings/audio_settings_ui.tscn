@@ -1,6 +1,7 @@
-[gd_scene load_steps=20 format=3 uid="uid://audio_settings_01"]
+[gd_scene load_steps=21 format=3 uid="uid://audio_settings_01"]
 
 [ext_resource type="Script" path="res://src/ui/settings/audio_settings_ui.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="15_book_background"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/wood_floor.png" id="2_wood"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/red_book_cover.png" id="3_book"]
 [ext_resource type="Texture2D" path="res://assets/ui/book/album_page.png" id="4_page"]
@@ -81,98 +82,20 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="ArtLayer" type="Control" parent="."]
+[node name="DesignRoot" type="Control" parent="."]
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="ArtLayer" parent="DesignRoot" instance=ExtResource("15_book_background")]
 layout_mode = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
 mouse_filter = 2
+active_page_id = "settings"
 
-[node name="WoodFloor" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_right = 1920.0
-offset_bottom = 1080.0
-mouse_filter = 2
-texture = ExtResource("2_wood")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="RedBookCover" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 32.0
-offset_top = 38.0
-offset_right = 1948.0
-offset_bottom = 1085.0
-mouse_filter = 2
-texture = ExtResource("3_book")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="BackTab" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 4.0
-offset_top = 68.0
-offset_right = 211.0
-offset_bottom = 229.0
-mouse_filter = 2
-texture = ExtResource("6_tab_back")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="AlbumPage" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 51.0
-offset_right = 1721.0
-offset_bottom = 1080.0
-mouse_filter = 2
-texture = ExtResource("4_page")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="AlbumTab" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 1604.0
-offset_top = 191.0
-offset_right = 1821.0
-offset_bottom = 355.0
-mouse_filter = 2
-texture = ExtResource("7_tab_album")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="BackpackTab" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 1554.0
-offset_top = 294.0
-offset_right = 1777.0
-offset_bottom = 473.0
-mouse_filter = 2
-texture = ExtResource("8_tab_backpack")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="GalleryTab" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 1580.0
-offset_top = 419.0
-offset_right = 1785.0
-offset_bottom = 602.0
-mouse_filter = 2
-texture = ExtResource("9_tab_gallery")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="SettingsTab" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 8.0
-offset_top = 497.0
-offset_right = 222.0
-offset_bottom = 683.0
-mouse_filter = 2
-texture = ExtResource("10_tab_settings")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="ZipperVisualMaster" type="Control" parent="ArtLayer"]
+[node name="ZipperVisualMaster" type="Control" parent="DesignRoot/ArtLayer"]
+z_index = 14
 layout_mode = 0
 offset_left = 754.0
 offset_top = 480.0
@@ -184,7 +107,8 @@ top_texture = ExtResource("11_zipper_top")
 bottom_texture = ExtResource("13_zipper_bottom")
 head_texture = ExtResource("12_zipper_head")
 
-[node name="ZipperVisualMusic" type="Control" parent="ArtLayer"]
+[node name="ZipperVisualMusic" type="Control" parent="DesignRoot/ArtLayer"]
+z_index = 14
 layout_mode = 0
 offset_left = 754.0
 offset_top = 587.0
@@ -196,7 +120,8 @@ top_texture = ExtResource("11_zipper_top")
 bottom_texture = ExtResource("13_zipper_bottom")
 head_texture = ExtResource("12_zipper_head")
 
-[node name="ZipperVisualSfx" type="Control" parent="ArtLayer"]
+[node name="ZipperVisualSfx" type="Control" parent="DesignRoot/ArtLayer"]
+z_index = 14
 layout_mode = 0
 offset_left = 754.0
 offset_top = 679.0
@@ -208,23 +133,13 @@ top_texture = ExtResource("11_zipper_top")
 bottom_texture = ExtResource("13_zipper_bottom")
 head_texture = ExtResource("12_zipper_head")
 
-[node name="AlbumRingRight" type="TextureRect" parent="ArtLayer"]
-layout_mode = 0
-offset_left = 1793.0
-offset_top = 1.0
-offset_right = 1920.0
-offset_bottom = 1064.0
-mouse_filter = 2
-texture = ExtResource("5_ring")
-expand_mode = 1
-stretch_mode = 0
-
-[node name="UiLayer" type="Control" parent="."]
+[node name="UiLayer" type="Control" parent="DesignRoot"]
+z_index = 100
 layout_mode = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
 
-[node name="LabelVideo" type="Label" parent="UiLayer"]
+[node name="LabelVideo" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 350.0
 offset_top = 134.0
@@ -236,7 +151,7 @@ theme_override_font_sizes/font_size = 48
 text = "视频"
 vertical_alignment = 1
 
-[node name="LabelResolution" type="Label" parent="UiLayer"]
+[node name="LabelResolution" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 222.0
@@ -248,7 +163,7 @@ theme_override_font_sizes/font_size = 36
 text = "分辨率"
 vertical_alignment = 1
 
-[node name="LabelWindowMode" type="Label" parent="UiLayer"]
+[node name="LabelWindowMode" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 300.0
@@ -260,7 +175,7 @@ theme_override_font_sizes/font_size = 36
 text = "显示模式"
 vertical_alignment = 1
 
-[node name="LabelAudio" type="Label" parent="UiLayer"]
+[node name="LabelAudio" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 350.0
 offset_top = 408.0
@@ -272,7 +187,7 @@ theme_override_font_sizes/font_size = 48
 text = "音频"
 vertical_alignment = 1
 
-[node name="LabelMaster" type="Label" parent="UiLayer"]
+[node name="LabelMaster" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 508.0
@@ -284,7 +199,7 @@ theme_override_font_sizes/font_size = 36
 text = "主音量"
 vertical_alignment = 1
 
-[node name="LabelMusic" type="Label" parent="UiLayer"]
+[node name="LabelMusic" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 610.0
@@ -296,7 +211,7 @@ theme_override_font_sizes/font_size = 36
 text = "BGM"
 vertical_alignment = 1
 
-[node name="LabelSfx" type="Label" parent="UiLayer"]
+[node name="LabelSfx" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 708.0
@@ -308,7 +223,7 @@ theme_override_font_sizes/font_size = 36
 text = "音效"
 vertical_alignment = 1
 
-[node name="LabelGame" type="Label" parent="UiLayer"]
+[node name="LabelGame" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 350.0
 offset_top = 812.0
@@ -320,7 +235,7 @@ theme_override_font_sizes/font_size = 48
 text = "游戏"
 vertical_alignment = 1
 
-[node name="LabelAnimation" type="Label" parent="UiLayer"]
+[node name="LabelAnimation" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 414.0
 offset_top = 886.0
@@ -332,7 +247,7 @@ theme_override_font_sizes/font_size = 36
 text = "动画速度"
 vertical_alignment = 1
 
-[node name="BackButton" type="Button" parent="UiLayer"]
+[node name="BackButton" type="Button" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_top = 70.0
 offset_right = 92.0
@@ -345,7 +260,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
 text = ""
 
-[node name="ResolutionOption" type="OptionButton" parent="UiLayer"]
+[node name="ResolutionOption" type="OptionButton" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 780.0
 offset_top = 213.0
@@ -361,7 +276,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
 theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control_pressed")
 
-[node name="WindowModeOption" type="OptionButton" parent="UiLayer"]
+[node name="WindowModeOption" type="OptionButton" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 780.0
 offset_top = 291.0
@@ -377,7 +292,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
 theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control_pressed")
 
-[node name="MasterSlider" type="HSlider" parent="UiLayer"]
+[node name="MasterSlider" type="HSlider" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 754.0
 offset_top = 497.0
@@ -389,7 +304,7 @@ max_value = 1.0
 step = 0.01
 value = 0.8
 
-[node name="MasterValue" type="Label" parent="UiLayer"]
+[node name="MasterValue" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1302.0
 offset_top = 492.0
@@ -399,7 +314,7 @@ theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
 theme_override_font_sizes/font_size = 36
 text = "80%"
 
-[node name="MusicSlider" type="HSlider" parent="UiLayer"]
+[node name="MusicSlider" type="HSlider" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 754.0
 offset_top = 586.0
@@ -411,7 +326,7 @@ max_value = 1.0
 step = 0.01
 value = 0.7
 
-[node name="MusicValue" type="Label" parent="UiLayer"]
+[node name="MusicValue" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1302.0
 offset_top = 580.0
@@ -421,7 +336,7 @@ theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
 theme_override_font_sizes/font_size = 36
 text = "70%"
 
-[node name="SfxSlider" type="HSlider" parent="UiLayer"]
+[node name="SfxSlider" type="HSlider" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 754.0
 offset_top = 696.0
@@ -433,7 +348,7 @@ max_value = 1.0
 step = 0.01
 value = 0.9
 
-[node name="SfxValue" type="Label" parent="UiLayer"]
+[node name="SfxValue" type="Label" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1302.0
 offset_top = 690.0
@@ -443,7 +358,7 @@ theme_override_colors/font_color = Color(0.03, 0.02, 0.015, 1)
 theme_override_font_sizes/font_size = 36
 text = "90%"
 
-[node name="MuteButton" type="Button" parent="UiLayer"]
+[node name="MuteButton" type="Button" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1302.0
 offset_top = 415.0
@@ -460,7 +375,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control_pressed")
 text = "静音"
 
-[node name="AnimationSpeedOption" type="OptionButton" parent="UiLayer"]
+[node name="AnimationSpeedOption" type="OptionButton" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 780.0
 offset_top = 872.0
@@ -476,7 +391,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_paper_control")
 theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control_pressed")
 
-[node name="ResetButton" type="Button" parent="UiLayer"]
+[node name="ResetButton" type="Button" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1166.0
 offset_top = 956.0
@@ -493,7 +408,7 @@ theme_override_styles/hover = SubResource("StyleBoxFlat_paper_control_hover")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_paper_control_pressed")
 text = "重置"
 
-[node name="CloseButton" type="Button" parent="UiLayer"]
+[node name="CloseButton" type="Button" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 1322.0
 offset_top = 956.0

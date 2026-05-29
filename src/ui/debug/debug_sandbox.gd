@@ -19,7 +19,7 @@ func _ready():
 	if debug_list:
 		debug_list.setup(battle_manager)
 	
-	print("[Sandbox] 沙盒环境就绪。")
+	print("[Sandbox] Ready.")
 
 func _input(event):
 	# 输入权限检查

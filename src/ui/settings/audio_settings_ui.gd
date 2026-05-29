@@ -1,7 +1,8 @@
 extends Control
 
-## 设置界面：节点坐标保存在场景文件中，脚本只负责整张设计稿缩放。
-const BASE_SIZE := Vector2(1920.0, 1080.0)
+## 设置界面：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SPEED_IDS := [
 	"slow",
 	"normal",
@@ -12,26 +13,28 @@ const POPUP_HOVER_COLOR := Color(0.58, 0.36, 0.18, 0.28)
 const POPUP_BORDER_COLOR := Color(0.16, 0.09, 0.04, 0.0)
 const POPUP_FONT_COLOR := Color(0.05, 0.035, 0.02, 1.0)
 
-@onready var master_slider: HSlider = $UiLayer/MasterSlider
-@onready var music_slider: HSlider = $UiLayer/MusicSlider
-@onready var sfx_slider: HSlider = $UiLayer/SfxSlider
-@onready var master_value: Label = $UiLayer/MasterValue
-@onready var music_value: Label = $UiLayer/MusicValue
-@onready var sfx_value: Label = $UiLayer/SfxValue
-@onready var mute_button: Button = $UiLayer/MuteButton
-@onready var resolution_option: OptionButton = $UiLayer/ResolutionOption
-@onready var window_mode_option: OptionButton = $UiLayer/WindowModeOption
-@onready var animation_speed_option: OptionButton = $UiLayer/AnimationSpeedOption
-@onready var reset_button: Button = $UiLayer/ResetButton
-@onready var close_button: Button = $UiLayer/CloseButton
-@onready var back_button: Button = $UiLayer/BackButton
-@onready var art_layer: Control = $ArtLayer
-@onready var ui_layer: Control = $UiLayer
+@onready var design_root: Control = $DesignRoot
+@onready var art_layer: Control = $DesignRoot/ArtLayer
+@onready var master_slider: HSlider = $DesignRoot/UiLayer/MasterSlider
+@onready var music_slider: HSlider = $DesignRoot/UiLayer/MusicSlider
+@onready var sfx_slider: HSlider = $DesignRoot/UiLayer/SfxSlider
+@onready var master_value: Label = $DesignRoot/UiLayer/MasterValue
+@onready var music_value: Label = $DesignRoot/UiLayer/MusicValue
+@onready var sfx_value: Label = $DesignRoot/UiLayer/SfxValue
+@onready var mute_button: Button = $DesignRoot/UiLayer/MuteButton
+@onready var resolution_option: OptionButton = $DesignRoot/UiLayer/ResolutionOption
+@onready var window_mode_option: OptionButton = $DesignRoot/UiLayer/WindowModeOption
+@onready var animation_speed_option: OptionButton = $DesignRoot/UiLayer/AnimationSpeedOption
+@onready var reset_button: Button = $DesignRoot/UiLayer/ResetButton
+@onready var close_button: Button = $DesignRoot/UiLayer/CloseButton
+@onready var back_button: Button = $DesignRoot/UiLayer/BackButton
 
 var _is_updating := false
+var _book_page_navigator: Node = null
 
 func _ready() -> void:
 	resized.connect(_layout_controls)
+	_configure_book_background()
 	_populate_options()
 	_style_dropdown_popups()
 	_connect_controls()
@@ -39,9 +42,20 @@ func _ready() -> void:
 	call_deferred("_layout_controls")
 
 func _input(event: InputEvent) -> void:
+	if not visible:
+		return
 	if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
 		_on_close_pressed()
 		get_viewport().set_input_as_handled()
+
+
+func set_book_page_navigator(navigator: Node) -> void:
+	_book_page_navigator = navigator
+
+
+func _configure_book_background() -> void:
+	if art_layer != null and art_layer.has_method("set_active_page_id"):
+		art_layer.call("set_active_page_id", BookBackgroundConfig.PAGE_SETTINGS)
 
 func _populate_options() -> void:
 	resolution_option.clear()
@@ -49,8 +63,8 @@ func _populate_options() -> void:
 		resolution_option.add_item("%dx%d" % [resolution.x, resolution.y])
 
 	window_mode_option.clear()
-	window_mode_option.add_item("窗口模式")
-	window_mode_option.add_item("全屏")
+	window_mode_option.add_item("Windowed")
+	window_mode_option.add_item("Fullscreen")
 
 	animation_speed_option.clear()
 	animation_speed_option.add_item("慢")
@@ -133,21 +147,18 @@ func _update_ui() -> void:
 	_is_updating = false
 
 func _layout_controls() -> void:
+	if design_root == null:
+		return
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = BASE_SIZE
-	var scale_factor: float = maxf(viewport_size.x / BASE_SIZE.x, viewport_size.y / BASE_SIZE.y)
-	var displayed_art_size := BASE_SIZE * scale_factor
+		viewport_size = DESIGN_SIZE
+	var scale_factor: float = maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
+	var displayed_art_size := DESIGN_SIZE * scale_factor
 	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
-
-	_layout_design_layer(art_layer, displayed_art_origin, scale_factor)
-	_layout_design_layer(ui_layer, displayed_art_origin, scale_factor)
+	design_root.position = displayed_art_origin
+	design_root.size = DESIGN_SIZE
+	design_root.scale = Vector2(scale_factor, scale_factor)
 	_update_zipper_heads()
-
-func _layout_design_layer(layer: Control, origin: Vector2, scale_factor: float) -> void:
-	layer.position = origin
-	layer.size = BASE_SIZE
-	layer.scale = Vector2(scale_factor, scale_factor)
 
 func _update_zipper_heads() -> void:
 	_set_zipper_visual_value("Master", master_slider.value)
@@ -155,7 +166,7 @@ func _update_zipper_heads() -> void:
 	_set_zipper_visual_value("Sfx", sfx_slider.value)
 
 func _set_zipper_visual_value(track_name: String, value: float) -> void:
-	var visual := get_node_or_null("ArtLayer/ZipperVisual%s" % track_name)
+	var visual := get_node_or_null("DesignRoot/ArtLayer/ZipperVisual%s" % track_name)
 	if visual != null and visual.has_method("set_zipper_value"):
 		visual.set_zipper_value(value)
 
@@ -210,7 +221,10 @@ func _on_reset_pressed() -> void:
 	_update_ui()
 
 func _on_close_pressed() -> void:
-	GlobalScene.go_back()
+	if _book_page_navigator != null and is_instance_valid(_book_page_navigator) and _book_page_navigator.has_method("return_to_main_menu"):
+		_book_page_navigator.return_to_main_menu()
+	else:
+		GlobalScene.go_back()
 
 func _resolution_index(resolution: Vector2i) -> int:
 	for i in range(SettingsManager.RESOLUTION_OPTIONS.size()):

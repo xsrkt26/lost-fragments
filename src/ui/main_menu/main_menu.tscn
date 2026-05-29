@@ -1,12 +1,15 @@
-[gd_scene load_steps=4 format=3 uid="uid://main_menu_01"]
+[gd_scene format=3 uid="uid://c8qv6c87bl3nj"]
 
-[ext_resource type="Script" path="res://src/ui/main_menu/main_menu.gd" id="1_script"]
-[ext_resource type="Texture2D" path="res://assets/ui/main_menu/main_menu_background.png" id="2_background"]
+[ext_resource type="Script" uid="uid://brb88j8hjfor8" path="res://src/ui/main_menu/main_menu.gd" id="1_script"]
+[ext_resource type="Texture2D" uid="uid://dgls17el8f8l0" path="res://assets/ui/main_menu/main_menu_background.png" id="2_background"]
+[ext_resource type="Texture2D" uid="uid://dfp5rfinhoq0w" path="res://assets/ui/main_menu/lighter_closed.png" id="3_lighter_closed"]
+[ext_resource type="Texture2D" uid="uid://4rb7sl22ttfa" path="res://assets/ui/main_menu/lighter_open.png" id="4_lighter_open"]
+[ext_resource type="FontFile" uid="uid://vfc33erinrkv" path="res://assets/fonts/ChillHuoSong_F_ExBold.otf" id="5_menu_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotspot_transparent"]
 bg_color = Color(1, 1, 1, 0)
 
-[node name="MainMenu" type="Control"]
+[node name="MainMenu" type="Control" unique_id=939574330]
 layout_mode = 3
 anchors_preset = 15
 anchor_right = 1.0
@@ -15,7 +18,12 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("1_script")
 
-[node name="Background" type="TextureRect" parent="."]
+[node name="DesignRoot" type="Control" parent="." unique_id=1353172306]
+anchors_preset = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+
+[node name="Background" type="TextureRect" parent="DesignRoot" unique_id=1353172305]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -27,7 +35,7 @@ texture = ExtResource("2_background")
 expand_mode = 1
 stretch_mode = 6
 
-[node name="MenuHotspots" type="Control" parent="."]
+[node name="MenuHotspots" type="Control" parent="DesignRoot" unique_id=2064067802]
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -35,69 +43,135 @@ anchor_bottom = 1.0
 grow_horizontal = 2
 grow_vertical = 2
 
-[node name="NewGameButton" type="Button" parent="MenuHotspots"]
+[node name="NewGameButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1216600379]
 layout_mode = 0
-focus_mode = 0
-mouse_default_cursor_shape = 2
+offset_left = 1311.0
+offset_top = 103.999985
+offset_right = 1701.0
+offset_bottom = 228.99998
+rotation = 0.2617994
+scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "开始游戏"
-theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = ""
-
-[node name="ContinueButton" type="Button" parent="MenuHotspots"]
-layout_mode = 0
 focus_mode = 0
 mouse_default_cursor_shape = 2
+theme_type_variation = &"DisplayButton"
+theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
+theme_override_colors/font_focus_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_pressed_color = Color(0.42, 0.015, 0.01, 1)
+theme_override_colors/font_hover_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_disabled_color = Color(0.08, 0.06, 0.045, 0.34)
+theme_override_fonts/font = ExtResource("5_menu_font")
+theme_override_font_sizes/font_size = 62
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = "开始"
+
+[node name="ContinueButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=740638814]
+layout_mode = 0
+offset_left = 1297.0001
+offset_top = 226.0
+offset_right = 1687.0001
+offset_bottom = 351.0
+rotation = 0.2617994
+scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "继续游戏"
-theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = ""
-
-[node name="GalleryButton" type="Button" parent="MenuHotspots"]
-layout_mode = 0
 focus_mode = 0
 mouse_default_cursor_shape = 2
+theme_type_variation = &"DisplayButton"
+theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
+theme_override_colors/font_focus_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_pressed_color = Color(0.42, 0.015, 0.01, 1)
+theme_override_colors/font_hover_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_disabled_color = Color(0.08, 0.06, 0.045, 0.34)
+theme_override_fonts/font = ExtResource("5_menu_font")
+theme_override_font_sizes/font_size = 62
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = "继续"
+
+[node name="GalleryButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1937975851]
+layout_mode = 0
+offset_left = 1276.0
+offset_top = 351.0
+offset_right = 1666.0
+offset_bottom = 476.0
+rotation = 0.2617994
+scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "图鉴"
-theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = ""
-
-[node name="SettingsButton" type="Button" parent="MenuHotspots"]
-layout_mode = 0
 focus_mode = 0
 mouse_default_cursor_shape = 2
+theme_type_variation = &"DisplayButton"
+theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
+theme_override_colors/font_focus_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_pressed_color = Color(0.42, 0.015, 0.01, 1)
+theme_override_colors/font_hover_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_disabled_color = Color(0.08, 0.06, 0.045, 0.34)
+theme_override_fonts/font = ExtResource("5_menu_font")
+theme_override_font_sizes/font_size = 62
+theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+text = "图鉴"
+
+[node name="SettingsButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1082685952]
+layout_mode = 0
+offset_left = 1252.0
+offset_top = 475.0
+offset_right = 1642.0
+offset_bottom = 600.0
+rotation = 0.2617994
+scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "设置"
-theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = ""
-
-[node name="QuitButton" type="Button" parent="MenuHotspots"]
-layout_mode = 0
 focus_mode = 0
 mouse_default_cursor_shape = 2
-tooltip_text = "退出"
+theme_type_variation = &"DisplayButton"
+theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
+theme_override_colors/font_focus_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_pressed_color = Color(0.42, 0.015, 0.01, 1)
+theme_override_colors/font_hover_color = Color(0.92, 0.58, 0.16, 1)
+theme_override_colors/font_disabled_color = Color(0.08, 0.06, 0.045, 0.34)
+theme_override_fonts/font = ExtResource("5_menu_font")
+theme_override_font_sizes/font_size = 62
 theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
-theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = ""
+text = "设置"
 
-[node name="ContinueDisabledOverlay" type="ColorRect" parent="MenuHotspots"]
+[node name="QuitButton" type="TextureButton" parent="DesignRoot/MenuHotspots" unique_id=89147434]
+layout_mode = 0
+offset_left = 1628.0001
+offset_top = 749.00006
+offset_right = 1878.0001
+offset_bottom = 1049.0
+rotation = 0.22112042
+scale = Vector2(1.1160308, 0.9574039)
+tooltip_text = "退出"
+focus_mode = 0
+mouse_default_cursor_shape = 2
+texture_normal = ExtResource("3_lighter_closed")
+texture_pressed = ExtResource("4_lighter_open")
+texture_hover = ExtResource("4_lighter_open")
+ignore_texture_size = true
+stretch_mode = 3
+
+[node name="ContinueDisabledOverlay" type="ColorRect" parent="DesignRoot/MenuHotspots" unique_id=955999516]
 visible = false
 layout_mode = 0
+offset_left = 1385.0
+offset_top = 300.0
+offset_right = 1615.0
+offset_bottom = 425.0
 mouse_filter = 2
 color = Color(0.11, 0.08, 0.04, 0.3)
 
-[connection signal="pressed" from="MenuHotspots/NewGameButton" to="." method="_on_new_game_button_pressed"]
-[connection signal="pressed" from="MenuHotspots/ContinueButton" to="." method="_on_continue_button_pressed"]
-[connection signal="pressed" from="MenuHotspots/GalleryButton" to="." method="_on_gallery_button_pressed"]
-[connection signal="pressed" from="MenuHotspots/SettingsButton" to="." method="_on_settings_button_pressed"]
-[connection signal="pressed" from="MenuHotspots/QuitButton" to="." method="_on_quit_button_pressed"]
+[connection signal="pressed" from="DesignRoot/MenuHotspots/NewGameButton" to="." method="_on_new_game_button_pressed"]
+[connection signal="pressed" from="DesignRoot/MenuHotspots/ContinueButton" to="." method="_on_continue_button_pressed"]
+[connection signal="pressed" from="DesignRoot/MenuHotspots/GalleryButton" to="." method="_on_gallery_button_pressed"]
+[connection signal="pressed" from="DesignRoot/MenuHotspots/SettingsButton" to="." method="_on_settings_button_pressed"]
+[connection signal="pressed" from="DesignRoot/MenuHotspots/QuitButton" to="." method="_on_quit_button_pressed"]

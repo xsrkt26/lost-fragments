@@ -6,13 +6,10 @@ extends Node2D
 var battle_manager: BattleManager
 
 func _ready():
-	# 1. 创建逻辑中枢 BattleManager
 	battle_manager = BattleManager.new()
 	add_child(battle_manager)
 
-	# 2. 初始化 UI 并建立连接
-	# 如果 MainGameUI 是在编辑器里直接拖进去的
 	if main_ui:
 		main_ui.setup(battle_manager)
-	
-	print("[Demo] 整合场景就绪，点击'点击捕梦'开始游戏")
+
+	print("[Demo] Integrated scene ready; click draw to start.")

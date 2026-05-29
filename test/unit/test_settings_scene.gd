@@ -8,8 +8,10 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	await get_tree().process_frame
 
 	assert_null(ui.get_node_or_null("Background"), "Settings should be assembled from split art layers, not one full-screen bitmap.")
-	var art_layer := ui.get_node_or_null("ArtLayer") as Control
+	var art_layer := ui.get_node_or_null("DesignRoot/ArtLayer") as Control
 	assert_not_null(art_layer)
+	assert_true(art_layer.has_method("get_visible_page_sheet_count"))
+	assert_eq(art_layer.call("get_visible_page_sheet_count"), 1)
 	for node_name in [
 		"WoodFloor",
 		"RedBookCover",
@@ -18,7 +20,7 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"SettingsTab",
 		"ZipperVisualMaster",
 	]:
-		var art := ui.get_node_or_null("ArtLayer/%s" % node_name) as Control
+		var art := ui.get_node_or_null("DesignRoot/ArtLayer/%s" % node_name) as Control
 		assert_not_null(art, "Settings split art should expose %s" % node_name)
 		if art is TextureRect:
 			assert_not_null(art.texture)
@@ -38,29 +40,29 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"LabelMaster",
 		"LabelWindowMode",
 	]:
-		var node := ui.get_node_or_null("UiLayer/%s" % node_name) as Control
+		var node := ui.get_node_or_null("DesignRoot/UiLayer/%s" % node_name) as Control
 		assert_not_null(node, "Settings UI should expose %s" % node_name)
 		assert_true(node.size.x > 0.0)
 		assert_true(node.size.y > 0.0)
 
-	var master_visual := ui.get_node("ArtLayer/ZipperVisualMaster") as Control
+	var master_visual := ui.get_node("DesignRoot/ArtLayer/ZipperVisualMaster") as Control
 	assert_almost_eq(master_visual.position.x, 754.0, 0.01)
 	assert_almost_eq(master_visual.size.x, 520.0, 0.01)
 	assert_almost_eq(art_layer.size.x, 1920.0, 0.01)
 	assert_true(art_layer.scale.x > 0.0)
 
-	var label_video := ui.get_node("UiLayer/LabelVideo") as Label
-	var label_resolution := ui.get_node("UiLayer/LabelResolution") as Label
-	var label_master := ui.get_node("UiLayer/LabelMaster") as Label
+	var label_video := ui.get_node("DesignRoot/UiLayer/LabelVideo") as Label
+	var label_resolution := ui.get_node("DesignRoot/UiLayer/LabelResolution") as Label
+	var label_master := ui.get_node("DesignRoot/UiLayer/LabelMaster") as Label
 	assert_true(label_resolution.position.x > label_video.position.x)
-	assert_true(label_master.position.x > (ui.get_node("UiLayer/LabelAudio") as Label).position.x)
+	assert_true(label_master.position.x > (ui.get_node("DesignRoot/UiLayer/LabelAudio") as Label).position.x)
 	assert_false(label_resolution.text.contains(":"))
 	assert_false(label_master.text.contains(":"))
 
-	var mute_button := ui.get_node("UiLayer/MuteButton") as Button
-	var reset_button := ui.get_node("UiLayer/ResetButton") as Button
-	var close_button := ui.get_node("UiLayer/CloseButton") as Button
-	var master_value := ui.get_node("UiLayer/MasterValue") as Label
+	var mute_button := ui.get_node("DesignRoot/UiLayer/MuteButton") as Button
+	var reset_button := ui.get_node("DesignRoot/UiLayer/ResetButton") as Button
+	var close_button := ui.get_node("DesignRoot/UiLayer/CloseButton") as Button
+	var master_value := ui.get_node("DesignRoot/UiLayer/MasterValue") as Label
 	assert_almost_eq(mute_button.position.x, master_value.position.x, 0.01)
 	assert_almost_eq(mute_button.position.x + mute_button.size.x, master_value.position.x + master_value.size.x, 0.01)
 	assert_almost_eq(reset_button.position.y, close_button.position.y, 0.01)
@@ -72,7 +74,7 @@ func test_settings_scene_updates_audio_values() -> void:
 	await get_tree().process_frame
 
 	var previous: float = float(SettingsManager.audio_settings["master_volume"])
-	var slider := ui.get_node("UiLayer/MasterSlider") as HSlider
+	var slider := ui.get_node("DesignRoot/UiLayer/MasterSlider") as HSlider
 	slider.value = 0.42
 	await get_tree().process_frame
 
@@ -116,12 +118,12 @@ func test_settings_scene_updates_all_setting_categories() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var music_slider := ui.get_node("UiLayer/MusicSlider") as HSlider
-	var sfx_slider := ui.get_node("UiLayer/SfxSlider") as HSlider
-	var mute_button := ui.get_node("UiLayer/MuteButton") as Button
-	var resolution_option := ui.get_node("UiLayer/ResolutionOption") as OptionButton
-	var window_mode_option := ui.get_node("UiLayer/WindowModeOption") as OptionButton
-	var animation_speed_option := ui.get_node("UiLayer/AnimationSpeedOption") as OptionButton
+	var music_slider := ui.get_node("DesignRoot/UiLayer/MusicSlider") as HSlider
+	var sfx_slider := ui.get_node("DesignRoot/UiLayer/SfxSlider") as HSlider
+	var mute_button := ui.get_node("DesignRoot/UiLayer/MuteButton") as Button
+	var resolution_option := ui.get_node("DesignRoot/UiLayer/ResolutionOption") as OptionButton
+	var window_mode_option := ui.get_node("DesignRoot/UiLayer/WindowModeOption") as OptionButton
+	var animation_speed_option := ui.get_node("DesignRoot/UiLayer/AnimationSpeedOption") as OptionButton
 
 	music_slider.value = 0.31
 	sfx_slider.value = 0.47
@@ -145,8 +147,8 @@ func test_settings_zipper_tracks_open_when_slider_is_lowered() -> void:
 	await get_tree().process_frame
 	await get_tree().process_frame
 
-	var slider := ui.get_node("UiLayer/MasterSlider") as HSlider
-	var visual = ui.get_node("ArtLayer/ZipperVisualMaster")
+	var slider := ui.get_node("DesignRoot/UiLayer/MasterSlider") as HSlider
+	var visual = ui.get_node("DesignRoot/ArtLayer/ZipperVisualMaster")
 	var previous: float = float(SettingsManager.audio_settings["master_volume"])
 
 	slider.value = 1.0

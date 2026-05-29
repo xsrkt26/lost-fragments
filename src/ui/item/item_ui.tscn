@@ -61,7 +61,7 @@ grow_horizontal = 2
 grow_vertical = 2
 pivot_offset = Vector2(20, 11)
 mouse_filter = 2
-text = "→"
+text = "->"
 horizontal_alignment = 1
 vertical_alignment = 1
 

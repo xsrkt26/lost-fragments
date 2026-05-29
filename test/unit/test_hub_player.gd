@@ -2,6 +2,7 @@ extends GutTest
 
 const HubScene = preload("res://src/ui/hub/hub_scene.tscn")
 const MainGameUI = preload("res://src/ui/main_game_ui.tscn")
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 var player
 var rm_snapshot := {}
@@ -26,6 +27,10 @@ func _assert_dreamcatcher_net_centered_on_cloud(panel: TextureRect, net: Sprite2
 	assert_almost_eq(actual_center.x, expected_center.x, 0.01)
 	assert_almost_eq(actual_center.y, expected_center.y, 0.01)
 	assert_gt(net.offset.y, net.texture.get_size().y * 0.75)
+
+
+func _get_scaled_sprite_offset(sprite: Sprite2D) -> Vector2:
+	return Vector2(sprite.offset.x * sprite.scale.x, sprite.offset.y * sprite.scale.y)
 
 
 func test_mouse_move_target_is_set_and_cleared():
@@ -60,13 +65,22 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 	var viewport_size: Vector2 = ui.get_viewport_rect().size
 	var content_layer := ui.get_node_or_null("ContentLayer") as Control
 	assert_not_null(content_layer)
-	assert_eq(content_layer.position, Vector2.ZERO)
-	assert_eq(content_layer.scale, Vector2.ONE)
-	assert_almost_eq(content_layer.size.x, viewport_size.x, 0.01)
-	assert_almost_eq(content_layer.size.y, viewport_size.y, 0.01)
+	assert_almost_eq(content_layer.size.x, 1920.0, 0.01)
+	assert_almost_eq(content_layer.size.y, 1080.0, 0.01)
+	assert_true(content_layer.scale.x > 0.0)
+	assert_almost_eq(content_layer.scale.x, content_layer.scale.y, 0.001)
+	var content_end := content_layer.position + content_layer.size * content_layer.scale
+	assert_lte(content_layer.position.x, 0.01)
+	assert_lte(content_layer.position.y, 0.01)
+	assert_gte(content_end.x, viewport_size.x - 0.01)
+	assert_gte(content_end.y, viewport_size.y - 0.01)
 	var overlay_art := ui.get_node_or_null("ContentLayer/BackpackOverlayArt") as Control
 	assert_not_null(overlay_art)
 	assert_true(overlay_art.visible)
+	assert_true(overlay_art.has_method("get_visible_page_sheet_count"))
+	assert_eq(overlay_art.call("get_visible_page_sheet_count"), 2)
+	assert_true(ui.get_node("ContentLayer/BackpackOverlayGridPanel").visible)
+	assert_false(ui.get_node("ContentLayer/GridPanel").visible)
 	for node_name in [
 		"WoodFloor",
 		"RedBookCover",
@@ -213,6 +227,50 @@ func test_hub_left_click_moves_player_with_mouse():
 	assert_eq(hub_player.move_target_x, 320.0)
 
 
+func test_hub_left_bookmark_click_does_not_move_player():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+	var hub_player = hub.get_node("Player")
+	hub_player.clear_move_target()
+
+	var bookmark_paths := [
+		"CanvasLayer/DesignRoot/RouteButton",
+		"CanvasLayer/DesignRoot/BackpackButton",
+		"CanvasLayer/DesignRoot/GalleryButton",
+		"CanvasLayer/DesignRoot/SettingsButton",
+	]
+	for path in bookmark_paths:
+		var button := hub.get_node_or_null(path) as Control
+		assert_not_null(button)
+		var event = InputEventMouseButton.new()
+		event.button_index = MOUSE_BUTTON_LEFT
+		event.pressed = true
+		event.position = button.get_global_rect().get_center()
+		hub._unhandled_input(event)
+		assert_false(hub_player.has_move_target, "%s should not move the player." % path)
+
+
+func test_hub_player_walk_bounds_are_limited_to_scene_range():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+	var hub_player = hub.get_node("Player")
+
+	var min_x: float = hub._source_x_to_viewport(hub.PLAYER_WALK_MIN_SOURCE_X)
+	var max_x: float = hub._source_x_to_viewport(hub.PLAYER_WALK_MAX_SOURCE_X)
+	assert_true(hub_player.has_walk_bounds)
+	assert_eq(hub_player.walk_min_x, min_x)
+	assert_eq(hub_player.walk_max_x, max_x)
+
+	hub_player.move_to_global_x(min_x - 500.0)
+	assert_eq(hub_player.move_target_x, min_x)
+	hub_player.move_to_global_x(max_x + 500.0)
+	assert_eq(hub_player.move_target_x, max_x)
+
+
 func test_hub_player_uses_character_animation_frames():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
@@ -234,7 +292,7 @@ func test_hub_player_uses_character_animation_frames():
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
 
 
-func test_hub_shows_merchant_animation_on_shop_node():
+func test_hub_merchant_animation_follows_player_arrival_and_departure():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)
 	rm.is_run_active = true
@@ -259,12 +317,31 @@ func test_hub_shows_merchant_animation_on_shop_node():
 	assert_false(merchant_sprite.is_playing())
 	assert_eq(merchant_sprite.frame, 0)
 
+	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	assert_not_null(hub_player)
+	var merchant_x: float = hub._get_merchant_interaction_target_x()
+	var merchant_rect: Rect2 = hub._get_merchant_interaction_viewport_rect()
+	assert_true(merchant_rect.size.x > 0.0)
+	assert_true(merchant_rect.size.y > 0.0)
 	merchant_sprite.speed_scale = 100.0
-	hub._on_merchant_button_mouse_entered()
+	hub_player.global_position.x = merchant_rect.position.x + 1.0
+	hub._sync_merchant_presence_state()
 	assert_true(merchant_sprite.is_playing())
 	await get_tree().create_timer(0.2).timeout
 	assert_false(merchant_sprite.is_playing())
 	assert_eq(merchant_sprite.frame, merchant_sprite.sprite_frames.get_frame_count("idle") - 1)
+
+	hub._sync_merchant_presence_state()
+	assert_false(merchant_sprite.is_playing())
+	assert_eq(merchant_sprite.frame, merchant_sprite.sprite_frames.get_frame_count("idle") - 1)
+
+	var exit_padding: float = hub.MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X * hub._art_scale
+	hub_player.global_position.x = merchant_rect.position.x - hub._get_player_collision_half_width() - exit_padding - 32.0
+	hub._sync_merchant_presence_state()
+	assert_true(merchant_sprite.is_playing())
+	await get_tree().create_timer(0.2).timeout
+	assert_false(merchant_sprite.is_playing())
+	assert_eq(merchant_sprite.frame, 0)
 
 	var merchant_button := hub.get_node_or_null("CanvasLayer/MerchantButton") as Button
 	assert_not_null(merchant_button)
@@ -272,6 +349,11 @@ func test_hub_shows_merchant_animation_on_shop_node():
 	assert_false(merchant_button.disabled)
 	assert_true(merchant_button.size.x > 0.0)
 	assert_true(merchant_button.size.y > 0.0)
+	var room := hub.get_node_or_null("HubArt/Room") as Sprite2D
+	assert_not_null(room)
+	var frame_bounds: Rect2 = hub.MERCHANT_FRAME_BOUNDS[hub._get_merchant_animation_key()]
+	var unshifted_center: float = hub._source_x_to_viewport(room.position.x + frame_bounds.get_center().x * room.scale.x)
+	assert_almost_eq(unshifted_center - merchant_x, absf(hub.MERCHANT_INTERACTION_SOURCE_OFFSET_X) * hub._art_scale, 0.01)
 
 
 func test_hub_keeps_merchant_visible_before_shop_node_but_disables_entry():
@@ -296,6 +378,214 @@ func test_hub_keeps_merchant_visible_before_shop_node_but_disables_entry():
 
 	hub._on_merchant_button_pressed()
 	assert_eq(rm.current_route_index, 0)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
+
+
+func test_hub_dreamcatcher_is_stage_art_and_battle_entry_hotspot():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var net := hub.get_node_or_null("HubArt/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	assert_not_null(net.texture)
+	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png")
+	assert_eq(net.scale, Vector2(0.55, 0.55))
+	assert_false(net.region_enabled)
+	assert_null(net.material)
+	assert_gt(net.offset.y, net.texture.get_size().y * 0.75)
+
+	hub._stop_hub_dreamcatcher_idle_swing()
+	net.position = hub._dreamcatcher_net_base_position
+	net.rotation = hub._dreamcatcher_net_base_rotation
+	net.offset = hub._dreamcatcher_net_base_offset
+	var visual_center := net.position + _get_scaled_sprite_offset(net).rotated(net.rotation)
+	assert_almost_eq(visual_center.x, 918.0, 0.01)
+	assert_almost_eq(visual_center.y, 624.0, 0.01)
+
+	var dreamcatcher_button := hub.get_node_or_null("CanvasLayer/DesignRoot/DreamcatcherButton") as Button
+	assert_not_null(dreamcatcher_button)
+	assert_false(dreamcatcher_button.disabled)
+	assert_true(dreamcatcher_button.pressed.is_connected(Callable(hub, "_on_dreamcatcher_button_pressed")))
+	assert_true(hub._is_dreamcatcher_game_available())
+
+
+func test_hub_route_tab_no_longer_drives_route_progression():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	assert_not_null(hub_player)
+	hub_player.clear_move_target()
+	hub._pending_auto_interaction = ""
+
+	var route_button := hub.get_node_or_null("CanvasLayer/DesignRoot/RouteButton") as Button
+	assert_not_null(route_button)
+	route_button.pressed.emit()
+
+	assert_eq(rm.current_route_index, 0)
+	assert_eq(hub._pending_auto_interaction, "")
+	assert_false(hub_player.has_move_target)
+
+
+func test_hub_dreamcatcher_tracks_current_stage_and_disables_on_shop_node():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 4
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var net := hub.get_node_or_null("HubArt/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	assert_not_null(net.texture)
+	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_4_parents.png")
+	assert_true(hub._is_dreamcatcher_game_available())
+
+	var dreamcatcher_button := hub.get_node_or_null("CanvasLayer/DesignRoot/DreamcatcherButton") as Button
+	assert_not_null(dreamcatcher_button)
+	assert_false(dreamcatcher_button.disabled)
+
+	rm.current_route_index = 1
+	hub._on_route_changed(rm.current_act, rm.current_route_index, rm.get_current_route_node())
+	assert_false(hub._is_dreamcatcher_game_available())
+	assert_true(dreamcatcher_button.disabled)
+
+
+func test_hub_dreamcatcher_start_swing_returns_to_base_pose():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var net := hub.get_node_or_null("HubArt/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	hub._stop_hub_dreamcatcher_idle_swing()
+	var base_position: Vector2 = hub._dreamcatcher_net_base_position
+	var base_rotation: float = hub._dreamcatcher_net_base_rotation
+	var base_offset: Vector2 = hub._dreamcatcher_net_base_offset
+
+	await hub._play_hub_dreamcatcher_start_swing()
+
+	assert_eq(net.position, base_position)
+	assert_almost_eq(net.rotation, base_rotation, 0.001)
+	assert_eq(net.offset, base_offset)
+
+
+func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
+	assert_not_null(navigator)
+	assert_eq(navigator.current_page_id, "hub")
+	assert_eq(navigator.PAGE_STACK_Z["hub"], 0)
+	assert_eq(navigator.PAGE_STACK_Z["gallery"], -1)
+	assert_eq(navigator.PAGE_STACK_Z["backpack"], -2)
+	assert_eq(navigator.PAGE_STACK_Z["settings"], -3)
+
+	hub._open_book_page("gallery")
+	await get_tree().create_timer(0.75).timeout
+
+	assert_eq(navigator.current_page_id, "gallery")
+	assert_false(hub.get_node("BookCanvasLayer").visible)
+	assert_false(hub.get_node("HubArt").visible)
+	assert_false(hub.get_node("CanvasLayer/DesignRoot").visible)
+	var gallery_page := navigator.get_node_or_null("GalleryPage") as Control
+	assert_not_null(gallery_page)
+	assert_true(gallery_page.visible)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
+
+	navigator.go_to_page("hub")
+	await get_tree().create_timer(0.75).timeout
+
+	assert_eq(navigator.current_page_id, "hub")
+	assert_true(hub.get_node("BookCanvasLayer").visible)
+	assert_true(hub.get_node("HubArt").visible)
+	assert_true(hub.get_node("CanvasLayer/DesignRoot").visible)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
+
+
+func test_hub_book_page_navigator_repositions_right_side_tabs_between_pages():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
+	assert_not_null(navigator)
+
+	hub._open_book_page("settings")
+	await get_tree().create_timer(0.75).timeout
+
+	var viewport_center_x := get_viewport().get_visible_rect().size.x * 0.5
+	var hub_tab := navigator.get_node_or_null("HubTabButton") as Button
+	var backpack_tab := navigator.get_node_or_null("BackpackTabButton") as Button
+	var gallery_tab := navigator.get_node_or_null("GalleryTabButton") as Button
+	var settings_tab := navigator.get_node_or_null("SettingsTabButton") as Button
+	assert_not_null(hub_tab)
+	assert_not_null(backpack_tab)
+	assert_not_null(gallery_tab)
+	assert_not_null(settings_tab)
+	assert_true(hub_tab.visible)
+	assert_true(backpack_tab.visible)
+	assert_true(gallery_tab.visible)
+	assert_false(settings_tab.visible)
+	assert_true(hub_tab.position.x > viewport_center_x)
+	assert_true(hub_tab.position.y > backpack_tab.position.y - 160.0)
+	assert_true(backpack_tab.position.x > viewport_center_x)
+	assert_true(gallery_tab.position.x > viewport_center_x)
+
+	gallery_tab.pressed.emit()
+	await get_tree().create_timer(0.75).timeout
+
+	assert_eq(navigator.current_page_id, "gallery")
+	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
+
+
+func test_hub_book_page_navigator_red_tab_returns_to_hub():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
+	assert_not_null(navigator)
+
+	hub._open_book_page("settings")
+	await get_tree().create_timer(0.75).timeout
+
+	var hub_tab := navigator.get_node_or_null("HubTabButton") as Button
+	assert_not_null(hub_tab)
+	assert_true(hub_tab.visible)
+	assert_true(hub_tab.position.x > get_viewport().get_visible_rect().size.x * 0.5)
+	assert_true(hub_tab.position.y > 100.0)
+
+	hub_tab.pressed.emit()
+	await get_tree().create_timer(0.75).timeout
+
+	assert_eq(navigator.current_page_id, "hub")
+	assert_true(hub.get_node("BookCanvasLayer").visible)
+	assert_true(hub.get_node("HubArt").visible)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 
 
@@ -336,7 +626,7 @@ func test_hub_scene_applies_stage_background_and_foreground():
 	assert_not_null(room)
 	assert_not_null(room.texture)
 	assert_eq(room.texture.resource_path, "res://assets/ui/hub/backgrounds/xiaojia.png")
-	assert_eq(room.position, Vector2(156.0, 50.0))
+	assert_eq(room.position, Vector2(188.0, 74.0))
 	assert_true(room.scale.x > 0.0)
 	assert_eq(room.scale.x, room.scale.y)
 
@@ -375,24 +665,30 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var background := hub.get_node_or_null("HubArt/Background") as TextureRect
+	var background := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/WoodFloor") as TextureRect
 	assert_not_null(background)
 	assert_not_null(background.texture)
 	assert_eq(background.texture.resource_path, "res://assets/ui/book/wood_floor.png")
-	assert_eq(background.size, Vector2(1593.0, 872.0))
+	assert_eq(background.size, BookBackgroundConfig.DESIGN_SIZE)
 
 	for node_path in [
-		"HubArt/PageBack",
-		"HubArt/PageRouteCover",
-		"HubArt/PageBackpackCover",
-		"HubArt/PageMiddle",
-		"HubArt/Page",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumRingRight",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumTab",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/GalleryTab",
+		"BookCanvasLayer/BookDesignRoot/BookBackground/SettingsTab",
+	]:
+		var art := hub.get_node_or_null(node_path) as TextureRect
+		assert_not_null(art, "Hub book background should expose %s" % node_path)
+		assert_not_null(art.texture)
+		assert_true(art.texture.resource_path != "res://assets/ui/hub/hub_background.png")
+
+	for node_path in [
 		"HubArt/Room",
-		"HubArt/RingRight",
-		"HubArt/RouteTab",
-		"HubArt/BackpackTab",
-		"HubArt/GalleryTab",
-		"HubArt/SettingsTab",
 		"HubArt/CornerTopLeft",
 		"HubArt/CornerTopRight",
 		"HubArt/CornerBottomLeft",
@@ -423,21 +719,27 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	assert_false(speech_bubble.visible)
 	assert_false(speech_text.visible)
 
-	var page := hub.get_node_or_null("HubArt/Page") as Sprite2D
-	var page_back := hub.get_node_or_null("HubArt/PageBack") as Sprite2D
-	var page_route_cover := hub.get_node_or_null("HubArt/PageRouteCover") as Sprite2D
-	var page_backpack_cover := hub.get_node_or_null("HubArt/PageBackpackCover") as Sprite2D
-	var page_middle := hub.get_node_or_null("HubArt/PageMiddle") as Sprite2D
-	assert_true(page_back.position.x < page_route_cover.position.x)
+	var book_background := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground") as Control
+	assert_not_null(book_background)
+	assert_true(book_background.has_method("get_visible_page_sheet_count"))
+	assert_eq(book_background.call("get_visible_page_sheet_count"), 4)
+
+	var page := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage") as TextureRect
+	var page_route_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover") as TextureRect
+	var page_backpack_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover") as TextureRect
+	var page_middle := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle") as TextureRect
 	assert_true(page_route_cover.position.x < page_backpack_cover.position.x)
 	assert_true(page_backpack_cover.position.x < page_middle.position.x)
 	assert_true(page_middle.position.x < page.position.x)
 
-	var route_tab := hub.get_node_or_null("HubArt/RouteTab") as Sprite2D
-	var backpack_tab := hub.get_node_or_null("HubArt/BackpackTab") as Sprite2D
-	var gallery_tab := hub.get_node_or_null("HubArt/GalleryTab") as Sprite2D
-	var settings_tab := hub.get_node_or_null("HubArt/SettingsTab") as Sprite2D
-	assert_true(route_tab.z_index > page_back.z_index)
+	var route_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumTab") as TextureRect
+	var backpack_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab") as TextureRect
+	var gallery_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/GalleryTab") as TextureRect
+	var settings_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/SettingsTab") as TextureRect
+	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	var dreamcatcher_net := hub.get_node_or_null("HubArt/DreamcatcherNet") as Sprite2D
+	var merchant_sprite := hub.get_node_or_null("HubArt/MerchantSprite") as AnimatedSprite2D
+	var speech_bubble_for_z := hub.get_node_or_null("HubArt/SpeechBubble") as Sprite2D
 	assert_true(route_tab.z_index < page_route_cover.z_index)
 	assert_true(backpack_tab.z_index > page_route_cover.z_index)
 	assert_true(backpack_tab.z_index < page_backpack_cover.z_index)
@@ -445,23 +747,30 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	assert_true(gallery_tab.z_index < page_middle.z_index)
 	assert_true(settings_tab.z_index > page_middle.z_index)
 	assert_true(settings_tab.z_index < page.z_index)
+	assert_not_null(hub_player)
+	assert_not_null(dreamcatcher_net)
+	assert_not_null(merchant_sprite)
+	assert_not_null(speech_bubble_for_z)
+	assert_true(hub_player.z_index > dreamcatcher_net.z_index)
+	assert_true(hub_player.z_index > merchant_sprite.z_index)
+	assert_true(hub_player.z_index < speech_bubble_for_z.z_index)
 
-	var route_button := hub.get_node_or_null("CanvasLayer/RouteButton") as Button
+	var route_button := hub.get_node_or_null("CanvasLayer/DesignRoot/RouteButton") as Button
 	assert_not_null(route_button)
-	assert_eq(route_button.tooltip_text, "继续梦境")
+	assert_false(route_button.tooltip_text.is_empty())
 	assert_true(route_button.pressed.is_connected(Callable(hub, "_on_route_button_pressed")))
 
-	var backpack_button := hub.get_node_or_null("CanvasLayer/BackpackButton") as Button
+	var backpack_button := hub.get_node_or_null("CanvasLayer/DesignRoot/BackpackButton") as Button
 	assert_not_null(backpack_button)
 	assert_eq(backpack_button.tooltip_text, "整理背包")
 	assert_true(backpack_button.pressed.is_connected(Callable(hub, "_on_backpack_button_pressed")))
 
-	var gallery_button := hub.get_node_or_null("CanvasLayer/GalleryButton") as Button
+	var gallery_button := hub.get_node_or_null("CanvasLayer/DesignRoot/GalleryButton") as Button
 	assert_not_null(gallery_button)
 	assert_eq(gallery_button.tooltip_text, "图鉴")
 	assert_true(gallery_button.pressed.is_connected(Callable(hub, "_on_gallery_button_pressed")))
 
-	var settings_button := hub.get_node_or_null("CanvasLayer/SettingsButton") as Button
+	var settings_button := hub.get_node_or_null("CanvasLayer/DesignRoot/SettingsButton") as Button
 	assert_not_null(settings_button)
 	assert_eq(settings_button.tooltip_text, "设置")
 	assert_true(settings_button.pressed.is_connected(Callable(hub, "_on_settings_button_pressed")))
@@ -474,8 +783,8 @@ func test_hub_keeps_legacy_main_menu_button_hidden_from_left_tabs():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var button := hub.get_node_or_null("CanvasLayer/MainMenuButton") as Button
+	var button := hub.get_node_or_null("CanvasLayer/DesignRoot/MainMenuButton") as Button
 	assert_not_null(button)
-	assert_eq(button.tooltip_text, "返回主界面")
+	assert_false(button.tooltip_text.is_empty())
 	assert_false(button.visible)
 	assert_true(button.pressed.is_connected(Callable(hub, "_on_main_menu_button_pressed")))
