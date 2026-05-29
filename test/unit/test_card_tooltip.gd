@@ -55,6 +55,29 @@ func test_item_ui_shows_configured_icon_texture():
 	assert_true(ui.icon.visible)
 
 
+func test_item_ui_uses_item_art_without_background_fill():
+	var item = _make_item_data()
+	var image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	image.fill(Color.RED)
+	item.icon = ImageTexture.create_from_image(image)
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+
+	assert_false(ui.background.visible)
+
+
+func test_item_ui_keeps_placeholder_background_without_icon():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+
+	assert_true(ui.background.visible)
+
+
 func test_backpack_configures_item_ui_with_grid_cell_size():
 	var backpack = add_child_autofree(BackpackUIScene.instantiate())
 	backpack.custom_minimum_size = Vector2(700.0, 490.0)

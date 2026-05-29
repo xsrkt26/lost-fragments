@@ -81,6 +81,8 @@ func _sync_visuals():
 	if icon:
 		icon.texture = item_data.icon
 		icon.visible = item_data.icon != null
+	if background:
+		background.visible = item_data.icon == null
 	
 	# 1. 根据 Shape 设置 UI 尺寸
 	var rect = item_data.get_bounding_rect()
