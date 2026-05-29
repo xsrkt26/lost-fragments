@@ -40,6 +40,21 @@ func test_item_ui_uses_configured_grid_cell_size_for_shape_size():
 	assert_eq(ui.custom_minimum_size, Vector2(160.0, 144.0))
 	assert_eq(ui.size, Vector2(160.0, 144.0))
 
+
+func test_item_ui_shows_configured_icon_texture():
+	var item = _make_item_data()
+	var image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
+	image.fill(Color.RED)
+	item.icon = ImageTexture.create_from_image(image)
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+
+	assert_eq(ui.icon.texture, item.icon)
+	assert_true(ui.icon.visible)
+
+
 func test_backpack_configures_item_ui_with_grid_cell_size():
 	var backpack = add_child_autofree(BackpackUIScene.instantiate())
 	backpack.custom_minimum_size = Vector2(700.0, 490.0)

@@ -78,6 +78,9 @@ func _sync_visuals():
 	# 0. 设置名称
 	if name_label:
 		name_label.text = item_data.item_name
+	if icon:
+		icon.texture = item_data.icon
+		icon.visible = item_data.icon != null
 	
 	# 1. 根据 Shape 设置 UI 尺寸
 	var rect = item_data.get_bounding_rect()
