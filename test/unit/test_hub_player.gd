@@ -521,6 +521,23 @@ func test_hub_route_tab_no_longer_drives_route_progression():
 	assert_false(hub_player.has_move_target)
 
 
+func test_hub_z_shortcut_skips_unimplemented_event_node():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 2
+	rm.completed_route_nodes = [] as Array[int]
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_true(hub._advance_current_route_by_shortcut())
+	assert_eq(rm.current_route_index, 3)
+	assert_true(rm.completed_route_nodes.has(2))
+
+
 func test_hub_dreamcatcher_tracks_current_stage_and_disables_on_shop_node():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)
@@ -658,7 +675,7 @@ func test_hub_book_page_navigator_repositions_right_side_tabs_between_pages():
 	assert_true(gallery_tab.visible)
 	assert_false(settings_tab.visible)
 	assert_true(hub_tab.position.x > viewport_center_x)
-	assert_true(hub_tab.position.y > backpack_tab.position.y - 160.0)
+	assert_true(hub_tab.position.y < backpack_tab.position.y)
 	assert_true(backpack_tab.position.x > viewport_center_x)
 	assert_true(gallery_tab.position.x > viewport_center_x)
 

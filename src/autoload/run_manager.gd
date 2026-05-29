@@ -7,6 +7,7 @@ const RouteConfig = preload("res://src/core/route/route_config.gd")
 const RewardGenerator = preload("res://src/core/rewards/reward_generator.gd")
 const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 const RunPersistenceCodec = preload("res://src/core/run/run_persistence_codec.gd")
 const RunRouteProgress = preload("res://src/core/run/run_route_progress.gd")
 const RunRngService = preload("res://src/core/run/run_rng_service.gd")
@@ -24,9 +25,11 @@ signal tools_changed(current_tools: Dictionary)
 # --- 配置项 ---
 const INITIAL_SHARDS = 10
 const INITIAL_DECK: Array[String] = [
-	"paper_ball", "paper_ball", "paper_ball", "paper_ball", "paper_ball",
-	"alarm_clock", "alarm_clock", "alarm_clock", "alarm_clock", "alarm_clock",
-	"tin_can", "tin_can", "tin_can", "tin_can", "tin_can"
+	"baseball", "baseball", "baseball",
+	"alarm_clock", "alarm_clock", "alarm_clock",
+	"tin_can", "tin_can", "tin_can",
+	"mineral_water_bottle", "mineral_water_bottle", "mineral_water_bottle",
+	"apple", "apple", "apple"
 ]
 const NO_SCORE_TARGET := -1
 const BACKPACK_GRID_WIDTH := 7
@@ -1034,6 +1037,20 @@ func random_int_for_run(max_exclusive: int, save_after: bool = false) -> int:
 
 func shuffle_array_for_run(values: Array, save_after: bool = false) -> Array:
 	var result := _get_random_service().shuffle(values)
+	_sync_random_state()
+	if save_after:
+		save_current_state()
+	return result
+
+func draw_item_id_for_current_act(item_db: Node, save_after: bool = true) -> String:
+	var item_id := ItemDrawPool.draw_item_id(self, item_db)
+	_sync_random_state()
+	if save_after:
+		save_current_state()
+	return item_id
+
+func build_current_draw_deck(item_db: Node, draw_count: int = ItemDrawPool.DEFAULT_DECK_SIZE, save_after: bool = true) -> Array[String]:
+	var result := ItemDrawPool.build_deck(self, item_db, draw_count)
 	_sync_random_state()
 	if save_after:
 		save_current_state()

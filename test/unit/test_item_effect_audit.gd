@@ -342,9 +342,10 @@ func test_draw_and_discard_reactive_items_trigger_their_runtime_hooks():
 	manager.battle_state = BattleManager.BattleState.RESOLVING
 
 	var apple = _place(manager, "apple", Vector2i(2, 1), ItemData.Direction.RIGHT)
+	gs.current_sanity = 50
 	manager.backpack_manager.remove_instance(apple)
 	apple.data.effects[0].on_discard_instance(apple, manager.context)
-	assert_eq(gs.current_score, 3)
+	assert_eq(gs.current_sanity, 53)
 	assert_eq(manager.backpack_manager.grid[Vector2i(2, 1)].data.id, "apple_core")
 
 	manager.backpack_manager.grid.clear()

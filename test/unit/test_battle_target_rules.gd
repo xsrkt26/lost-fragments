@@ -18,7 +18,7 @@ func test_score_target_text_supports_none():
 	assert_eq(ui._format_target_text(false, -1), "无")
 	assert_eq(ui._format_target_text(true, 50), "50")
 
-func test_reaching_boss_target_does_not_auto_end_battle():
+func test_target_display_marks_reached_score_without_finishing_by_itself():
 	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
 	ui.sanity_label = autofree(Label.new())
 	ui.score_label = autofree(Label.new())
@@ -30,6 +30,44 @@ func test_reaching_boss_target_does_not_auto_end_battle():
 	assert_eq(ui.score_label.text, "50")
 	assert_eq(ui.target_score_label.text, "50")
 	assert_false(ui._is_battle_ended)
+
+func test_boss_target_reached_requests_battle_finish():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 6
+
+	var manager = autofree(BattleManagerScript.new())
+	manager.battle_state = BattleManager.BattleState.INTERACTIVE
+	var finish_reasons: Array[String] = []
+	manager.battle_finish_requested.connect(func(reason: String): finish_reasons.append(reason))
+
+	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
+	ui.battle_manager = manager
+	ui._try_request_boss_finish_on_target_reached(45, rm)
+
+	assert_eq(finish_reasons, ["score_target_reached"] as Array[String])
+	assert_eq(manager.battle_state, BattleManager.BattleState.FINISHING)
+
+func test_normal_battle_target_check_does_not_auto_finish():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+
+	var manager = autofree(BattleManagerScript.new())
+	manager.battle_state = BattleManager.BattleState.INTERACTIVE
+	var finish_reasons: Array[String] = []
+	manager.battle_finish_requested.connect(func(reason: String): finish_reasons.append(reason))
+
+	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
+	ui.battle_manager = manager
+	ui._try_request_boss_finish_on_target_reached(999, rm)
+
+	assert_true(finish_reasons.is_empty())
+	assert_eq(manager.battle_state, BattleManager.BattleState.INTERACTIVE)
 
 func test_potion_state_tracks_sanity_ratio():
 	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())

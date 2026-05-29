@@ -1230,6 +1230,23 @@ func _on_score_changed(new_val):
 	var gs = get_node("/root/GameState")
 	if gs:
 		_update_stats_display(gs.current_sanity, new_val)
+	_try_request_boss_finish_on_target_reached(new_val)
+
+func _try_request_boss_finish_on_target_reached(score: int, run_manager = null) -> void:
+	if _is_backpack_overlay_mode() or _is_battle_ended or battle_manager == null:
+		return
+	if battle_manager.battle_state == BattleManager.BattleState.FINISHING or battle_manager.battle_state == BattleManager.BattleState.FINISHED:
+		return
+	var rm = run_manager if run_manager != null else get_node_or_null("/root/RunManager")
+	if rm == null or not rm.has_method("get_current_battle_config"):
+		return
+	var config = rm.get_current_battle_config()
+	if not bool(config.get("is_boss", false)) or not bool(config.get("has_score_target", false)):
+		return
+	var target_score := int(config.get("target_score", -1))
+	if target_score < 0 or score < target_score:
+		return
+	battle_manager.request_finish_battle("score_target_reached")
 
 func _update_stats_display(san, score):
 	var gs = get_node_or_null("/root/GameState")

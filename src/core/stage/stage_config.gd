@@ -4,6 +4,14 @@ extends RefCounted
 const STAGE_DATA_PATH := "res://data/stages/stages.json"
 const DEFAULT_STAGE_ID := "act_1"
 const DEFAULT_MAX_ACT := 6
+const FALLBACK_BOSS_SCORE_TARGETS := {
+	1: 45,
+	2: 65,
+	3: 85,
+	4: 110,
+	5: 135,
+	6: 165,
+}
 
 const DEFAULT_STAGE := {
 	"id": DEFAULT_STAGE_ID,
@@ -21,7 +29,7 @@ const DEFAULT_STAGE := {
 	},
 	"boss": {
 		"mechanics": ["score_target"],
-		"score_target": {"enabled": true, "value": 50},
+		"score_target": {"enabled": true, "value": 45},
 	},
 	"reward_weight_modifiers": {
 		"types": {},
@@ -144,7 +152,7 @@ static func _fallback_stage_table() -> Dictionary:
 		stage["name"] = "Stage %d" % act
 		stage["boss"] = {
 			"mechanics": ["score_target"],
-			"score_target": {"enabled": true, "value": 30 + act * 20},
+			"score_target": {"enabled": true, "value": int(FALLBACK_BOSS_SCORE_TARGETS.get(act, 45 + (act - 1) * 20))},
 		}
 		stages[str(act)] = stage
 	return {

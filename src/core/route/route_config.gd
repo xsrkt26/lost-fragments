@@ -26,9 +26,7 @@ const FALLBACK_ROUTES := {
 		{"id": "battle_2", "type": NODE_BATTLE, "label": "局内游戏", "scene": SCENE_BATTLE},
 		{"id": "shop_2", "type": NODE_SHOP, "label": "商店", "scene": SCENE_SHOP},
 		{"id": "event_2", "type": NODE_EVENT, "label": "事件", "scene": SCENE_EVENT},
-		{"id": "boss_1", "type": NODE_BOSS_BATTLE, "label": "Boss局内游戏", "scene": SCENE_BATTLE, "score_target": {"enabled": true, "base": 30, "act_multiplier": 20}},
-		{"id": "shop_3", "type": NODE_SHOP, "label": "商店", "scene": SCENE_SHOP},
-		{"id": "event_3", "type": NODE_EVENT, "label": "事件", "scene": SCENE_EVENT},
+		{"id": "boss_1", "type": NODE_BOSS_BATTLE, "label": "Boss局内游戏", "scene": SCENE_BATTLE, "score_target": {"enabled": true, "value": 45}},
 	]
 }
 

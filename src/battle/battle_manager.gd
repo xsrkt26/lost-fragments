@@ -2,6 +2,7 @@ class_name BattleManager
 extends Node
 
 const ToolEffectScript = preload("res://src/core/tools/tool_effect.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 
 ## 战斗管理器：游戏的逻辑中枢 (Controller)
 ## 负责协调 backpack 数据、碰撞解析、序列播放和音频触发
@@ -93,6 +94,12 @@ func _initialize_battle_data():
 		print("[BattleManager] 警告: 未找到 RunManager，使用空卡包运行。")
 
 func _make_battle_deck_from_run(rm) -> Array[String]:
+	var item_db = get_node_or_null("/root/ItemDatabase")
+	if item_db != null and rm.has_method("build_current_draw_deck"):
+		var generated_deck = rm.build_current_draw_deck(item_db, ItemDrawPool.DEFAULT_DECK_SIZE, true)
+		if not generated_deck.is_empty():
+			return generated_deck
+
 	var source_deck := Array(rm.current_deck).duplicate()
 	var shuffled: Array = source_deck
 	if rm.has_method("shuffle_array_for_run"):
@@ -380,8 +387,10 @@ func request_discard_item(item_ui: Control):
 	print("[BattleManager] 正在丢弃物品: ", item_data.item_name)
 	
 	# 1. 如果在背包内，先移除
-	var old_pos = _find_item_old_pos(item_data)
-	var old_instance = backpack_manager.grid.get(old_pos) if old_pos != Vector2i(-1, -1) else null
+	var old_instance = _get_backpack_instance_from_item_ui(item_ui, item_data)
+	var old_pos = old_instance.root_pos if old_instance != null else Vector2i(-1, -1)
+	if old_instance != null:
+		item_data = old_instance.data
 	if old_pos != Vector2i(-1, -1):
 		backpack_manager.remove_by_runtime_id(item_data.runtime_id)
 	_remove_item_visual_mapping(item_data)
@@ -397,6 +406,12 @@ func request_discard_item(item_ui: Control):
 	var bus = get_node_or_null("/root/GlobalEventBus")
 	if bus:
 		bus.item_discarded.emit(item_data)
+
+	var replacement_instance = backpack_manager.grid.get(old_pos) if old_pos != Vector2i(-1, -1) else null
+	if replacement_instance != null and replacement_instance != old_instance:
+		_reuse_discarded_item_ui_for_replacement(item_ui, replacement_instance)
+		GlobalAudio.play_sfx("discard")
+		return
 		
 	# 3. 视觉表现与清理
 	if managed_item_uis.has(item_ui):
@@ -404,6 +419,27 @@ func request_discard_item(item_ui: Control):
 		
 	item_ui.queue_free()
 	GlobalAudio.play_sfx("discard")
+
+func _get_backpack_instance_from_item_ui(item_ui: Control, fallback_data: ItemData) -> BackpackManager.ItemInstance:
+	var ui_instance = item_ui.get("item_instance") as BackpackManager.ItemInstance
+	if ui_instance != null and _is_instance_in_grid(ui_instance):
+		return ui_instance
+	var old_pos = _find_item_old_pos(fallback_data)
+	if old_pos != Vector2i(-1, -1):
+		return backpack_manager.grid.get(old_pos)
+	return null
+
+func _reuse_discarded_item_ui_for_replacement(item_ui: Control, replacement_instance: BackpackManager.ItemInstance) -> void:
+	if item_ui == null or replacement_instance == null or replacement_instance.data == null:
+		return
+	item_ui.set("item_instance", replacement_instance)
+	item_ui.set("item_data", replacement_instance.data)
+	if item_ui.has_method("setup"):
+		item_ui.setup(replacement_instance.data, context)
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("add_item_visual"):
+		backpack_ui.add_item_visual(item_ui, replacement_instance.root_pos)
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("update_slot_visuals"):
+		backpack_ui.update_slot_visuals()
 
 ## 清理所有不在背包格宫内的物品
 func discard_all_outside_items():
@@ -609,13 +645,14 @@ func _process_new_item_acquisition(item: ItemData):
 	# 扣除捕梦梦值
 	var gs = get_node_or_null("/root/GameState")
 	if gs:
-		var cost = 0
+		var base_cost = 0
 		if item.base_cost == -1:
 			# 特殊规则：阶梯递增 (例如：基础 1 + 已经抽取的次数)
-			cost = 1 + draw_count
+			base_cost = 1
 		else:
 			# 其他数值取绝对值作为消耗，避免负数变成恢复
-			cost = abs(item.base_cost)
+			base_cost = abs(item.base_cost)
+		var cost = base_cost + max(0, draw_count - 1)
 		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
 		if _next_draw_cost_discount > 0:
 			cost = max(1, cost - _next_draw_cost_discount)

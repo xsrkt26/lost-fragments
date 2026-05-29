@@ -20,6 +20,7 @@ Detailed large-module split planning is tracked in `spec/Docs/02_Tech/06_Refacto
 - `BackpackManager` owns grid placement rules, runtime item instances, blocked cells, seed growth, and item replacement.
 - `ImpactResolver` converts one impact source into ordered `GameAction` results.
 - `SequencePlayer` applies `GameAction` values and plays UI feedback.
+- `ItemDrawPool` owns capture draw rules. It generates the battle draw sequence from the current act, item category weights, role weights, and implemented `ItemData` resources.
 - UI scripts should request actions from managers and render state; they should not directly mutate long-term run data except through `RunManager` APIs.
 
 ## Data Sources
@@ -36,6 +37,7 @@ Detailed large-module split planning is tracked in `spec/Docs/02_Tech/06_Refacto
 
 - `ItemData` resources are static templates. Runtime state must live in duplicated item data or `BackpackManager.ItemInstance`, never by mutating database resources.
 - Gameplay random choices should use `RunManager` random helpers or `GameContext.random_*()` so RNG state can be serialized with the run.
+- Capture draws should go through `RunManager.build_current_draw_deck()` / `ItemDrawPool`, not by directly shuffling `RunManager.current_deck`.
 - Config loader classes cache normalized JSON by path and return defensive copies; tests that write custom config paths should call `clear_cache_for_tests()`.
 - Route, stage, reward, shop, event, and economy values should stay out of UI scripts.
 - Battle completion goes through `BattleManager.request_finish_battle()` and is resolved by the UI only after the current draw/impact sequence settles.

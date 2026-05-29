@@ -28,6 +28,7 @@
 - 场景层：`data/stages/stages.json`，由 `StageConfig` 加载。
 - 经济曲线：`data/economy/economy.json`，由 `EconomyConfig` 读取并保留代码默认值作为回退。
 - 策划配置 schema：`data/config/design_config_schema.json`，由 `scripts/design_config/*` 校验和导出工具使用。
+- 捕梦物品投放：`ItemDrawPool` 按 `ItemDrawProbability.md` 的层数、大类别和定位权重生成局内抽取牌堆；当前覆盖已实现的 `ItemData` 物品资源，未落地为 `.tres` 的梦境之种专用启动件不会进入候选池，其类别权重会自动归零并重归一化。
 
 路线、场景层、奖励、商店、事件和经济数值不应散落在 UI 场景脚本中。策划可编辑配置需要先通过 `scripts/design_config/validate_design_config.py` 校验，再进入导出或发布流程。
 
@@ -58,7 +59,7 @@
 `RouteConfig` 从 `data/routes/routes.json` 读取默认路线：
 
 ```text
-局内游戏 -> 商店 -> 事件 -> 局内游戏 -> 商店 -> 事件 -> Boss局内游戏 -> 商店 -> 事件
+局内游戏 -> 商店 -> 事件 -> 局内游戏 -> 商店 -> 事件 -> Boss局内游戏
 ```
 
 当前支持节点类型：
@@ -71,7 +72,7 @@
 - `reward`
 - `elite_battle`
 
-`HubScene` 由路线按钮驱动，只允许进入当前节点；完成战斗、离开商店或完成事件后推进路线。完成第 6 个场景最后节点后，整局胜利并返回主菜单。
+`HubScene` 由当前路线节点驱动，只允许进入当前节点；`Z` 键可推进到当前节点，事件节点在未实现前只推进路线不进入事件场景。完成战斗、离开商店或跳过事件后推进路线。完成第 6 个场景最后节点后，整局胜利并返回主菜单。
 
 `StageConfig` 会按 `current_act` 选择当前场景层配置。每层可以覆盖 `route_id`，因此同一整局内可以使用不同路线结构；未配置或非法时回退到默认路线。
 
@@ -100,7 +101,9 @@
 
 玩家手动结束或梦值归零都会走 `request_finish_battle(reason)`。如果当前仍在抽取或结算中，结束请求会延迟到本次结算完成后再发出，避免中途打断本次撞击结算。
 
-普通战斗默认无分数目标；Boss 战从路线节点的 `score_target` 规则读取目标分数。达到目标不会自动结束，战斗结束时统一判定胜负。
+普通战斗默认无分数目标；Boss 战从路线节点和当前场景层读取目标分数。Boss 达到目标分数会请求结束当前战斗；梦值归零或手动结束时仍按目标分数统一判定胜负。
+
+局内捕梦不再直接使用 `RunManager.current_deck` 的固定初始三物品列表。进入战斗时，`BattleManager` 通过 `RunManager.build_current_draw_deck()` 请求 `ItemDrawPool` 生成 60 张可复现抽取序列；`current_deck` 仍保留为长期获得物品列表，并参与同名重复抽取修正。
 
 ### 3. 背包与物品状态
 

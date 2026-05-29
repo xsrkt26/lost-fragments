@@ -129,6 +129,9 @@ func test_old_pocket_watch_and_safety_pin_modify_sanity_loss_in_order():
 	assert_eq(gs.current_sanity, 100)
 
 	manager._process_new_item_acquisition(item)
+	assert_eq(gs.current_sanity, 100)
+
+	manager._process_new_item_acquisition(item)
 	assert_eq(gs.current_sanity, 98)
 
 func test_dreamcatcher_filter_scores_every_three_draws():
@@ -677,11 +680,11 @@ func test_empty_dream_trophy_bonus_requires_target_and_score_margin():
 	rm.current_ornaments = ["empty_dream_trophy"] as Array[String]
 	rm.current_route_index = 6
 	rm.current_act = 1
-	assert_false(rm.has_empty_dream_trophy_reward_bonus(100))
-	assert_true(rm.has_empty_dream_trophy_reward_bonus(101))
+	assert_false(rm.has_empty_dream_trophy_reward_bonus(95))
+	assert_true(rm.has_empty_dream_trophy_reward_bonus(96))
 
 	rm.current_ornaments = [] as Array[String]
-	assert_false(rm.has_empty_dream_trophy_reward_bonus(101))
+	assert_false(rm.has_empty_dream_trophy_reward_bonus(96))
 
 	rm.current_ornaments = ["empty_dream_trophy"] as Array[String]
 	rm.current_route_index = 0

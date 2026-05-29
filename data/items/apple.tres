@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="1"]
 script = ExtResource("e1")
-score_amount = 3
+sanity_amount = 3
 core_item_id = "apple_core"
 
 [resource]

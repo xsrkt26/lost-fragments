@@ -635,8 +635,44 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if GlobalInput.is_context(GlobalInput.Context.WORLD):
+		if _is_route_advance_shortcut(event):
+			if _advance_current_route_by_shortcut():
+				get_viewport().set_input_as_handled()
+			return
 		if event.is_action_pressed("ui_accept") or Input.is_key_pressed(KEY_E):
 			get_viewport().set_input_as_handled()
+
+
+func _is_route_advance_shortcut(event: InputEvent) -> bool:
+	if not (event is InputEventKey):
+		return false
+	var key_event := event as InputEventKey
+	return key_event.pressed and not key_event.echo and (key_event.keycode == KEY_Z or key_event.physical_keycode == KEY_Z)
+
+
+func _advance_current_route_by_shortcut() -> bool:
+	if _pending_auto_interaction != "" or _is_dreamcatcher_transition_pending:
+		return false
+	var rm = get_node_or_null("/root/RunManager")
+	if rm == null or not bool(rm.get("is_run_active")):
+		return false
+	if not rm.has_method("can_enter_route_node") or not rm.can_enter_route_node(int(rm.get("current_route_index"))):
+		return false
+
+	var node_type: String = rm.get_current_route_node_type() if rm.has_method("get_current_route_node_type") else ""
+	if RouteConfig.is_battle_node_type(node_type):
+		_on_dreamcatcher_button_pressed()
+		return true
+	if node_type == RouteConfig.NODE_SHOP:
+		_enter_current_route_node()
+		return true
+	if node_type == RouteConfig.NODE_EVENT:
+		var skipped_node: Dictionary = rm.advance_route_node()
+		if skipped_node.is_empty():
+			return false
+		print("[Hub] 事件节点暂未实现，已跳过: ", skipped_node.get("id", ""))
+		return true
+	return false
 
 
 func _unhandled_input(event: InputEvent) -> void:
