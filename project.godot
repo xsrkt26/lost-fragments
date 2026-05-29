@@ -18,6 +18,7 @@ config/icon="res://assets/app/icon.svg"
 [autoload]
 
 GameState="*res://src/autoload/game_state.gd"
+StoryManager="*res://src/autoload/story_manager.gd"
 RunManager="*res://src/autoload/run_manager.gd"
 ItemDatabase="*res://src/autoload/item_database.gd"
 ToolDatabase="*res://src/autoload/tool_database.gd"

@@ -6,6 +6,8 @@ extends Node
 enum TextType { SCORE, SANITY, INFO }
 
 const BUTTON_FEEDBACK_META := "_lost_fragments_button_feedback_bound"
+const BUTTON_FEEDBACK_DISABLED_META := "_lost_fragments_button_feedback_disabled"
+const BUTTON_BASE_SCALE_META := "_lost_fragments_button_feedback_base_scale"
 const BUTTON_HOVER_SCALE := Vector2(1.035, 1.035)
 const BUTTON_HOVER_DURATION := 0.08
 
@@ -29,9 +31,10 @@ func bind_buttons(root: Node) -> void:
 		bind_buttons(child)
 
 func bind_button(button: BaseButton) -> void:
-	if button == null or not is_instance_valid(button) or button.has_meta(BUTTON_FEEDBACK_META):
+	if button == null or not is_instance_valid(button) or button.has_meta(BUTTON_FEEDBACK_META) or button.has_meta(BUTTON_FEEDBACK_DISABLED_META):
 		return
 	button.set_meta(BUTTON_FEEDBACK_META, true)
+	button.set_meta(BUTTON_BASE_SCALE_META, button.scale)
 	button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 	button.mouse_entered.connect(func(): _on_button_hovered(button))
 	button.mouse_exited.connect(func(): _on_button_unhovered(button))
@@ -50,15 +53,16 @@ func _bind_button_deferred(button: Variant) -> void:
 	bind_button(button as BaseButton)
 
 func _on_button_hovered(button: BaseButton) -> void:
-	if button == null or button.disabled or not is_inside_tree():
+	if button == null or button.disabled or button.has_meta(BUTTON_FEEDBACK_DISABLED_META) or not is_inside_tree():
 		return
-	button.pivot_offset = button.size * 0.5
-	_tween_button_scale(button, BUTTON_HOVER_SCALE)
+	var base_scale: Vector2 = button.get_meta(BUTTON_BASE_SCALE_META, button.scale)
+	_tween_button_scale(button, base_scale * BUTTON_HOVER_SCALE)
 
 func _on_button_unhovered(button: BaseButton) -> void:
-	if button == null or not is_inside_tree():
+	if button == null or button.has_meta(BUTTON_FEEDBACK_DISABLED_META) or not is_inside_tree():
 		return
-	_tween_button_scale(button, Vector2.ONE)
+	var base_scale: Vector2 = button.get_meta(BUTTON_BASE_SCALE_META, button.scale)
+	_tween_button_scale(button, base_scale)
 
 func _on_button_pressed(button: BaseButton) -> void:
 	if button == null or button.disabled:
