@@ -1,6 +1,7 @@
 extends GutTest
 
 const SettingsScene = preload("res://src/ui/settings/audio_settings_ui.tscn")
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())
@@ -67,6 +68,26 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	assert_almost_eq(mute_button.position.x + mute_button.size.x, master_value.position.x + master_value.size.x, 0.01)
 	assert_almost_eq(reset_button.position.y, close_button.position.y, 0.01)
 	assert_true(reset_button.position.x < close_button.position.x)
+
+	var album_tab_right := ui.get_node("DesignRoot/ArtLayer/AlbumTabRight") as TextureRect
+	var backpack_tab_right := ui.get_node("DesignRoot/ArtLayer/BackpackTabRight") as TextureRect
+	var gallery_tab_right := ui.get_node("DesignRoot/ArtLayer/GalleryTabRight") as TextureRect
+	var settings_tab_right := ui.get_node("DesignRoot/ArtLayer/SettingsTabRight") as TextureRect
+	var settings_tab := ui.get_node("DesignRoot/ArtLayer/SettingsTab") as TextureRect
+	var album_page := ui.get_node("DesignRoot/ArtLayer/AlbumPage") as TextureRect
+	var album_ring_right := ui.get_node("DesignRoot/ArtLayer/AlbumRingRight") as TextureRect
+	assert_true(album_tab_right.visible)
+	assert_true(backpack_tab_right.visible)
+	assert_true(gallery_tab_right.visible)
+	assert_false(settings_tab_right.visible)
+	assert_true(settings_tab.visible)
+	assert_eq(settings_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_SETTINGS, BookBackgroundConfig.PAGE_SETTINGS))
+	assert_true(settings_tab.z_index > album_page.z_index)
+	assert_eq(album_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
+	assert_eq(backpack_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
+	assert_eq(gallery_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
+	assert_true(gallery_tab_right.z_index > album_page.z_index)
+	assert_true(gallery_tab_right.z_index < album_ring_right.z_index)
 
 func test_settings_scene_updates_audio_values() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())

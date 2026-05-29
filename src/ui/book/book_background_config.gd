@@ -22,6 +22,16 @@ const PAGE_STACK_Z := {
 	PAGE_SETTINGS: -3,
 }
 
+const TAB_Z_INDEX := {
+	PAGE_HUB: 11,
+	PAGE_GALLERY: 9,
+	PAGE_BACKPACK: 7,
+	PAGE_SETTINGS: 5,
+}
+
+const ACTIVE_LEFT_TAB_Z_INDEX := 11
+const RIGHT_TAB_Z_INDEX := 12
+
 # Visible sheets include the current page and the pages behind it.
 const PAGE_SHEET_COUNT := {
 	PAGE_HUB: 4,
@@ -51,6 +61,17 @@ static func normalize_page_id(page_id: String) -> String:
 
 static func get_page_sheet_count(page_id: String) -> int:
 	return int(PAGE_SHEET_COUNT[normalize_page_id(page_id)])
+
+
+static func get_tab_z_index(page_id: String, active_page_id: String = "") -> int:
+	var target_page := normalize_page_id(page_id)
+	if active_page_id != "" and target_page == normalize_page_id(active_page_id):
+		return ACTIVE_LEFT_TAB_Z_INDEX
+	return int(TAB_Z_INDEX[target_page])
+
+
+static func get_right_tab_z_index() -> int:
+	return RIGHT_TAB_Z_INDEX
 
 
 static func should_place_tab_on_right(page_id: String, active_page_id: String) -> bool:

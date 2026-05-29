@@ -3,14 +3,7 @@
 [ext_resource type="Script" uid="uid://ckodnqlaehffy" path="res://src/ui/hub/hub_scene.gd" id="1_script"]
 [ext_resource type="Script" uid="uid://dgnfdwrhpleu2" path="res://src/ui/hub/hub_player.gd" id="2_player"]
 [ext_resource type="SpriteFrames" path="res://assets/characters/player/player_sprite_frames.tres" id="3_player_frames"]
-[ext_resource type="Texture2D" uid="uid://b7c4lx1nc4lex" path="res://assets/ui/book/wood_floor.png" id="4_wood_floor"]
-[ext_resource type="Texture2D" uid="uid://do4oa4kui6at7" path="res://assets/ui/hub/hub_page.png" id="5_page"]
 [ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="6_room"]
-[ext_resource type="Texture2D" uid="uid://y63gxtnljiys" path="res://assets/ui/hub/hub_ring_right.png" id="7_ring_right"]
-[ext_resource type="Texture2D" uid="uid://dapa0hcg0pjo8" path="res://assets/ui/book/tab_album.png" id="8_tab_album"]
-[ext_resource type="Texture2D" uid="uid://6vv7bo0dguyq" path="res://assets/ui/book/tab_backpack.png" id="9_tab_backpack"]
-[ext_resource type="Texture2D" uid="uid://rtvad6tauuut" path="res://assets/ui/book/tab_gallery.png" id="10_tab_gallery"]
-[ext_resource type="Texture2D" uid="uid://bp55p0g5btpsf" path="res://assets/ui/book/tab_settings.png" id="11_tab_settings"]
 [ext_resource type="Texture2D" uid="uid://c13ro2n1arkox" path="res://assets/ui/book/tab_back.png" id="12_tab_back"]
 [ext_resource type="Texture2D" uid="uid://c7knc0ircvw8b" path="res://assets/ui/hub/dialog_bubble.png" id="13_speech_bubble"]
 [ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="14_photo_corner"]
@@ -32,25 +25,31 @@ bg_color = Color(1, 1, 1, 0)
 [node name="HubScene" type="Node2D" unique_id=384251132]
 script = ExtResource("1_script")
 
-[node name="BookCanvasLayer" type="CanvasLayer" parent="."]
+[node name="BookCanvasLayer" type="CanvasLayer" parent="." unique_id=734178098]
 layer = -1
 
-[node name="BookDesignRoot" type="Control" parent="BookCanvasLayer"]
+[node name="BookDesignRoot" type="Control" parent="BookCanvasLayer" unique_id=1366413158]
 layout_mode = 3
 anchors_preset = 0
+offset_top = 14.0
 offset_right = 1920.0
-offset_bottom = 1080.0
+offset_bottom = 1094.0
 mouse_filter = 2
 
-[node name="BookBackground" parent="BookCanvasLayer/BookDesignRoot" instance=ExtResource("17_book_background")]
-active_page_id = "hub"
+[node name="BookBackground" parent="BookCanvasLayer/BookDesignRoot" unique_id=1655500968 instance=ExtResource("17_book_background")]
+layout_mode = 1
+anchors_preset = -1
+anchor_left = 0.0015625
+anchor_right = 1.0015625
+metadata/_edit_use_anchors_ = true
 
 [node name="HubArt" type="Node2D" parent="." unique_id=1340072637]
+position = Vector2(0, 14)
 
 [node name="Room" type="Sprite2D" parent="HubArt" unique_id=1195141554]
 z_index = 11
 position = Vector2(188, 74)
-scale = Vector2(0.99, 0.99)
+scale = Vector2(0.9599282, 0.9599282)
 texture = ExtResource("6_room")
 centered = false
 
@@ -65,14 +64,14 @@ texture = ExtResource("16_dc_net")
 visible = false
 z_index = 15
 position = Vector2(188, 74)
-scale = Vector2(0.99, 0.99)
+scale = Vector2(0.9599282, 0.9599282)
 centered = false
 
 [node name="MerchantSprite" type="AnimatedSprite2D" parent="HubArt" unique_id=1419421131]
 visible = false
 z_index = 14
 position = Vector2(188, 74)
-scale = Vector2(0.99, 0.99)
+scale = Vector2(0.9599282, 0.9599282)
 centered = false
 
 [node name="CornerTopLeft" type="Sprite2D" parent="HubArt" unique_id=1548526289]
@@ -83,7 +82,7 @@ centered = false
 
 [node name="CornerTopRight" type="Sprite2D" parent="HubArt" unique_id=1769091379]
 z_index = 13
-position = Vector2(1848, 74)
+position = Vector2(1793, 74)
 scale = Vector2(-1, 1)
 texture = ExtResource("14_photo_corner")
 centered = false
@@ -97,7 +96,7 @@ centered = false
 
 [node name="CornerBottomRight" type="Sprite2D" parent="HubArt" unique_id=1577423503]
 z_index = 13
-position = Vector2(1848, 1065)
+position = Vector2(1793, 1065)
 scale = Vector2(-1, -1)
 texture = ExtResource("14_photo_corner")
 centered = false
@@ -199,8 +198,9 @@ horizontal_alignment = 1
 [node name="DesignRoot" type="Control" parent="CanvasLayer" unique_id=1176835619]
 layout_mode = 3
 anchors_preset = 0
+offset_top = 14.0
 offset_right = 1920.0
-offset_bottom = 1080.0
+offset_bottom = 1094.0
 mouse_filter = 2
 
 [node name="RouteButton" type="Button" parent="CanvasLayer/DesignRoot" unique_id=1808680365]

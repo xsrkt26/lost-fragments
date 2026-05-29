@@ -201,6 +201,9 @@ func _layout_battle_scene() -> void:
 		return
 	_select_active_backpack_ui()
 	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE)
+	var background = get_node_or_null("Background")
+	if background is ColorRect:
+		background.visible = true
 	if battle_art:
 		battle_art.show()
 	if backpack_overlay_art:
@@ -220,6 +223,16 @@ func _layout_current_scene() -> void:
 
 func _layout_backpack_overlay_scene() -> void:
 	_layout_content_layer_as_fixed_frame(BATTLE_FRAME_SIZE, true)
+	_layout_backpack_overlay_art()
+
+func _layout_backpack_overlay_art() -> void:
+	var art := backpack_overlay_art as Control
+	if art == null:
+		return
+	art.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	art.position = Vector2.ZERO
+	art.size = BATTLE_FRAME_SIZE
+	art.scale = Vector2.ONE
 
 func _capture_dreamcatcher_net_pose() -> void:
 	if dreamcatcher_net == null:
@@ -274,7 +287,7 @@ func _apply_backpack_overlay_mode() -> void:
 	_layout_backpack_overlay_scene()
 	var background = get_node_or_null("Background")
 	if background is ColorRect:
-		background.color = Color(0.17, 0.12, 0.075, 1)
+		background.visible = false
 	if battle_art:
 		battle_art.hide()
 	if backpack_overlay_art:

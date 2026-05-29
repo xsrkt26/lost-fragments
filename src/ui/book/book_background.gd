@@ -64,9 +64,12 @@ func _refresh_tabs() -> void:
 		var left_tab := get_node_or_null(str(TAB_NODE_NAMES[page_id])) as CanvasItem
 		var right_tab := get_node_or_null("%sRight" % str(TAB_NODE_NAMES[page_id])) as CanvasItem
 		var use_right := BookBackgroundConfig.should_place_tab_on_right(str(page_id), active_page_id)
+		var tab_z_index := BookBackgroundConfig.get_tab_z_index(str(page_id), active_page_id)
 		if left_tab != null:
+			left_tab.z_index = tab_z_index
 			left_tab.visible = not use_right
 		if right_tab != null:
+			right_tab.z_index = BookBackgroundConfig.get_right_tab_z_index()
 			right_tab.visible = use_right
 
 

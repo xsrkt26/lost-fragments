@@ -74,11 +74,28 @@ func test_backpack_overlay_mode_adds_close_button_and_keeps_ui_context():
 	assert_lte(content_layer.position.y, 0.01)
 	assert_gte(content_end.x, viewport_size.x - 0.01)
 	assert_gte(content_end.y, viewport_size.y - 0.01)
+	var background := ui.get_node_or_null("Background") as ColorRect
+	assert_not_null(background)
+	assert_false(background.visible)
 	var overlay_art := ui.get_node_or_null("ContentLayer/BackpackOverlayArt") as Control
 	assert_not_null(overlay_art)
 	assert_true(overlay_art.visible)
+	assert_eq(overlay_art.position, Vector2.ZERO)
+	assert_eq(overlay_art.size, BookBackgroundConfig.DESIGN_SIZE)
+	assert_eq(overlay_art.scale, Vector2.ONE)
 	assert_true(overlay_art.has_method("get_visible_page_sheet_count"))
 	assert_eq(overlay_art.call("get_visible_page_sheet_count"), 2)
+	var overlay_album_page := ui.get_node_or_null("ContentLayer/BackpackOverlayArt/AlbumPage") as TextureRect
+	var overlay_backpack_tab := ui.get_node_or_null("ContentLayer/BackpackOverlayArt/BackpackTab") as TextureRect
+	var overlay_settings_tab := ui.get_node_or_null("ContentLayer/BackpackOverlayArt/SettingsTab") as TextureRect
+	assert_not_null(overlay_album_page)
+	assert_not_null(overlay_backpack_tab)
+	assert_not_null(overlay_settings_tab)
+	assert_true(overlay_backpack_tab.visible)
+	assert_true(overlay_settings_tab.visible)
+	assert_eq(overlay_backpack_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_BACKPACK, BookBackgroundConfig.PAGE_BACKPACK))
+	assert_true(overlay_backpack_tab.z_index > overlay_album_page.z_index)
+	assert_true(overlay_settings_tab.z_index < overlay_backpack_tab.z_index)
 	assert_true(ui.get_node("ContentLayer/BackpackOverlayGridPanel").visible)
 	assert_false(ui.get_node("ContentLayer/GridPanel").visible)
 	for node_name in [
@@ -728,9 +745,16 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	var page_route_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover") as TextureRect
 	var page_backpack_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover") as TextureRect
 	var page_middle := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle") as TextureRect
+	var ring_right := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumRingRight") as TextureRect
 	assert_true(page_route_cover.position.x < page_backpack_cover.position.x)
 	assert_true(page_backpack_cover.position.x < page_middle.position.x)
 	assert_true(page_middle.position.x < page.position.x)
+	assert_almost_eq(page_route_cover.position.y, -8.0, 0.01)
+	assert_almost_eq(page_backpack_cover.position.y, 2.0, 0.01)
+	assert_almost_eq(page_middle.position.y, 10.0, 0.01)
+	assert_almost_eq(page.position.y, 18.0, 0.01)
+	assert_almost_eq(ring_right.position.y, page.position.y, 0.01)
+	assert_almost_eq(ring_right.size.y, page.size.y, 0.01)
 
 	var route_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumTab") as TextureRect
 	var backpack_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab") as TextureRect
@@ -740,13 +764,34 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	var dreamcatcher_net := hub.get_node_or_null("HubArt/DreamcatcherNet") as Sprite2D
 	var merchant_sprite := hub.get_node_or_null("HubArt/MerchantSprite") as AnimatedSprite2D
 	var speech_bubble_for_z := hub.get_node_or_null("HubArt/SpeechBubble") as Sprite2D
-	assert_true(route_tab.z_index < page_route_cover.z_index)
-	assert_true(backpack_tab.z_index > page_route_cover.z_index)
-	assert_true(backpack_tab.z_index < page_backpack_cover.z_index)
-	assert_true(gallery_tab.z_index > page_backpack_cover.z_index)
-	assert_true(gallery_tab.z_index < page_middle.z_index)
-	assert_true(settings_tab.z_index > page_middle.z_index)
-	assert_true(settings_tab.z_index < page.z_index)
+	var room := hub.get_node_or_null("HubArt/Room") as Sprite2D
+	var top_right_corner := hub.get_node_or_null("HubArt/CornerTopRight") as Sprite2D
+	var bottom_right_corner := hub.get_node_or_null("HubArt/CornerBottomRight") as Sprite2D
+	var hub_offset: Vector2 = hub.get("hub_art_source_offset")
+	assert_eq(hub_offset, Vector2(0.0, 14.0))
+	assert_not_null(ring_right)
+	assert_not_null(room)
+	assert_not_null(room.texture)
+	assert_not_null(top_right_corner)
+	assert_not_null(bottom_right_corner)
+	var room_right_edge := room.position.x + room.texture.get_size().x * room.scale.x
+	assert_almost_eq(room_right_edge, ring_right.position.x, 0.25)
+	assert_almost_eq(top_right_corner.position.x, ring_right.position.x, 0.01)
+	assert_almost_eq(bottom_right_corner.position.x, ring_right.position.x, 0.01)
+	assert_eq(route_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_HUB))
+	assert_eq(gallery_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_GALLERY))
+	assert_eq(backpack_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_BACKPACK))
+	assert_eq(settings_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_SETTINGS))
+	assert_true(route_tab.z_index > gallery_tab.z_index)
+	assert_true(gallery_tab.z_index > backpack_tab.z_index)
+	assert_true(backpack_tab.z_index > settings_tab.z_index)
+	assert_true(route_tab.z_index > page.z_index)
+	assert_true(gallery_tab.z_index > page_middle.z_index)
+	assert_true(gallery_tab.z_index < page.z_index)
+	assert_true(backpack_tab.z_index > page_backpack_cover.z_index)
+	assert_true(backpack_tab.z_index < page_middle.z_index)
+	assert_true(settings_tab.z_index > page_route_cover.z_index)
+	assert_true(settings_tab.z_index < page_backpack_cover.z_index)
 	assert_not_null(hub_player)
 	assert_not_null(dreamcatcher_net)
 	assert_not_null(merchant_sprite)

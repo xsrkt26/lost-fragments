@@ -76,6 +76,8 @@ const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
 const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
 const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
 
+@export var hub_art_source_offset := Vector2(0.0, 14.0)
+
 @onready var book_canvas_layer: CanvasLayer = $BookCanvasLayer
 @onready var book_design_root: Control = $BookCanvasLayer/BookDesignRoot
 @onready var book_background: Control = $BookCanvasLayer/BookDesignRoot/BookBackground
@@ -908,7 +910,7 @@ func _layout_hub_art(viewport_size: Vector2) -> void:
 		viewport_size.y / _hub_source_size.y
 	)
 	var displayed_size := _hub_source_size * _art_scale
-	_art_origin = (viewport_size - displayed_size) * 0.5
+	_art_origin = (viewport_size - displayed_size) * 0.5 + hub_art_source_offset * _art_scale
 	if hub_art != null:
 		hub_art.position = _art_origin
 		hub_art.scale = Vector2(_art_scale, _art_scale)
