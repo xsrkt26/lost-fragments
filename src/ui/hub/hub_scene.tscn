@@ -76,28 +76,28 @@ scale = Vector2(0.9599282, 0.9599282)
 centered = false
 
 [node name="CornerTopLeft" type="Sprite2D" parent="HubArt" unique_id=1548526289]
-z_index = 13
-position = Vector2(200, 74)
+z_index = 14
+position = Vector2(188, 74)
 texture = ExtResource("14_photo_corner")
 centered = false
 
 [node name="CornerTopRight" type="Sprite2D" parent="HubArt" unique_id=1769091379]
-z_index = 13
+z_index = 14
 position = Vector2(1793, 74)
 scale = Vector2(-1, 1)
 texture = ExtResource("14_photo_corner")
 centered = false
 
 [node name="CornerBottomLeft" type="Sprite2D" parent="HubArt" unique_id=88956898]
-z_index = 13
-position = Vector2(200, 1065)
+z_index = 14
+position = Vector2(188, 977.3)
 scale = Vector2(1, -1)
 texture = ExtResource("14_photo_corner")
 centered = false
 
 [node name="CornerBottomRight" type="Sprite2D" parent="HubArt" unique_id=1577423503]
-z_index = 13
-position = Vector2(1793, 1065)
+z_index = 14
+position = Vector2(1793, 977.3)
 scale = Vector2(-1, -1)
 texture = ExtResource("14_photo_corner")
 centered = false
