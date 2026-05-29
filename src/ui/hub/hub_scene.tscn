@@ -10,6 +10,7 @@
 [ext_resource type="Script" uid="uid://c8yy4f7hmtf5s" path="res://src/ui/book/book_page_navigator.gd" id="15_book_nav"]
 [ext_resource type="Texture2D" uid="uid://c17ulsa3cl4db" path="res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png" id="16_dc_net"]
 [ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="17_book_background"]
+[ext_resource type="Script" path="res://src/ui/book/book_page_turn_effect.gd" id="18_page_turn"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldWorldBoundaryShape2D_floor"]
 
@@ -328,6 +329,17 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 script = ExtResource("15_book_nav")
+
+[node name="PageTurnEffect" type="Control" parent="CanvasLayer/BookPageNavigator" unique_id=131438471]
+visible = false
+z_index = 100
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+script = ExtResource("18_page_turn")
 
 [node name="OverlayRoot" type="Control" parent="CanvasLayer" unique_id=148633309]
 layout_mode = 3

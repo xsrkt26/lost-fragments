@@ -516,16 +516,39 @@ func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
 
 	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
 	assert_not_null(navigator)
+	var turn_effect := navigator.get_node_or_null("PageTurnEffect") as Control
+	assert_not_null(turn_effect)
+	assert_true(turn_effect.has_method("start_turn"))
+	assert_true(turn_effect.has_method("finish_turn"))
+	assert_false(turn_effect.visible)
+	assert_null(navigator.get_node_or_null("TurnSheet"))
+	assert_null(navigator.get_node_or_null("TurnShadow"))
 	assert_eq(navigator.current_page_id, "hub")
 	assert_eq(navigator.PAGE_STACK_Z["hub"], 0)
 	assert_eq(navigator.PAGE_STACK_Z["gallery"], -1)
 	assert_eq(navigator.PAGE_STACK_Z["backpack"], -2)
 	assert_eq(navigator.PAGE_STACK_Z["settings"], -3)
+	assert_eq(navigator.get_visual_turn_direction("hub", "gallery"), 1)
+	assert_eq(navigator.get_visual_turn_direction("gallery", "hub"), -1)
+	assert_eq(navigator.get_visual_turn_direction("gallery", "settings"), 1)
+	assert_eq(navigator.get_visual_turn_direction("settings", "backpack"), -1)
+	var page_sheet := hub.get_node("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage") as TextureRect
+	var page_sheet_rect := page_sheet.get_global_rect()
 
 	hub._open_book_page("gallery")
+	await get_tree().create_timer(0.1).timeout
+	assert_true(turn_effect.visible)
+	var turn_material := turn_effect.material as ShaderMaterial
+	assert_not_null(turn_material)
+	assert_almost_eq(float(turn_material.get_shader_parameter("turn_direction")), -1.0, 0.001)
+	assert_almost_eq(turn_effect.position.x, page_sheet_rect.position.x, 1.0)
+	assert_almost_eq(turn_effect.position.y, page_sheet_rect.position.y, 1.0)
+	assert_almost_eq(turn_effect.size.x, page_sheet_rect.size.x, 1.0)
+	assert_true(turn_effect.size.x < get_viewport().get_visible_rect().size.x)
 	await get_tree().create_timer(0.75).timeout
 
 	assert_eq(navigator.current_page_id, "gallery")
+	assert_false(turn_effect.visible)
 	assert_false(hub.get_node("BookCanvasLayer").visible)
 	assert_false(hub.get_node("HubArt").visible)
 	assert_false(hub.get_node("CanvasLayer/DesignRoot").visible)
@@ -535,7 +558,10 @@ func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
 	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 
 	navigator.go_to_page("hub")
-	await get_tree().create_timer(0.75).timeout
+	await get_tree().create_timer(0.1).timeout
+	assert_true(turn_effect.visible)
+	assert_almost_eq(float(turn_material.get_shader_parameter("turn_direction")), -1.0, 0.001)
+	await get_tree().create_timer(0.85).timeout
 
 	assert_eq(navigator.current_page_id, "hub")
 	assert_true(hub.get_node("BookCanvasLayer").visible)
@@ -604,6 +630,29 @@ func test_hub_book_page_navigator_red_tab_returns_to_hub():
 	assert_true(hub.get_node("BookCanvasLayer").visible)
 	assert_true(hub.get_node("HubArt").visible)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
+
+
+func test_hub_book_page_navigator_opens_backpack_overlay_mode():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
+	assert_not_null(navigator)
+
+	hub._open_book_page("backpack")
+	await get_tree().create_timer(0.9).timeout
+
+	assert_eq(navigator.current_page_id, "backpack")
+	var backpack_page := navigator.get_node_or_null("BackpackPage") as Control
+	assert_not_null(backpack_page)
+	assert_true(backpack_page.visible)
+	assert_true(bool(backpack_page.call("_is_backpack_overlay_mode")))
+	assert_not_null(backpack_page.get("battle_manager"))
+	assert_false((backpack_page.get_node("ContentLayer/BattleArt") as Control).visible)
+	assert_true((backpack_page.get_node("ContentLayer/BackpackOverlayArt") as Control).visible)
+	assert_true((backpack_page.get_node("ContentLayer/BackpackOverlayGridPanel") as Control).visible)
+	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 
 
 func test_hub_zone_triggers_do_not_show_current_prompt_bubbles():
@@ -739,13 +788,17 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	var book_background := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground") as Control
 	assert_not_null(book_background)
 	assert_true(book_background.has_method("get_visible_page_sheet_count"))
+	assert_true(book_background.has_method("get_page_turn_sheet_info"))
 	assert_eq(book_background.call("get_visible_page_sheet_count"), 4)
 
 	var page := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage") as TextureRect
+	var turn_sheet_info: Dictionary = book_background.call("get_page_turn_sheet_info")
 	var page_route_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover") as TextureRect
 	var page_backpack_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover") as TextureRect
 	var page_middle := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle") as TextureRect
 	var ring_right := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumRingRight") as TextureRect
+	assert_eq(turn_sheet_info.get("texture"), page.texture)
+	assert_eq(turn_sheet_info.get("global_rect"), page.get_global_rect())
 	assert_true(page_route_cover.position.x < page_backpack_cover.position.x)
 	assert_true(page_backpack_cover.position.x < page_middle.position.x)
 	assert_true(page_middle.position.x < page.position.x)

@@ -68,6 +68,12 @@ func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> vo
 	if is_node_ready():
 		_apply_backpack_overlay_mode()
 
+@onready var stats_panel = $ContentLayer/StatsPanel
+@onready var ornaments_panel = $ContentLayer/OrnamentsPanel
+@onready var dreamcatcher_panel_node = $ContentLayer/DreamcatcherPanel
+
+var _intro_playing := false
+
 func _ready():
 	print("[MainGameUI Debug] UI初始化开始...")
 	_select_active_backpack_ui()
@@ -75,16 +81,20 @@ func _ready():
 		resized.connect(_layout_current_scene)
 	_layout_current_scene()
 	_capture_dreamcatcher_net_pose()
+
 	if _is_backpack_overlay_mode():
 		_apply_backpack_overlay_mode()
-	
+	else:
+		# 只有正式进入战斗才播放入场动画
+		_prepare_intro_animation()
+
 	var menu_btn = $ContentLayer/MenuButton
 	if menu_btn:
 		menu_btn.text = ""
 		menu_btn.tooltip_text = "结束本局"
 		menu_btn.flat = true
 		menu_btn.focus_mode = Control.FOCUS_NONE
-	
+
 	# 检查关键节点是否成功获取
 	if draw_button:
 		# 强制确保按钮是可见的且接收鼠标
@@ -95,9 +105,104 @@ func _ready():
 		trash_bin.tooltip_text = "丢弃"
 	_ensure_tool_panel()
 	_layout_current_scene()
-	
-	# 容错：自动初始化逻辑
-	await get_tree().create_timer(0.1).timeout
+	call_deferred("_ensure_battle_manager_setup")
+
+	if not _is_backpack_overlay_mode():
+		call_deferred("_start_intro_sequence")
+
+func _prepare_intro_animation() -> void:
+	_intro_playing = true
+	# 初始状态：全部隐藏或移出屏幕
+	if battle_grid_panel:
+		battle_grid_panel.modulate.a = 0.0
+	if stats_panel:
+		stats_panel.position.y += 400 # 移到更深处
+	if ornaments_area:
+		# 饰品容器先保持静止，但里面的子节点会单独处理
+		pass
+	if tool_panel:
+		tool_panel.modulate.a = 0.0
+
+func _start_intro_sequence() -> void:
+	# 1. 创建定格动画容器 (使用 TextureRect 保证在 UI 层级正确)
+	var bag_rect = TextureRect.new()
+	bag_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	bag_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	bag_rect.size = Vector2(800, 800) # 根据 ffprobe 结果设定一个较大的初始尺寸
+	bag_rect.pivot_offset = bag_rect.size / 2.0
+	content_layer.add_child(bag_rect)
+
+	# 加载帧素材
+	var frames = []
+	for i in range(1, 5):
+		frames.append(load("res://assets/sourceImage/包%d.png" % i))
+
+	# 设置初始帧（闭合的包）
+	bag_rect.texture = frames[0]
+
+	# 计算目标位置：背包面板中心
+	var target_center = battle_grid_panel.global_position + battle_grid_panel.size * 0.5
+	# 初始位置：屏幕上方
+	bag_rect.global_position = Vector2(target_center.x - bag_rect.size.x/2.0, -800)
+
+	# A. 物理掉落
+	var drop_tween = create_tween().set_trans(Tween.TRANS_QUAD).set_ease(Tween.EASE_IN)
+	drop_tween.tween_property(bag_rect, "global_position:y", target_center.y - bag_rect.size.y/2.0, 0.45)
+	await drop_tween.finished
+
+	# 落地弹跳微震 (定格动画质感)
+	var shake_tween = create_tween()
+	shake_tween.tween_property(bag_rect, "scale", Vector2(1.1, 0.9), 0.05)
+	shake_tween.tween_property(bag_rect, "scale", Vector2(1.0, 1.0), 0.05)
+	await shake_tween.finished
+
+	# B. 定格动画展开 (包1 -> 包4)
+	for i in range(1, 4):
+		await get_tree().create_timer(0.08).timeout # 每帧停留 0.08s
+		bag_rect.texture = frames[i]
+		# 每一帧给一点轻微的随机位移，模拟手工定格感
+		bag_rect.position += Vector2(randf_range(-4, 4), randf_range(-4, 4))
+
+	# C. 揭开真正的背包
+	var reveal_tween = create_tween().set_parallel(true)
+	reveal_tween.tween_property(battle_grid_panel, "modulate:a", 1.0, 0.2)
+	reveal_tween.tween_property(bag_rect, "modulate:a", 0.0, 0.15)
+	reveal_tween.tween_property(bag_rect, "scale", Vector2(1.5, 1.5), 0.25) # 扩散消失
+	await reveal_tween.finished
+	bag_rect.queue_free()
+
+	# D. UI 面板滑入
+	var panel_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	if stats_panel:
+		panel_tween.tween_property(stats_panel, "position:y", stats_panel.position.y - 400, 0.6)
+	if tool_panel:
+		panel_tween.tween_property(tool_panel, "modulate:a", 1.0, 0.4)
+
+	# E. 饰品依次滑出 (每个饰品单独轨迹)
+	_animate_ornaments_slide_in()
+
+	await panel_tween.finished
+	_intro_playing = false
+	print("[MainGameUI] 定格入场动画完成")
+
+func _animate_ornaments_slide_in() -> void:
+	if ornaments_area == null: return
+	var children = ornaments_area.get_children()
+	for i in range(children.size()):
+		var slot = children[i] as Control
+		if slot:
+			var final_pos = slot.position
+			# 初始位置：从屏幕右侧更远处滑入
+			slot.position.x += 800
+			slot.modulate.a = 0.0
+			var stween = create_tween().set_trans(Tween.TRANS_QUINT).set_ease(Tween.EASE_OUT)
+			# 带有明显交错感的延迟
+			stween.set_delay(i * 0.2)
+			stween.parallel().tween_property(slot, "position:x", final_pos.x, 1.0)
+			stween.parallel().tween_property(slot, "modulate:a", 1.0, 0.6)
+
+
+func _ensure_battle_manager_setup() -> void:
 	if battle_manager == null:
 		var mock_manager = BattleManager.new()
 		add_child(mock_manager)
@@ -432,25 +537,25 @@ func _show_result_popup(is_victory: bool):
 		battle_manager.discard_all_outside_items()
 		if battle_manager.has_method("persist_backpack_to_run"):
 			battle_manager.persist_backpack_to_run()
-		
+
 	# 禁用背景输入
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
-	
+
 	var popup_scene = load("res://src/ui/battle/result_popup.tscn")
 	var popup = popup_scene.instantiate()
 	add_child(popup)
-	
+
 	# 获取组件
 	var title = popup.get_node("%TitleLabel")
 	var score_label = popup.get_node("%ScoreLabel")
 	var btn = popup.get_node("%ConfirmButton")
-	
+
 	# 设置文本
 	var gs = get_node("/root/GameState")
 	var rm = get_node_or_null("/root/RunManager")
 	var score_rule = _get_current_score_rule()
 	var target_text = _format_target_text(score_rule.has_target, score_rule.target)
-	
+
 	if is_victory:
 		title.text = "梦境圆满"
 		title.add_theme_color_override("font_color", Color("#ec3073")) # 暖粉/金色
@@ -556,17 +661,17 @@ func _on_item_drawn(item_data: ItemData):
 	add_child(card)
 	card.setup(item_data, battle_manager.context)
 	_configure_item_ui_for_backpack_grid(card)
-	
+
 	# 注册到管理器以便自动清理
 	if battle_manager:
 		battle_manager.managed_item_uis.append(card)
-	
+
 	card.scale = Vector2.ONE
-	
+
 	# 初始位置：抽卡区中心
 	card.global_position = _get_draw_spawn_position(card)
 	_play_item_spawn_animation(card)
-	
+
 	# 连接拖拽信号
 	_connect_item_ui_signals(card)
 
@@ -792,23 +897,23 @@ func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2
 
 func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i):
 	_update_backpack_slot_visuals() # 清除高亮
-	
+
 	# 1. 检查是否掉落在垃圾桶
 	if not _is_backpack_overlay_mode() and trash_bin != null and trash_bin.get_global_rect().has_point(mouse_pos):
 		if battle_manager:
 			battle_manager.request_discard_item(item_ui)
 		return
-		
+
 	# 2. 检查是否掉落在饰品区
 	if ornaments_area.get_global_rect().has_point(mouse_pos):
 		if battle_manager and battle_manager.has_method("request_equip_ornament"):
 			battle_manager.request_equip_ornament(item_ui)
 		return
-	
+
 	# 3. 计算 root_pos 并交给管理器
 	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 	var root_grid_pos = mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
-	
+
 	battle_manager.request_place_item(item_ui, root_grid_pos)
 	_consume_pending_item_if_placed(item_ui)
 
@@ -934,13 +1039,13 @@ func _evaluate_and_end_battle():
 
 func _finish_battle_from_current_state():
 	if _is_battle_ended: return
-	
+
 	var gs = get_node("/root/GameState")
 	var rm = get_node_or_null("/root/RunManager")
 	var score_rule = _get_current_score_rule()
-	
+
 	print("[MainGameUI] 正在结束战斗. 当前得分: ", gs.current_score, " 目标: ", _format_target_text(score_rule.has_target, score_rule.target))
-	
+
 	if rm and rm.has_method("is_current_battle_score_success"):
 		if rm.is_current_battle_score_success(gs.current_score):
 			_on_victory()
@@ -983,7 +1088,7 @@ func _apply_stats_display(san: int, score: int, max_san: int, score_rule: Dictio
 			sanity_label.add_theme_color_override("font_color", STATS_LOW_SANITY_COLOR)
 		else:
 			sanity_label.add_theme_color_override("font_color", STATS_DARK_COLOR)
-	
+
 	if score_label:
 		_set_stat_label_text(score_label, str(score), STATS_FONT_SIZE_SCORE)
 		# 有目标且达成时变绿；无目标时保持默认深色。

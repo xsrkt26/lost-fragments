@@ -718,7 +718,19 @@ func _enter_route_node(index: int) -> void:
 	var node = rm.get_current_route_node()
 	print("[Hub] 进入路线节点: ", node.get("id", ""))
 	_lock_before_transition()
-	GlobalScene.transition_to(rm.get_current_node_scene_type())
+
+	# 获取点击的位置作为缩放中心（捕梦网）
+	var dreamcatcher_uv := Vector2(0.5, 0.5)
+	if dreamcatcher_button != null:
+		var btn_pos = dreamcatcher_button.global_position + dreamcatcher_button.size * 0.5
+		var viewport_size = get_viewport_rect().size
+		dreamcatcher_uv = btn_pos / viewport_size
+
+	# 设定入场动画的聚焦目标：右下角
+	# 通过 Panning，捕梦网会从其位置移向左上方（相对于缩放中心），从而在视野中移向右上角
+	var end_focus := Vector2(0.75, 0.75)
+
+	GlobalScene.transition_with_zoom(rm.get_current_node_scene_type(), dreamcatcher_uv, end_focus)
 
 
 func _lock_before_transition() -> void:

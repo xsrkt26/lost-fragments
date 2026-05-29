@@ -3,6 +3,7 @@ extends Control
 signal page_changed(page_id: String)
 
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
+const BookPageTurnEffectScript = preload("res://src/ui/book/book_page_turn_effect.gd")
 
 const PAGE_HUB := BookBackgroundConfig.PAGE_HUB
 const PAGE_BACKPACK := BookBackgroundConfig.PAGE_BACKPACK
@@ -11,7 +12,6 @@ const PAGE_SETTINGS := BookBackgroundConfig.PAGE_SETTINGS
 const PAGE_MAIN_MENU := "main_menu"
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
-const TURN_DURATION := 0.32
 const PAGE_STACK_Z := BookBackgroundConfig.PAGE_STACK_Z
 const PAGE_SCENE_PATHS := {
 	PAGE_BACKPACK: "res://src/ui/main_game_ui.tscn",
@@ -19,13 +19,14 @@ const PAGE_SCENE_PATHS := {
 	PAGE_SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",
 }
 
+@export var turn_duration := 0.68
+
 var current_page_id := PAGE_HUB
 var _hub_scene: Node = null
 var _pages: Dictionary = {}
 var _tab_buttons: Dictionary = {}
 var _is_turning := false
-var _turn_sheet: ColorRect
-var _turn_shadow: ColorRect
+var _turn_effect: BookPageTurnEffect
 
 
 func _ready() -> void:
@@ -52,17 +53,28 @@ func go_to_page(page_id: String) -> void:
 		return
 	_is_turning = true
 	var previous_page := current_page_id
-	var turn_left_to_right := int(PAGE_STACK_Z[page_id]) < int(PAGE_STACK_Z[previous_page])
+	var visual_left_to_right := _is_visual_turn_left_to_right(previous_page, page_id)
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
 	visible = true
 	_ensure_page(page_id)
 	_prepare_target_visibility(page_id)
+	var turn_sheet_info := _get_page_turn_sheet_info(previous_page if visual_left_to_right else page_id)
+	if not _is_valid_page_turn_sheet_info(turn_sheet_info):
+		turn_sheet_info = _get_page_turn_sheet_info(previous_page)
+	var start_progress := 0.0 if visual_left_to_right else 1.0
+	var target_progress := 1.0 if visual_left_to_right else 0.0
+	_prepare_turn_effect(true, turn_sheet_info, start_progress)
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
-	await _play_turn_cover(turn_left_to_right)
-	current_page_id = page_id
-	_sync_page_visibility()
+	if visual_left_to_right:
+		current_page_id = page_id
+		_sync_page_visibility()
+	else:
+		_sync_tab_buttons()
 	await get_tree().process_frame
-	await _play_turn_reveal(turn_left_to_right)
+	await _play_turn(target_progress)
+	if not visual_left_to_right:
+		current_page_id = page_id
+		_sync_page_visibility()
 	_finish_transition()
 
 
@@ -83,6 +95,16 @@ func is_hub_current() -> bool:
 
 func is_turning() -> bool:
 	return _is_turning
+
+
+func get_visual_turn_direction(from_page_id: String, to_page_id: String) -> int:
+	if not PAGE_STACK_Z.has(from_page_id) or not PAGE_STACK_Z.has(to_page_id):
+		return 0
+	return 1 if _is_visual_turn_left_to_right(from_page_id, to_page_id) else -1
+
+
+func _is_visual_turn_left_to_right(from_page_id: String, to_page_id: String) -> bool:
+	return int(PAGE_STACK_Z[to_page_id]) < int(PAGE_STACK_Z[from_page_id])
 
 
 func _ensure_page(page_id: String) -> Control:
@@ -106,9 +128,9 @@ func _ensure_page(page_id: String) -> Control:
 	page.mouse_filter = Control.MOUSE_FILTER_STOP
 	page.visible = false
 	page.z_index = 1
+	_configure_page(page_id, page)
 	add_child(page)
 	move_child(page, 0)
-	_configure_page(page_id, page)
 	_pages[page_id] = page
 	return page
 
@@ -154,8 +176,8 @@ func _set_hub_page_visible(page_visible: bool) -> void:
 
 
 func _finish_transition() -> void:
-	_turn_sheet.visible = false
-	_turn_shadow.visible = false
+	if _turn_effect != null:
+		_turn_effect.finish_turn()
 	_is_turning = false
 	_sync_page_visibility()
 	GlobalInput.set_context(GlobalInput.Context.WORLD if current_page_id == PAGE_HUB else GlobalInput.Context.UI)
@@ -163,21 +185,14 @@ func _finish_transition() -> void:
 
 
 func _setup_turn_visuals() -> void:
-	_turn_sheet = ColorRect.new()
-	_turn_sheet.name = "TurnSheet"
-	_turn_sheet.color = Color(0.86, 0.76, 0.58, 1.0)
-	_turn_sheet.visible = false
-	_turn_sheet.mouse_filter = Control.MOUSE_FILTER_STOP
-	_turn_sheet.z_index = 100
-	add_child(_turn_sheet)
-
-	_turn_shadow = ColorRect.new()
-	_turn_shadow.name = "TurnShadow"
-	_turn_shadow.color = Color(0.08, 0.045, 0.02, 0.28)
-	_turn_shadow.visible = false
-	_turn_shadow.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	_turn_shadow.z_index = 99
-	add_child(_turn_shadow)
+	_turn_effect = get_node_or_null("PageTurnEffect") as BookPageTurnEffect
+	if _turn_effect == null:
+		_turn_effect = BookPageTurnEffectScript.new()
+		_turn_effect.name = "PageTurnEffect"
+		add_child(_turn_effect)
+	_turn_effect.visible = false
+	_turn_effect.mouse_filter = Control.MOUSE_FILTER_STOP
+	_turn_effect.z_index = 100
 
 
 func _setup_tab_hotspots() -> void:
@@ -220,12 +235,12 @@ func _layout_navigation() -> void:
 
 
 func _layout_turn_visuals(viewport_size: Vector2) -> void:
-	if _turn_sheet == null or _turn_shadow == null:
+	if _turn_effect == null:
 		return
-	_turn_sheet.position = Vector2.ZERO
-	_turn_sheet.size = viewport_size
-	_turn_shadow.position = Vector2.ZERO
-	_turn_shadow.size = viewport_size
+	if _turn_effect.visible:
+		return
+	_turn_effect.position = Vector2.ZERO
+	_turn_effect.size = viewport_size
 
 
 func _layout_tab_buttons(viewport_size: Vector2) -> void:
@@ -240,38 +255,63 @@ func _layout_tab_buttons(viewport_size: Vector2) -> void:
 		button.size = rect.size * scale_factor
 
 
-func _play_turn_cover(left_to_right: bool) -> void:
-	_prepare_turn_sheet(left_to_right)
+func _play_turn(target_progress: float) -> void:
+	if _turn_effect == null:
+		return
 	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(_turn_sheet, "scale:x", 1.0, TURN_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	tween.tween_property(_turn_shadow, "color:a", 0.34, TURN_DURATION)
+	tween.tween_property(_turn_effect, "progress", target_progress, turn_duration).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN_OUT)
 	await tween.finished
 
 
-func _play_turn_reveal(left_to_right: bool) -> void:
-	var viewport_size := get_viewport_rect().size
-	if left_to_right:
-		_turn_sheet.pivot_offset = Vector2(viewport_size.x, viewport_size.y * 0.5)
-	else:
-		_turn_sheet.pivot_offset = Vector2(0.0, viewport_size.y * 0.5)
-	var tween := create_tween()
-	tween.set_parallel(true)
-	tween.tween_property(_turn_sheet, "scale:x", 0.0, TURN_DURATION).set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_OUT)
-	tween.tween_property(_turn_shadow, "color:a", 0.0, TURN_DURATION)
-	await tween.finished
-
-
-func _prepare_turn_sheet(left_to_right: bool) -> void:
+func _prepare_turn_effect(left_to_right: bool, sheet_info: Dictionary, start_progress: float) -> void:
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
-	_turn_sheet.visible = true
-	_turn_sheet.position = Vector2.ZERO
-	_turn_sheet.size = viewport_size
-	_turn_sheet.scale = Vector2(0.0, 1.0)
-	_turn_sheet.pivot_offset = Vector2(0.0 if left_to_right else viewport_size.x, viewport_size.y * 0.5)
-	_turn_shadow.visible = true
-	_turn_shadow.position = Vector2.ZERO
-	_turn_shadow.size = viewport_size
-	_turn_shadow.color.a = 0.0
+	if _turn_effect == null:
+		return
+	var turn_rect: Rect2 = sheet_info.get("global_rect", Rect2(Vector2.ZERO, viewport_size))
+	var page_texture := sheet_info.get("texture", null) as Texture2D
+	var front_tint: Color = sheet_info.get("modulate", Color.WHITE)
+	_turn_effect.position = turn_rect.position
+	_turn_effect.size = turn_rect.size
+	_turn_effect.start_turn(left_to_right, page_texture, start_progress, front_tint)
+
+
+func _get_page_turn_sheet_info(page_id: String) -> Dictionary:
+	var background := _get_book_background_for_page(page_id)
+	if background != null and background.has_method("get_page_turn_sheet_info"):
+		var info = background.call("get_page_turn_sheet_info")
+		if info is Dictionary:
+			var typed_info: Dictionary = info
+			if not typed_info.is_empty():
+				return typed_info
+	return {
+		"global_rect": Rect2(Vector2.ZERO, get_viewport_rect().size),
+		"texture": null,
+		"modulate": Color.WHITE,
+	}
+
+
+func _is_valid_page_turn_sheet_info(sheet_info: Dictionary) -> bool:
+	var turn_rect: Rect2 = sheet_info.get("global_rect", Rect2())
+	return sheet_info.get("texture", null) is Texture2D and turn_rect.size.x > 1.0 and turn_rect.size.y > 1.0
+
+
+func _get_book_background_for_page(page_id: String) -> Node:
+	if page_id == PAGE_HUB:
+		return _find_book_background(_hub_scene)
+	if not _pages.has(page_id):
+		return null
+	return _find_book_background(_pages[page_id] as Node)
+
+
+func _find_book_background(root: Node) -> Node:
+	if root == null or not is_instance_valid(root):
+		return null
+	if root.has_method("get_page_turn_sheet_info"):
+		return root
+	for child in root.get_children():
+		var found := _find_book_background(child)
+		if found != null:
+			return found
+	return null

@@ -43,6 +43,25 @@ func get_visible_page_sheet_count() -> int:
 	return BookBackgroundConfig.get_page_sheet_count(active_page_id)
 
 
+func get_page_turn_sheet_info() -> Dictionary:
+	var sheet := get_page_turn_sheet()
+	if sheet == null:
+		return {}
+	return {
+		"texture": sheet.texture,
+		"global_rect": sheet.get_global_rect(),
+		"modulate": sheet.modulate,
+	}
+
+
+func get_page_turn_sheet() -> TextureRect:
+	for sheet_name in PAGE_SHEET_NAMES:
+		var sheet := get_node_or_null(sheet_name) as TextureRect
+		if sheet != null and sheet.visible:
+			return sheet
+	return null
+
+
 func _refresh_book_background() -> void:
 	if not is_inside_tree() and get_child_count() == 0:
 		return

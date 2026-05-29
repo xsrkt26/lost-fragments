@@ -6,7 +6,9 @@ signal transition_started(target_scene)
 signal transition_finished(new_scene)
 
 const PAGE_TURN_SHADER = preload("res://src/ui/transitions/page_turn.gdshader")
+const ZOOM_EXPAND_SHADER = preload("res://src/ui/transitions/zoom_expand.gdshader")
 const PAGE_TURN_DURATION := 1.05
+const ZOOM_EXPAND_DURATION := 0.85
 
 enum SceneType {
 	MAIN_MENU,
@@ -151,6 +153,54 @@ func transition_to(target: SceneType, push_to_history: bool = true):
 
 	_is_transitioning = false
 	transition_finished.emit(get_tree().current_scene)
+
+func transition_with_zoom(target: SceneType, start_focus: Vector2 = Vector2(0.5, 0.5), end_focus: Vector2 = Vector2(0.8, 0.8), push_to_history: bool = true):
+	if _is_transitioning:
+		return
+	_is_transitioning = true
+	if push_to_history:
+		_history_stack.append(current_scene_type)
+
+	print("[SceneManager] 正在缩放转场至: ", SceneType.keys()[target])
+	transition_started.emit(target)
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_sync_transition_ui_to_viewport()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var snapshot_texture = await _capture_current_scene_texture()
+	if snapshot_texture == null:
+		snapshot_texture = _make_fallback_page_texture()
+
+	if snapshot_texture != null:
+		await _transition_with_zoom_expand(target, snapshot_texture, start_focus, end_focus)
+	else:
+		await _transition_with_fade(target)
+
+	_is_transitioning = false
+	transition_finished.emit(get_tree().current_scene)
+
+func _transition_with_zoom_expand(target: SceneType, snapshot_texture: Texture2D, start_focus: Vector2, end_focus: Vector2) -> void:
+	_page_material.shader = ZOOM_EXPAND_SHADER
+	_page_material.set_shader_parameter("start_focus", start_focus)
+	_page_material.set_shader_parameter("end_focus", end_focus)
+	_show_page_turn_overlay(snapshot_texture)
+
+	var packed_scene: PackedScene = await _get_scene_for_transition(target)
+	if packed_scene == null:
+		_clear_page_turn_overlay()
+		return
+
+	current_scene_type = target
+	get_tree().change_scene_to_packed(packed_scene)
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_sync_transition_ui_to_viewport()
+
+	var tween: Tween = create_tween()
+	tween.tween_method(_set_page_turn_progress, 0.0, 1.0, ZOOM_EXPAND_DURATION).set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN)
+	await tween.finished
+	_clear_page_turn_overlay()
+	_page_material.shader = PAGE_TURN_SHADER # 还原回默认翻页着色器
 
 func transition_with_page_turn(change_callback: Callable) -> void:
 	if _is_transitioning:
