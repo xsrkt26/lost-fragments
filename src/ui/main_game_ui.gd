@@ -49,10 +49,11 @@ const POTION_STATE_TEXTURES := [
 @export var draw_spawn_point_path: NodePath = "ContentLayer/DreamcatcherPanel/DrawSpawnPoint"
 @export_group("Battle Intro")
 @export var play_battle_intro := true
-@export_file("*.png") var intro_bag_frame_1_path := "res://assets/sourceImage/包1.png"
-@export_file("*.png") var intro_bag_frame_2_path := "res://assets/sourceImage/包2.png"
-@export_file("*.png") var intro_bag_frame_3_path := "res://assets/sourceImage/包3.png"
-@export_file("*.png") var intro_bag_frame_4_path := "res://assets/sourceImage/包4.png"
+@export_file("*.png") var intro_bag_frame_1_path := "res://assets/sourceImage/包的变化/包1.png"
+@export_file("*.png") var intro_bag_frame_2_path := "res://assets/sourceImage/包的变化/包2.png"
+@export_file("*.png") var intro_bag_frame_3_path := "res://assets/sourceImage/包的变化/包3.png"
+@export_file("*.png") var intro_bag_frame_4_path := "res://assets/sourceImage/包的变化/包4.png"
+@export_file("*.png") var intro_bag_frame_5_path := "res://assets/sourceImage/包的变化/包5.png"
 @export var intro_bag_offset := Vector2.ZERO
 @export_range(0.1, 2.0, 0.01) var intro_bag_target_scale := 1.18
 @export_range(0.01, 0.8, 0.01) var intro_bag_frame_time := 0.34
@@ -251,6 +252,7 @@ func _get_intro_bag_frame_paths() -> PackedStringArray:
 		intro_bag_frame_2_path,
 		intro_bag_frame_3_path,
 		intro_bag_frame_4_path,
+		intro_bag_frame_5_path,
 	])
 
 

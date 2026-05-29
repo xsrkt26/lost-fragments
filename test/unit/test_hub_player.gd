@@ -230,9 +230,10 @@ func test_main_game_intro_prepares_bag_reveal_and_hidden_targets():
 	assert_false(ornaments_panel.visible)
 
 	var frame_paths: PackedStringArray = ui.call("_get_intro_bag_frame_paths")
-	assert_eq(frame_paths.size(), 4)
-	assert_eq(frame_paths[0], "res://assets/sourceImage/包1.png")
-	assert_eq(frame_paths[3], "res://assets/sourceImage/包4.png")
+	assert_eq(frame_paths.size(), 5)
+	assert_eq(frame_paths[0], "res://assets/sourceImage/包的变化/包1.png")
+	assert_eq(frame_paths[3], "res://assets/sourceImage/包的变化/包4.png")
+	assert_eq(frame_paths[4], "res://assets/sourceImage/包的变化/包5.png")
 
 
 func test_main_game_intro_finishes_into_battle_context():
@@ -246,6 +247,7 @@ func test_main_game_intro_finishes_into_battle_context():
 	ui.set("intro_bag_frame_2_path", "")
 	ui.set("intro_bag_frame_3_path", "")
 	ui.set("intro_bag_frame_4_path", "")
+	ui.set("intro_bag_frame_5_path", "")
 	add_child_autofree(ui)
 
 	await get_tree().create_timer(1.0).timeout
