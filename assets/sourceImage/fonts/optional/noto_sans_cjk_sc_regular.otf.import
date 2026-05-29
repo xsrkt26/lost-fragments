@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dnlmre5ahdfkr"
-path="res://.godot/imported/ChillHuoSong_F_ConRegular.otf-e5cc6e182ddbd2762ca952b43034b850.fontdata"
+uid="uid://bnrnhnj21fyuf"
+path="res://.godot/imported/noto_sans_cjk_sc_regular.otf-97acc729c9e83e29380f51376321645d.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/ChillHuoSong_F_ConRegular.otf"
-dest_files=["res://.godot/imported/ChillHuoSong_F_ConRegular.otf-e5cc6e182ddbd2762ca952b43034b850.fontdata"]
+source_file="res://assets/fonts/noto_sans_cjk_sc_regular.otf"
+dest_files=["res://.godot/imported/noto_sans_cjk_sc_regular.otf-97acc729c9e83e29380f51376321645d.fontdata"]
 
 [params]
 

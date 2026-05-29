@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://dgv1tuynrsa34"
-path="res://.godot/imported/LXGWWenKaiLite-Regular.ttf-6b5dfb4a5307256e0d441531546453fa.fontdata"
+uid="uid://s0y1nfc4hq8o"
+path="res://.godot/imported/chill_huosong_f_bold.otf-fa699312cb3ce488afc015e62828acd3.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/LXGWWenKaiLite-Regular.ttf"
-dest_files=["res://.godot/imported/LXGWWenKaiLite-Regular.ttf-6b5dfb4a5307256e0d441531546453fa.fontdata"]
+source_file="res://assets/fonts/chill_huosong_f_bold.otf"
+dest_files=["res://.godot/imported/chill_huosong_f_bold.otf-fa699312cb3ce488afc015e62828acd3.fontdata"]
 
 [params]
 

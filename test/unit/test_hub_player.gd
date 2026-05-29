@@ -231,9 +231,9 @@ func test_main_game_intro_prepares_bag_reveal_and_hidden_targets():
 
 	var frame_paths: PackedStringArray = ui.call("_get_intro_bag_frame_paths")
 	assert_eq(frame_paths.size(), 5)
-	assert_eq(frame_paths[0], "res://assets/sourceImage/包的变化/包1.png")
-	assert_eq(frame_paths[3], "res://assets/sourceImage/包的变化/包4.png")
-	assert_eq(frame_paths[4], "res://assets/sourceImage/包的变化/包5.png")
+	assert_eq(frame_paths[0], "res://assets/ui/battle/intro_bag_reveal/bag_reveal_01.png")
+	assert_eq(frame_paths[3], "res://assets/ui/battle/intro_bag_reveal/bag_reveal_04.png")
+	assert_eq(frame_paths[4], "res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png")
 
 
 func test_main_game_intro_finishes_into_battle_context():

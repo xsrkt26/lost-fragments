@@ -4,36 +4,13 @@ extends Node
 ## 字体文件可后续放入 assets/fonts/，缺失时自动回退到 Godot 默认字体。
 
 const BODY_FONT_CANDIDATES := [
-	"res://assets/fonts/ChillHuoSong_F_Regular.otf",
-	"res://assets/fonts/ChillHuoSong_F_ConRegular.otf",
-	"res://assets/fonts/LXGWWenKaiLite-Regular.ttf",
-	"res://assets/fonts/LXGWWenKaiLite-Regular.otf",
-	"res://assets/fonts/LXGWWenKai-Regular.ttf",
-	"res://assets/fonts/LXGWWenKai-Regular.otf",
-	"res://assets/fonts/NotoSerifSC-Regular.otf",
-	"res://assets/fonts/NotoSerifSC-Regular.ttf",
-	"res://assets/fonts/NotoSansCJKsc-Regular.otf",
-	"res://assets/fonts/NotoSansCJKsc-Regular.ttf",
-	"res://assets/fonts/NotoSansSC-Regular.otf",
-	"res://assets/fonts/NotoSansSC-Regular.ttf",
+	"res://assets/fonts/chill_huosong_f_regular.otf",
 ]
 const DISPLAY_FONT_CANDIDATES := [
-	"res://assets/fonts/ChillHuoSong_F_ExBold.otf",
-	"res://assets/fonts/ChillHuoSong_F_Bold.otf",
-	"res://assets/fonts/SmileySans-Oblique.ttf",
-	"res://assets/fonts/SmileySans-Oblique.otf",
-	"res://assets/fonts/SmileySans.ttf",
-	"res://assets/fonts/SmileySans.otf",
+	"res://assets/fonts/chill_huosong_f_ex_bold.otf",
 ]
 const FALLBACK_FONT_CANDIDATES := [
-	"res://assets/fonts/ChillHuoSong_F_Regular.otf",
-	"res://assets/fonts/ChillHuoSong_F_ConRegular.otf",
-	"res://assets/fonts/NotoSansCJKsc-Regular.otf",
-	"res://assets/fonts/NotoSansCJKsc-Regular.ttf",
-	"res://assets/fonts/NotoSansSC-Regular.otf",
-	"res://assets/fonts/NotoSansSC-Regular.ttf",
-	"res://assets/fonts/NotoSerifSC-Regular.otf",
-	"res://assets/fonts/NotoSerifSC-Regular.ttf",
+	"res://assets/fonts/chill_huosong_f_regular.otf",
 ]
 const THEME_META := "_lost_fragments_theme_applied"
 

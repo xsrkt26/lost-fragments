@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://bnrnhnj21fyuf"
-path="res://.godot/imported/NotoSansCJKsc-Regular.otf-234b66ec4f6090cf3cb4fe9bcf1a8765.fontdata"
+uid="uid://fug1uekc6lse"
+path="res://.godot/imported/chill_huosong_f_regular.otf-d705bf9a838acd6689e4248b51910940.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/NotoSansCJKsc-Regular.otf"
-dest_files=["res://.godot/imported/NotoSansCJKsc-Regular.otf-234b66ec4f6090cf3cb4fe9bcf1a8765.fontdata"]
+source_file="res://assets/fonts/chill_huosong_f_regular.otf"
+dest_files=["res://.godot/imported/chill_huosong_f_regular.otf-d705bf9a838acd6689e4248b51910940.fontdata"]
 
 [params]
 

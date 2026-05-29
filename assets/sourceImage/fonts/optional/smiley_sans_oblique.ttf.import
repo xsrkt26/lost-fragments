@@ -2,13 +2,13 @@
 
 importer="font_data_dynamic"
 type="FontFile"
-uid="uid://vfc33erinrkv"
-path="res://.godot/imported/ChillHuoSong_F_ExBold.otf-a32a5e95b83d6739d8c73b684788bb85.fontdata"
+uid="uid://bs7hk1iluxese"
+path="res://.godot/imported/smiley_sans_oblique.ttf-7f9d389614bd3574b8cc0cf79ddff4f4.fontdata"
 
 [deps]
 
-source_file="res://assets/fonts/ChillHuoSong_F_ExBold.otf"
-dest_files=["res://.godot/imported/ChillHuoSong_F_ExBold.otf-a32a5e95b83d6739d8c73b684788bb85.fontdata"]
+source_file="res://assets/fonts/smiley_sans_oblique.ttf"
+dest_files=["res://.godot/imported/smiley_sans_oblique.ttf-7f9d389614bd3574b8cc0cf79ddff4f4.fontdata"]
 
 [params]
 

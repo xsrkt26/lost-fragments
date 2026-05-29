@@ -2,28 +2,18 @@
 
 Drop UI font files in this folder. `GlobalTheme` will load them automatically at runtime.
 
-Preferred filenames:
+Runtime font filenames use ASCII lower snake case:
 
-- `ChillHuoSong_F_Regular.otf` for regular UI/body text.
-- `ChillHuoSong_F_ExBold.otf` or `ChillHuoSong_F_Bold.otf` for titles and display labels.
-- `LXGWWenKaiLite-Regular.ttf` or `.otf` for regular UI/body text.
-- `LXGWWenKai-Regular.ttf` or `.otf` for regular UI/body text.
-- `SmileySans-Oblique.ttf` or `.otf` for titles and display labels.
-- `NotoSansCJKsc-Regular.otf` or `.ttf` as a broad Simplified Chinese fallback.
-- `NotoSansSC-Regular.ttf` or `.otf` as a broad fallback.
-- `NotoSerifSC-Regular.ttf` or `.otf` as an alternate fallback/body font.
+- `chill_huosong_f_regular.otf` for regular UI/body text.
+- `chill_huosong_f_ex_bold.otf` for titles and display labels.
 
 Bundled files:
 
-- `ChillHuoSong_F_Regular.otf`: primary body UI font.
-- `ChillHuoSong_F_ConRegular.otf`: alternate condensed body UI font.
-- `ChillHuoSong_F_ExBold.otf`: primary display/title font.
-- `ChillHuoSong_F_Bold.otf`: alternate display/title font.
-- `LXGWWenKaiLite-Regular.ttf`: body UI font.
-- `SmileySans-Oblique.ttf`: display/title font.
-- `NotoSansCJKsc-Regular.otf`: fallback font for missing CJK glyphs.
+- `chill_huosong_f_regular.otf`: primary body UI font.
+- `chill_huosong_f_ex_bold.otf`: primary display/title font.
 
-See `SOURCES.md` and `licenses/` for source links and bundled license files.
+Optional fonts and source deliveries live under `assets/sourceImage/fonts/optional/`.
+See `sources.md` and `licenses/` for source links and bundled license files.
 
 Scene nodes can opt into the display font by setting `theme_type_variation` to:
 

@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://dgls17el8f8l0" path="res://assets/ui/main_menu/main_menu_background.png" id="2_background"]
 [ext_resource type="Texture2D" uid="uid://dfp5rfinhoq0w" path="res://assets/ui/main_menu/lighter_closed.png" id="3_lighter_closed"]
 [ext_resource type="Texture2D" uid="uid://4rb7sl22ttfa" path="res://assets/ui/main_menu/lighter_open.png" id="4_lighter_open"]
-[ext_resource type="FontFile" uid="uid://vfc33erinrkv" path="res://assets/fonts/ChillHuoSong_F_ExBold.otf" id="5_menu_font"]
+[ext_resource type="FontFile" uid="uid://vfc33erinrkv" path="res://assets/fonts/chill_huosong_f_ex_bold.otf" id="5_menu_font"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotspot_transparent"]
 bg_color = Color(1, 1, 1, 0)

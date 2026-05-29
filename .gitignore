@@ -13,6 +13,9 @@ spec/.obsidian/workspace.json
 # AI workflow local state
 .ai-state/
 .queue/
+.codex_tmp/
+transition_reference.gif
+transition_result.gif
 
 # Local release/build scratch space
 /tmp/*
