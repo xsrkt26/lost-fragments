@@ -87,6 +87,7 @@ func _check_scene(scene_path: String) -> bool:
 		push_error("SCENE_SMOKE_FAIL: instantiate returned null %s" % scene_path)
 		return false
 
+	_apply_scene_smoke_overrides(instance)
 	get_root().add_child(instance)
 	await process_frame
 	await create_timer(SETTLE_SECONDS).timeout
@@ -95,3 +96,17 @@ func _check_scene(scene_path: String) -> bool:
 	await process_frame
 	await process_frame
 	return true
+
+
+func _apply_scene_smoke_overrides(root: Node) -> void:
+	if _has_property(root, "play_battle_intro"):
+		root.set("play_battle_intro", false)
+	for child in root.get_children():
+		_apply_scene_smoke_overrides(child)
+
+
+func _has_property(object: Object, property_name: String) -> bool:
+	for property in object.get_property_list():
+		if str(property.get("name", "")) == property_name:
+			return true
+	return false
