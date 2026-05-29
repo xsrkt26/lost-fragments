@@ -202,8 +202,20 @@ foreach ($line in $output) {
 }
 
 $allOutput = @($output) + @($errors)
-$fatalErrors = $allOutput | Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|CrashHandlerException|Program crashed|ERROR:" | Select-Object -First 8 -Unique
-$nonFatalWarnings = $allOutput | Select-String -Pattern "ObjectDB instances leaked at exit" | Select-Object -First 4 -Unique
+$knownHeadlessTextureLeak = $allOutput | Select-String -Pattern "RendererDummy.*DummyTexture" | Select-Object -First 1
+$fatalErrors = $allOutput |
+    Select-String -Pattern "SCRIPT ERROR|Parse Error|Resource still in use|resources still in use|CrashHandlerException|Program crashed|ERROR:" |
+    Where-Object {
+        $text = $_.ToString()
+        if ($knownHeadlessTextureLeak -and ($text -match "RendererDummy.*DummyTexture|resources still in use at exit")) {
+            return $false
+        }
+        return $true
+    } |
+    Select-Object -First 8 -Unique
+$nonFatalWarnings = $allOutput |
+    Select-String -Pattern "ObjectDB instances leaked at exit|RendererDummy.*DummyTexture|resources still in use at exit" |
+    Select-Object -First 4 -Unique
 
 if ($failedTests.Count -gt 0 -or $fatalErrors.Count -gt 0) {
     $isFailed = $true

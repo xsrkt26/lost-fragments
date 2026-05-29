@@ -239,6 +239,7 @@ func _layout_turn_visuals(viewport_size: Vector2) -> void:
 		return
 	if _turn_effect.visible:
 		return
+	_turn_effect.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 	_turn_effect.position = Vector2.ZERO
 	_turn_effect.size = viewport_size
 

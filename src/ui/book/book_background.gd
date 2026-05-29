@@ -31,6 +31,7 @@ const TAB_NODE_NAMES := {
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 	size = BookBackgroundConfig.DESIGN_SIZE
 	_refresh_book_background()
 

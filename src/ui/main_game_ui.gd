@@ -47,6 +47,23 @@ const POTION_STATE_TEXTURES := [
 @onready var backpack_overlay_art = get_node_or_null("ContentLayer/BackpackOverlayArt")
 
 @export var draw_spawn_point_path: NodePath = "ContentLayer/DreamcatcherPanel/DrawSpawnPoint"
+@export_group("Battle Intro")
+@export var play_battle_intro := true
+@export_file("*.png") var intro_bag_frame_1_path := "res://assets/sourceImage/包1.png"
+@export_file("*.png") var intro_bag_frame_2_path := "res://assets/sourceImage/包2.png"
+@export_file("*.png") var intro_bag_frame_3_path := "res://assets/sourceImage/包3.png"
+@export_file("*.png") var intro_bag_frame_4_path := "res://assets/sourceImage/包4.png"
+@export var intro_bag_offset := Vector2.ZERO
+@export_range(0.1, 2.0, 0.01) var intro_bag_target_scale := 1.18
+@export_range(0.01, 0.8, 0.01) var intro_bag_frame_time := 0.18
+@export_range(0.0, 32.0, 0.5) var intro_bag_jitter := 7.0
+@export_range(0.0, 1.0, 0.01) var intro_bag_final_hold := 0.16
+@export var intro_stats_start_offset := Vector2(0.0, 420.0)
+@export_range(0.0, 2.0, 0.01) var intro_stats_rise_duration := 0.68
+@export var intro_tool_start_offset := Vector2(0.0, 120.0)
+@export var intro_ornaments_start_offset := Vector2(420.0, -80.0)
+@export_range(0.0, 2.0, 0.01) var intro_ornaments_slide_duration := 0.62
+@export_range(0.0, 1.0, 0.01) var intro_grid_reveal_duration := 0.32
 
 var battle_manager: BattleManager
 var _is_battle_ended: bool = false
@@ -61,6 +78,8 @@ var _dragged_tool_id: String = ""
 var _tool_drag_start: Vector2 = Vector2.ZERO
 var backpack_ui: Control = null
 var trash_bin: Control = null
+var _intro_target_positions: Dictionary = {}
+var _intro_bag_rect: TextureRect = null
 
 func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> void:
 	_ui_mode = MODE_BACKPACK_OVERLAY
@@ -84,9 +103,10 @@ func _ready():
 
 	if _is_backpack_overlay_mode():
 		_apply_backpack_overlay_mode()
-	else:
-		# 只有正式进入战斗才播放入场动画
+	elif play_battle_intro:
 		_prepare_intro_animation()
+	else:
+		_set_intro_playing(false)
 
 	var menu_btn = $ContentLayer/MenuButton
 	if menu_btn:
@@ -107,104 +127,237 @@ func _ready():
 	_layout_current_scene()
 	call_deferred("_ensure_battle_manager_setup")
 
-	if not _is_backpack_overlay_mode():
+	if not _is_backpack_overlay_mode() and play_battle_intro:
 		call_deferred("_start_intro_sequence")
 
+func _exit_tree() -> void:
+	if _intro_playing and not _is_backpack_overlay_mode():
+		_set_intro_playing(false)
+		_clear_intro_bag_reveal()
+		if GlobalInput.is_context(GlobalInput.Context.LOCKED):
+			GlobalInput.set_context(GlobalInput.Context.BATTLE)
+
 func _prepare_intro_animation() -> void:
-	_intro_playing = true
-	# 初始状态：全部隐藏或移出屏幕
-	if battle_grid_panel:
-		battle_grid_panel.modulate.a = 0.0
-	if stats_panel:
-		stats_panel.position.y += 400 # 移到更深处
-	if ornaments_area:
-		# 饰品容器先保持静止，但里面的子节点会单独处理
-		pass
-	if tool_panel:
-		tool_panel.modulate.a = 0.0
+	if not play_battle_intro or _is_backpack_overlay_mode():
+		_set_intro_playing(false)
+		return
+	_set_intro_playing(true)
+	_capture_intro_target_positions()
+	_apply_intro_prestart_state()
 
 func _start_intro_sequence() -> void:
-	# 1. 创建定格动画容器 (调整尺寸为更贴合背包网格的大小)
-	var bag_rect = TextureRect.new()
+	if not play_battle_intro or _is_backpack_overlay_mode():
+		_set_intro_playing(false)
+		return
+	_set_intro_playing(true)
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_apply_intro_prestart_state()
+	await get_tree().process_frame
+	if not _should_continue_intro():
+		return
+
+	var bag_rect := _create_intro_bag_reveal()
+	if bag_rect != null:
+		await _play_intro_bag_frames(bag_rect)
+	if not _should_continue_intro():
+		_clear_intro_bag_reveal()
+		return
+
+	await _animate_intro_left_ui()
+	if not _should_continue_intro():
+		_clear_intro_bag_reveal()
+		return
+	await _animate_intro_ornaments()
+	if not _should_continue_intro():
+		_clear_intro_bag_reveal()
+		return
+	await _reveal_intro_grid(bag_rect)
+	if not _should_continue_intro():
+		_clear_intro_bag_reveal()
+		return
+
+	_clear_intro_bag_reveal()
+	_set_intro_playing(false)
+	if not _is_battle_ended:
+		GlobalInput.set_context(GlobalInput.Context.BATTLE)
+	print("[MainGameUI] Battle intro finished")
+
+func _set_intro_playing(playing: bool) -> void:
+	_intro_playing = playing
+	_sync_draw_button_state()
+
+
+func _clear_intro_bag_reveal() -> void:
+	if _intro_bag_rect != null and is_instance_valid(_intro_bag_rect):
+		_intro_bag_rect.texture = null
+		_intro_bag_rect.queue_free()
+	_intro_bag_rect = null
+
+
+func _should_continue_intro() -> bool:
+	return _intro_playing and is_inside_tree() and not _is_backpack_overlay_mode()
+
+
+func _capture_intro_target_positions() -> void:
+	_capture_intro_target_position("stats", stats_panel)
+	_capture_intro_target_position("tool", tool_panel as Control)
+	_capture_intro_target_position("ornaments", ornaments_panel)
+
+
+func _capture_intro_target_position(key: String, control: Control) -> void:
+	if control == null or _intro_target_positions.has(key):
+		return
+	_intro_target_positions[key] = control.position
+
+
+func _get_intro_target_position(key: String, control: Control) -> Vector2:
+	if _intro_target_positions.has(key):
+		return _intro_target_positions[key]
+	return control.position if control != null else Vector2.ZERO
+
+
+func _apply_intro_prestart_state() -> void:
+	_capture_intro_target_positions()
+	if battle_grid_panel:
+		battle_grid_panel.modulate.a = 0.0
+		battle_grid_panel.hide()
+	if stats_panel:
+		stats_panel.position = _get_intro_target_position("stats", stats_panel) + intro_stats_start_offset
+		stats_panel.modulate.a = 0.0
+		stats_panel.show()
+	if tool_panel:
+		tool_panel.position = _get_intro_target_position("tool", tool_panel as Control) + intro_tool_start_offset
+		tool_panel.modulate.a = 0.0
+	if ornaments_panel:
+		ornaments_panel.position = _get_intro_target_position("ornaments", ornaments_panel) + intro_ornaments_start_offset
+		ornaments_panel.modulate.a = 0.0
+		ornaments_panel.hide()
+
+
+func _get_intro_bag_frames() -> Array[Texture2D]:
+	var frames: Array[Texture2D] = []
+	for path in _get_intro_bag_frame_paths():
+		if path == "" or not ResourceLoader.exists(path):
+			continue
+		var frame := load(path) as Texture2D
+		if frame != null:
+			frames.append(frame)
+	return frames
+
+
+func _get_intro_bag_frame_paths() -> PackedStringArray:
+	return PackedStringArray([
+		intro_bag_frame_1_path,
+		intro_bag_frame_2_path,
+		intro_bag_frame_3_path,
+		intro_bag_frame_4_path,
+	])
+
+
+func _create_intro_bag_reveal() -> TextureRect:
+	if battle_grid_panel == null or content_layer == null:
+		return null
+	var frames := _get_intro_bag_frames()
+	if frames.is_empty():
+		return null
+	_clear_intro_bag_reveal()
+	var grid_rect := _get_control_visual_rect_in_parent(battle_grid_panel)
+	var bag_size := grid_rect.size * intro_bag_target_scale
+	var bag_position := grid_rect.position + (grid_rect.size - bag_size) * 0.5 + intro_bag_offset
+	var bag_rect := TextureRect.new()
+	bag_rect.name = "IntroBagReveal"
+	bag_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	bag_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	bag_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-	# 视频中包的大小约为背包网格的 1.2 倍
-	bag_rect.size = battle_grid_panel.size * 1.2
-	bag_rect.pivot_offset = bag_rect.size / 2.0
-	content_layer.add_child(bag_rect)
-
-	# 加载帧素材
-	var frames = []
-	for i in range(1, 5):
-		frames.append(load("res://assets/sourceImage/包%d.png" % i))
-
-	# 设置初始帧（闭合的包）
 	bag_rect.texture = frames[0]
+	bag_rect.position = bag_position
+	bag_rect.size = bag_size
+	bag_rect.pivot_offset = bag_size * 0.5
+	bag_rect.z_index = max(120, battle_grid_panel.z_index + 20)
+	content_layer.add_child(bag_rect)
+	_intro_bag_rect = bag_rect
+	return bag_rect
 
-	# 计算目标位置：背包面板中心
-	var target_center = battle_grid_panel.global_position + battle_grid_panel.size * 0.5
-	# 初始位置：屏幕上方
-	bag_rect.global_position = Vector2(target_center.x - bag_rect.size.x/2.0, -900)
 
-	# A. 物理掉落 (增加一点等待，让背景缩放基本完成)
-	await get_tree().create_timer(0.2).timeout
-	var drop_tween = create_tween().set_trans(Tween.TRANS_CUBIC).set_ease(Tween.EASE_IN)
-	drop_tween.tween_property(bag_rect, "global_position:y", target_center.y - bag_rect.size.y/2.0, 0.7)
-	await drop_tween.finished
+func _get_control_visual_rect_in_parent(control: Control) -> Rect2:
+	return Rect2(control.position, control.size * control.scale)
 
-	# 落地弹跳微震 (定格感)
-	var shake_tween = create_tween()
-	shake_tween.tween_property(bag_rect, "scale", Vector2(1.1, 0.9), 0.08)
-	shake_tween.tween_property(bag_rect, "scale", Vector2(1.0, 1.0), 0.08)
-	await shake_tween.finished
 
-	# B. 定格动画展开 (0.2s 一帧，更有节奏感)
-	for i in range(1, 4):
-		await get_tree().create_timer(0.2).timeout
+func _play_intro_bag_frames(bag_rect: TextureRect) -> void:
+	var frames := _get_intro_bag_frames()
+	if frames.is_empty():
+		return
+	var base_position := bag_rect.position
+	var base_rotation := bag_rect.rotation
+	for i in range(frames.size()):
+		if i > 0:
+			await get_tree().create_timer(intro_bag_frame_time).timeout
+			if not _should_continue_intro():
+				return
 		bag_rect.texture = frames[i]
-		# 手工抖动
-		bag_rect.position += Vector2(randf_range(-10, 10), randf_range(-10, 10))
+		bag_rect.position = base_position + _get_intro_bag_jitter(i, frames.size())
+		bag_rect.rotation = base_rotation + deg_to_rad(_get_intro_bag_rotation_degrees(i, frames.size()))
+	if intro_bag_final_hold > 0.0:
+		await get_tree().create_timer(intro_bag_final_hold).timeout
 
-	# 凝视瞬间
-	await get_tree().create_timer(0.25).timeout
 
-	# C. 揭开真正的背包 (伴随快速缩放)
-	var reveal_tween = create_tween().set_parallel(true)
-	reveal_tween.tween_property(battle_grid_panel, "modulate:a", 1.0, 0.25)
-	reveal_tween.tween_property(bag_rect, "modulate:a", 0.0, 0.2)
-	reveal_tween.tween_property(bag_rect, "scale", Vector2(1.4, 1.4), 0.3)
-	await reveal_tween.finished
-	bag_rect.queue_free()
+func _get_intro_bag_jitter(index: int, frame_count: int) -> Vector2:
+	if intro_bag_jitter <= 0.0 or index == 0 or index == frame_count - 1:
+		return Vector2.ZERO
+	var pattern := [
+		Vector2(-0.75, 0.35),
+		Vector2(0.55, -0.45),
+		Vector2(-0.25, 0.22),
+		Vector2(0.42, 0.18),
+	]
+	return pattern[index % pattern.size()] * intro_bag_jitter
 
-	# D. UI 面板滑入
-	var panel_tween = create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+
+func _get_intro_bag_rotation_degrees(index: int, frame_count: int) -> float:
+	if index == 0 or index == frame_count - 1:
+		return 0.0
+	var pattern := [-0.45, 0.35, -0.2, 0.25]
+	return pattern[index % pattern.size()]
+
+
+func _animate_intro_left_ui() -> void:
+	var tween := create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	var has_tween := false
 	if stats_panel:
-		panel_tween.tween_property(stats_panel, "position:y", stats_panel.position.y - 400, 0.8)
-	if tool_panel:
-		panel_tween.tween_property(tool_panel, "modulate:a", 1.0, 0.6)
+		stats_panel.show()
+		tween.tween_property(stats_panel, "position", _get_intro_target_position("stats", stats_panel), intro_stats_rise_duration)
+		tween.tween_property(stats_panel, "modulate:a", 1.0, minf(intro_stats_rise_duration, 0.45))
+		has_tween = true
+	if tool_panel and tool_panel.visible:
+		tween.tween_property(tool_panel, "position", _get_intro_target_position("tool", tool_panel as Control), intro_stats_rise_duration)
+		tween.tween_property(tool_panel, "modulate:a", 1.0, minf(intro_stats_rise_duration, 0.45))
+		has_tween = true
+	if has_tween:
+		await tween.finished
+	else:
+		tween.kill()
 
-	# E. 饰品精准滑入 (从下方垂直弹入)
-	_animate_ornaments_slide_in()
 
-	await panel_tween.finished
-	_intro_playing = false
-	print("[MainGameUI] 定格入场动画完成")
+func _animate_intro_ornaments() -> void:
+	if ornaments_panel == null:
+		return
+	ornaments_panel.show()
+	var tween := create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
+	tween.tween_property(ornaments_panel, "position", _get_intro_target_position("ornaments", ornaments_panel), intro_ornaments_slide_duration)
+	tween.tween_property(ornaments_panel, "modulate:a", 1.0, minf(intro_ornaments_slide_duration, 0.45))
+	await tween.finished
 
-func _animate_ornaments_slide_in() -> void:
-	if ornaments_area == null: return
-	var children = ornaments_area.get_children()
-	for i in range(children.size()):
-		var slot = children[i] as Control
-		if slot:
-			var final_pos = slot.position
-			# 初始位置：从下方垂直弹入
-			slot.position.y += 250
-			slot.modulate.a = 0.0
-			var stween = create_tween().set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
-			# 带有明显交错感的延迟
-			stween.set_delay(i * 0.15)
-			stween.parallel().tween_property(slot, "position:y", final_pos.y, 0.6)
-			stween.parallel().tween_property(slot, "modulate:a", 1.0, 0.4)
+
+func _reveal_intro_grid(bag_rect: TextureRect) -> void:
+	if battle_grid_panel == null:
+		return
+	battle_grid_panel.show()
+	var tween := create_tween().set_parallel(true).set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_OUT)
+	tween.tween_property(battle_grid_panel, "modulate:a", 1.0, intro_grid_reveal_duration)
+	if bag_rect != null and is_instance_valid(bag_rect):
+		tween.tween_property(bag_rect, "modulate:a", 0.0, intro_grid_reveal_duration)
+		tween.tween_property(bag_rect, "scale", Vector2(1.035, 1.035), intro_grid_reveal_duration)
+	await tween.finished
 
 
 func _ensure_battle_manager_setup() -> void:
@@ -951,6 +1104,8 @@ func _on_draw_button_pressed():
 func _input(event):
 	if not visible:
 		return
+	if _intro_playing:
+		return
 	# 输入权限检查
 	if not GlobalInput.can_cancel() or _is_battle_ended: return
 
@@ -987,7 +1142,7 @@ func _on_menu_button_pressed():
 		_finish_battle_from_current_state()
 
 func _is_draw_interaction_available() -> bool:
-	return not _is_battle_ended and not _draw_locked and battle_manager != null and battle_manager.battle_state == BattleManager.BattleState.INTERACTIVE
+	return not _intro_playing and not _is_battle_ended and not _draw_locked and battle_manager != null and battle_manager.battle_state == BattleManager.BattleState.INTERACTIVE
 
 func _set_draw_locked(locked: bool) -> void:
 	_draw_locked = locked
@@ -995,7 +1150,7 @@ func _set_draw_locked(locked: bool) -> void:
 
 func _sync_draw_button_state() -> void:
 	if draw_button:
-		draw_button.disabled = _draw_locked or _is_battle_ended or battle_manager == null or battle_manager.battle_state != BattleManager.BattleState.INTERACTIVE
+		draw_button.disabled = _intro_playing or _draw_locked or _is_battle_ended or battle_manager == null or battle_manager.battle_state != BattleManager.BattleState.INTERACTIVE
 
 func _play_dreamcatcher_animation() -> void:
 	if dreamcatcher_net == null or not is_inside_tree():

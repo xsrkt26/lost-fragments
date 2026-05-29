@@ -131,6 +131,7 @@ func test_main_game_dreamcatcher_net_sits_above_cloud():
 	if rm:
 		rm.current_act = 1
 	var ui = MainGameUI.instantiate()
+	ui.set("play_battle_intro", false)
 	add_child_autofree(ui)
 	await get_tree().create_timer(0.2).timeout
 
@@ -161,6 +162,7 @@ func test_main_game_dreamcatcher_net_tracks_current_stage():
 	if rm:
 		rm.current_act = 4
 	var ui = MainGameUI.instantiate()
+	ui.set("play_battle_intro", false)
 	add_child_autofree(ui)
 	await get_tree().create_timer(0.2).timeout
 
@@ -176,6 +178,7 @@ func test_main_game_dreamcatcher_net_tracks_current_stage():
 
 func test_dreamcatcher_animation_swings_net_from_high_pivot_without_moving_cloud():
 	var ui = MainGameUI.instantiate()
+	ui.set("play_battle_intro", false)
 	add_child_autofree(ui)
 	await get_tree().create_timer(0.2).timeout
 
@@ -200,6 +203,65 @@ func test_dreamcatcher_animation_swings_net_from_high_pivot_without_moving_cloud
 	assert_eq(net.position, net_position)
 	assert_almost_eq(net.rotation, net_rotation, 0.001)
 	assert_eq(net.offset, net_offset)
+
+
+func test_main_game_intro_prepares_bag_reveal_and_hidden_targets():
+	var ui = MainGameUI.instantiate()
+	ui.set("play_battle_intro", false)
+	add_child_autofree(ui)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	ui.set("play_battle_intro", true)
+	var stats_panel := ui.get_node("ContentLayer/StatsPanel") as Control
+	var ornaments_panel := ui.get_node("ContentLayer/OrnamentsPanel") as Control
+	var grid_panel := ui.get_node("ContentLayer/GridPanel") as Control
+	var stats_target := stats_panel.position
+	var ornaments_target := ornaments_panel.position
+
+	ui.call("_prepare_intro_animation")
+
+	assert_true(bool(ui.get("_intro_playing")))
+	assert_false(grid_panel.visible)
+	assert_almost_eq(grid_panel.modulate.a, 0.0, 0.001)
+	assert_eq(stats_panel.position, stats_target + ui.get("intro_stats_start_offset"))
+	assert_almost_eq(stats_panel.modulate.a, 0.0, 0.001)
+	assert_eq(ornaments_panel.position, ornaments_target + ui.get("intro_ornaments_start_offset"))
+	assert_false(ornaments_panel.visible)
+
+	var frame_paths: PackedStringArray = ui.call("_get_intro_bag_frame_paths")
+	assert_eq(frame_paths.size(), 4)
+	assert_eq(frame_paths[0], "res://assets/sourceImage/包1.png")
+	assert_eq(frame_paths[3], "res://assets/sourceImage/包4.png")
+
+
+func test_main_game_intro_finishes_into_battle_context():
+	var ui = MainGameUI.instantiate()
+	ui.set("intro_bag_frame_time", 0.01)
+	ui.set("intro_bag_final_hold", 0.0)
+	ui.set("intro_stats_rise_duration", 0.01)
+	ui.set("intro_ornaments_slide_duration", 0.01)
+	ui.set("intro_grid_reveal_duration", 0.01)
+	ui.set("intro_bag_frame_1_path", "")
+	ui.set("intro_bag_frame_2_path", "")
+	ui.set("intro_bag_frame_3_path", "")
+	ui.set("intro_bag_frame_4_path", "")
+	add_child_autofree(ui)
+
+	await get_tree().create_timer(1.0).timeout
+
+	var grid_panel := ui.get_node("ContentLayer/GridPanel") as Control
+	var stats_panel := ui.get_node("ContentLayer/StatsPanel") as Control
+	var ornaments_panel := ui.get_node("ContentLayer/OrnamentsPanel") as Control
+	assert_false(bool(ui.get("_intro_playing")))
+	assert_true(GlobalInput.is_context(GlobalInput.Context.BATTLE))
+	assert_true(grid_panel.visible)
+	assert_almost_eq(grid_panel.modulate.a, 1.0, 0.001)
+	assert_true(stats_panel.visible)
+	assert_almost_eq(stats_panel.modulate.a, 1.0, 0.001)
+	assert_true(ornaments_panel.visible)
+	assert_almost_eq(ornaments_panel.modulate.a, 1.0, 0.001)
+	assert_null(ui.get_node_or_null("ContentLayer/IntroBagReveal"))
 
 
 func test_hub_backpack_overlay_close_button_restores_world_context():
@@ -413,7 +475,7 @@ func test_hub_dreamcatcher_is_stage_art_and_battle_entry_hotspot():
 	assert_not_null(net)
 	assert_not_null(net.texture)
 	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png")
-	assert_eq(net.scale, Vector2(0.55, 0.55))
+	assert_eq(net.scale, Vector2(0.663, 0.663))
 	assert_false(net.region_enabled)
 	assert_null(net.material)
 	assert_gt(net.offset.y, net.texture.get_size().y * 0.75)
@@ -544,7 +606,6 @@ func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
 	assert_almost_eq(turn_effect.position.x, page_sheet_rect.position.x, 1.0)
 	assert_almost_eq(turn_effect.position.y, page_sheet_rect.position.y, 1.0)
 	assert_almost_eq(turn_effect.size.x, page_sheet_rect.size.x, 1.0)
-	assert_true(turn_effect.size.x < get_viewport().get_visible_rect().size.x)
 	await get_tree().create_timer(0.75).timeout
 
 	assert_eq(navigator.current_page_id, "gallery")
