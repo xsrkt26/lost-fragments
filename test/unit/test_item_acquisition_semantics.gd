@@ -10,6 +10,7 @@ var ornament_db
 func before_each():
 	run_manager = autofree(RunManagerScript.new())
 	run_manager.is_run_active = true
+	run_manager.current_route_index = 1
 	run_manager.current_deck = [] as Array[String]
 	run_manager.current_backpack_items = [] as Array[Dictionary]
 	run_manager.pending_item_rewards = [] as Array[Dictionary]
@@ -76,7 +77,7 @@ func test_pending_items_persist_across_save_data():
 
 func test_shop_generated_item_offer_is_staged_after_purchase():
 	run_manager.current_shards = 100
-	var offers = ShopGeneratorScript.generate_offers(run_manager, item_db, ornament_db, 4)
+	var offers = ShopGeneratorScript.generate_offers(run_manager, item_db, ornament_db)
 	var item_offer = _find_item_offer(offers)
 
 	assert_false(item_offer.is_empty())

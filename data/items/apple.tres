@@ -5,7 +5,7 @@
 
 [sub_resource type="Resource" id="1"]
 script = ExtResource("e1")
-score_amount = 3
+sanity_amount = 3
 core_item_id = "apple_core"
 
 [resource]
@@ -14,7 +14,7 @@ id = "apple"
 item_name = "苹果"
 description = "从背包中丢弃时：+3梦值，并且留下一个苹果核"
 tags = Array[String]([])
-price = 5
+price = 8
 base_cost = 1
 can_draw = true
 can_rotate = true

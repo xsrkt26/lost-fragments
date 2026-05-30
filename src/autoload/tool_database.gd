@@ -39,10 +39,10 @@ func get_all_tools() -> Array:
 		result.append(tools[key].duplicate(true))
 	return result
 
-func get_available_tools() -> Array:
+func get_available_tools(act: int = 0) -> Array:
 	var result: Array = []
 	for tool in tools.values():
-		if tool.enabled:
+		if tool.enabled and (act <= 0 or int(tool.earliest_act) <= act):
 			result.append(tool.duplicate(true))
 	return result
 
@@ -59,6 +59,7 @@ func _create_tool_data(entry: Dictionary):
 	data.tool_name = str(entry.get("name", ""))
 	data.category = str(entry.get("category", ""))
 	data.rarity = str(entry.get("rarity", "道具"))
+	data.earliest_act = int(entry.get("earliest_act", 1))
 	data.price = int(entry.get("price", 1))
 	data.target_type = str(entry.get("target_type", ToolDataScript.TARGET_ITEM))
 	data.tags = _to_string_array(entry.get("tags", []))

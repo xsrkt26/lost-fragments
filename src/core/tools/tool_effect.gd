@@ -141,9 +141,10 @@ static func _apply_corrosive_acid(target: Dictionary, battle, result: Dictionary
 	if not _is_instance_in_grid(battle, instance):
 		return _fail(result, "invalid_item_target")
 	_add_pollution(battle, instance, 2)
-	instance.data.price -= 5
+	var old_price := int(instance.data.price)
+	instance.data.price = max(1, old_price - 5)
 	result["pollution_added"] = 2
-	result["value_delta"] = -5
+	result["value_delta"] = int(instance.data.price) - old_price
 	return _success(result)
 
 static func _apply_seed_tool(target: Dictionary, battle, item_db: Node, seed_levels: int, allow_empty: bool, result: Dictionary) -> Dictionary:
@@ -298,7 +299,7 @@ static func _has_tag(item_data: ItemData, tag: String) -> bool:
 	return item_data != null and item_data.tags.has(tag)
 
 static func _is_waste(item_data: ItemData) -> bool:
-	return item_data != null and (item_data.tags.has(WASTE_TAG) or item_data.price < 0)
+	return item_data != null and item_data.tags.has(WASTE_TAG)
 
 static func _is_food(item_data: ItemData) -> bool:
 	return item_data != null and (item_data.tags.has("食物") or FOOD_IDS.has(item_data.id))

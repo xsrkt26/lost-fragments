@@ -20,7 +20,7 @@
       },
       "boss": {
         "mechanics": ["score_target"],
-        "score_target": {"enabled": true, "value": 50}
+        "score_target": {"enabled": true, "value": 45}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.0, "ornament": 1.0, "tool": 1.0},
@@ -50,7 +50,7 @@
       },
       "boss": {
         "mechanics": ["score_target", "pollution_pressure"],
-        "score_target": {"enabled": true, "value": 70}
+        "score_target": {"enabled": true, "value": 65}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.05, "ornament": 1.0, "tool": 1.05},
@@ -79,7 +79,7 @@
       },
       "boss": {
         "mechanics": ["score_target", "seed_growth_check"],
-        "score_target": {"enabled": true, "value": 90}
+        "score_target": {"enabled": true, "value": 85}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.0, "ornament": 1.05, "tool": 1.08},
@@ -137,7 +137,7 @@
       },
       "boss": {
         "mechanics": ["score_target", "locked_cell_pressure"],
-        "score_target": {"enabled": true, "value": 130}
+        "score_target": {"enabled": true, "value": 135}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.05, "ornament": 1.12, "tool": 1.08},
@@ -166,7 +166,7 @@
       },
       "boss": {
         "mechanics": ["score_target", "finale_pressure"],
-        "score_target": {"enabled": true, "value": 150}
+        "score_target": {"enabled": true, "value": 165}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.05, "ornament": 1.18, "tool": 1.12},

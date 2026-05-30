@@ -4,6 +4,20 @@ var _hub_dreamcatcher_net: Sprite2D = null
 var _hub_dreamcatcher_hit_control: Control = null
 
 
+func _enter_tree() -> void:
+	if not auto_initialize:
+		play_battle_intro = false
+
+
+func _ensure_battle_manager_setup() -> void:
+	if auto_initialize:
+		super._ensure_battle_manager_setup()
+
+
+func setup(p_battle_manager: BattleManager, close_callback: Callable = Callable()) -> void:
+	super.setup(p_battle_manager, close_callback)
+
+
 func use_hub_dreamcatcher(net: Sprite2D, hit_control: Control) -> void:
 	_hub_dreamcatcher_net = net
 	_hub_dreamcatcher_hit_control = hit_control

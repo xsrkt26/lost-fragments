@@ -40,6 +40,13 @@ func setup(p_context: GameContext):
 	
 	_refresh_grid()
 
+func clear_item_visuals() -> void:
+	for child in get_children():
+		if child == grid_container:
+			continue
+		child.queue_free()
+	item_ui_map.clear()
+
 func _refresh_grid():
 	if not manager: 
 		print("[BackpackUI] 警告: manager 为空，无法刷新网格。")
@@ -231,8 +238,7 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 	configure_item_for_grid(item_ui, self)
 	item_ui.scale = Vector2.ONE
 	
-	grid_container.force_update_transform()
-	await get_tree().process_frame
+	_sync_grid_geometry()
 	
 	# --- 核心修复：多格物品对齐 ---
 	# 计算形状的最小偏移量（防止形状不是从 (0,0) 开始的情况）

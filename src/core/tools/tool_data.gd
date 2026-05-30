@@ -13,6 +13,7 @@ const TARGET_ORNAMENT := "ornament"
 @export var tool_name: String = ""
 @export var category: String = ""
 @export var rarity: String = "道具"
+@export var earliest_act: int = 1
 @export var price: int = 1
 @export var target_type: String = TARGET_ITEM
 @export var tags: Array[String] = []

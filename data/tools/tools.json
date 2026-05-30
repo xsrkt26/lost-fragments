@@ -4,149 +4,222 @@
     "name": "小补丁",
     "category": "通用",
     "rarity": "道具",
-    "price": 18,
+    "price": 5,
     "target_type": "item",
-    "tags": ["道具", "通用"],
-    "effect_text": "目标物品本局内价值 +3。"
+    "tags": [
+      "道具",
+      "通用"
+    ],
+    "effect_text": "目标物品本局内价值 +3。",
+    "earliest_act": 1
   },
   {
     "id": "dream_value_candy",
     "name": "梦值糖",
     "category": "通用",
     "rarity": "道具",
-    "price": 20,
+    "price": 6,
     "target_type": "dreamcatcher",
-    "tags": ["道具", "通用", "捕梦区"],
-    "effect_text": "下一次捕梦梦值消耗 -2，最低为 1。"
+    "tags": [
+      "道具",
+      "通用",
+      "捕梦区"
+    ],
+    "effect_text": "下一次捕梦梦值消耗 -2，最低为 1。",
+    "earliest_act": 1
   },
   {
     "id": "turning_screw",
     "name": "转向螺丝",
     "category": "通用",
     "rarity": "道具",
-    "price": 22,
+    "price": 6,
     "target_type": "item",
-    "tags": ["道具", "通用", "旋转"],
-    "effect_text": "目标物品顺时针旋转一次；若仍在背包内，+2 分。"
+    "tags": [
+      "道具",
+      "通用",
+      "旋转"
+    ],
+    "effect_text": "目标物品顺时针旋转一次；若仍在背包内，+2 分。",
+    "earliest_act": 1
   },
   {
     "id": "cracked_marble",
     "name": "破弹珠",
     "category": "通用",
     "rarity": "道具",
-    "price": 24,
+    "price": 7,
     "target_type": "item",
-    "tags": ["道具", "通用", "撞击"],
-    "effect_text": "从目标物品发起一次撞击。"
+    "tags": [
+      "道具",
+      "通用",
+      "撞击"
+    ],
+    "effect_text": "从目标物品发起一次撞击。",
+    "earliest_act": 1
   },
   {
     "id": "black_ink_drop",
     "name": "黑墨滴",
     "category": "污染",
     "rarity": "罕见道具",
-    "price": 28,
+    "price": 8,
     "target_type": "item",
-    "tags": ["道具", "污染"],
-    "effect_text": "目标物品 +1 污染；若为废弃物额外 +1 污染。"
+    "tags": [
+      "道具",
+      "污染"
+    ],
+    "effect_text": "目标物品 +1 污染；若为废弃物额外 +1 污染。",
+    "earliest_act": 2
   },
   {
     "id": "disinfectant_spray",
     "name": "消毒喷雾",
     "category": "污染",
     "rarity": "罕见道具",
-    "price": 30,
+    "price": 9,
     "target_type": "item",
-    "tags": ["道具", "污染", "净化"],
-    "effect_text": "净化目标物品全部污染，每净化 1 层 +3 分。"
+    "tags": [
+      "道具",
+      "污染",
+      "净化"
+    ],
+    "effect_text": "净化目标物品全部污染，每净化 1 层 +3 分。",
+    "earliest_act": 2
   },
   {
     "id": "corrosive_acid",
     "name": "腐蚀酸",
     "category": "污染",
     "rarity": "稀有道具",
-    "price": 34,
+    "price": 10,
     "target_type": "item",
-    "tags": ["道具", "污染"],
-    "effect_text": "目标物品 +2 污染，并使其本局内价值 -5。"
+    "tags": [
+      "道具",
+      "污染"
+    ],
+    "effect_text": "目标物品 +2 污染，并使其本局内价值 -5，最低为 1。",
+    "earliest_act": 3
   },
   {
     "id": "small_water_drop",
     "name": "小水滴",
     "category": "梦境之种",
     "rarity": "道具",
-    "price": 20,
+    "price": 6,
     "target_type": "item_or_empty_cell",
-    "tags": ["道具", "梦境之种", "播种", "升级"],
-    "effect_text": "目标是梦境之种则等级 +1；目标是空格则播种。"
+    "tags": [
+      "道具",
+      "梦境之种",
+      "播种",
+      "升级"
+    ],
+    "effect_text": "目标是梦境之种则等级 +1；目标是空格则播种。",
+    "earliest_act": 1
   },
   {
     "id": "fertilizer_bag",
     "name": "肥料包",
     "category": "梦境之种",
     "rarity": "罕见道具",
-    "price": 28,
+    "price": 8,
     "target_type": "item_or_empty_cell",
-    "tags": ["道具", "梦境之种", "播种", "升级"],
-    "effect_text": "空格播种；梦境之种等级 +2。"
+    "tags": [
+      "道具",
+      "梦境之种",
+      "播种",
+      "升级"
+    ],
+    "effect_text": "空格播种；梦境之种等级 +2。",
+    "earliest_act": 2
   },
   {
     "id": "fast_sprout_agent",
     "name": "快速发芽剂",
     "category": "梦境之种",
     "rarity": "稀有道具",
-    "price": 36,
+    "price": 11,
     "target_type": "item",
-    "tags": ["道具", "梦境之种", "升级"],
-    "effect_text": "目标梦境之种等级 +3；若因此变大，+8 分。"
+    "tags": [
+      "道具",
+      "梦境之种",
+      "升级"
+    ],
+    "effect_text": "目标梦境之种等级 +3；若因此变大，+8 分。",
+    "earliest_act": 3
   },
   {
     "id": "extension_hook",
     "name": "延长钩",
     "category": "机械",
     "rarity": "罕见道具",
-    "price": 30,
+    "price": 8,
     "target_type": "item",
-    "tags": ["道具", "机械", "撞击"],
-    "effect_text": "目标物品本局内被撞后，若没有继续传导，额外向其方向再检查 1 格。"
+    "tags": [
+      "道具",
+      "机械",
+      "撞击"
+    ],
+    "effect_text": "目标物品本局内被撞后，若没有继续传导，额外向其方向再检查 1 格。",
+    "earliest_act": 2
   },
   {
     "id": "transmission_oil",
     "name": "传动油",
     "category": "机械",
     "rarity": "稀有道具",
-    "price": 34,
+    "price": 10,
     "target_type": "item",
-    "tags": ["道具", "机械", "传导"],
-    "effect_text": "目标机械物品本局内成功传导或曲线传动命中机械物品时额外 +3 分，最多 3 次。"
+    "tags": [
+      "道具",
+      "机械",
+      "传导"
+    ],
+    "effect_text": "目标机械物品本局内成功传导或曲线传动命中机械物品时额外 +3 分，最多 3 次。",
+    "earliest_act": 3
   },
   {
     "id": "apple_wax",
     "name": "苹果蜡",
     "category": "丢弃/食物",
     "rarity": "罕见道具",
-    "price": 26,
+    "price": 7,
     "target_type": "item",
-    "tags": ["道具", "丢弃", "食物"],
-    "effect_text": "目标食物本局内丢弃时额外 +2 梦值；若为苹果，额外播种。"
+    "tags": [
+      "道具",
+      "丢弃",
+      "食物"
+    ],
+    "effect_text": "目标食物本局内丢弃时额外 +2 梦值；若为苹果，额外播种。",
+    "earliest_act": 2
   },
   {
     "id": "recycling_clip",
     "name": "回收夹",
     "category": "丢弃/食物",
     "rarity": "稀有道具",
-    "price": 32,
+    "price": 10,
     "target_type": "discard",
-    "tags": ["道具", "丢弃", "废弃物"],
-    "effect_text": "下一次丢弃废弃物时 +8 分并获得 1 个纸团。"
+    "tags": [
+      "道具",
+      "丢弃",
+      "废弃物"
+    ],
+    "effect_text": "下一次丢弃废弃物时 +8 分并获得 1 个纸团。",
+    "earliest_act": 3
   },
   {
     "id": "blank_talisman",
     "name": "空白符纸",
     "category": "饰品联动",
     "rarity": "稀有道具",
-    "price": 38,
+    "price": 12,
     "target_type": "ornament",
-    "tags": ["道具", "饰品联动"],
-    "effect_text": "刷新目标饰品“每个局内关卡限 1 次”的触发次数，每饰品每关最多刷新 1 次。"
+    "tags": [
+      "道具",
+      "饰品联动"
+    ],
+    "effect_text": "刷新目标饰品“每个局内关卡限 1 次”的触发次数，每饰品每关最多刷新 1 次。",
+    "earliest_act": 4
   }
 ]

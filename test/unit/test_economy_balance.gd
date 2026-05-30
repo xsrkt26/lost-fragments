@@ -32,12 +32,12 @@ func _make_run_manager(act: int, route_index: int):
 
 func test_economy_snapshot_matches_current_balance_targets():
 	var expected = [
-		{"act": 1, "normal": 8, "boss": 18, "route": 34, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 7, "item_pct": 100, "common_pct": 100, "advanced_pct": 108, "rare_pct": 115},
-		{"act": 2, "normal": 10, "boss": 22, "route": 42, "normal_nodes": 1, "elite_nodes": 1, "boss_nodes": 1, "refresh": 9, "item_pct": 107, "common_pct": 109, "advanced_pct": 117, "rare_pct": 124},
-		{"act": 3, "normal": 12, "boss": 26, "route": 62, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 11, "item_pct": 114, "common_pct": 118, "advanced_pct": 126, "rare_pct": 133},
-		{"act": 4, "normal": 14, "boss": 30, "route": 72, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 13, "item_pct": 121, "common_pct": 127, "advanced_pct": 135, "rare_pct": 142},
-		{"act": 5, "normal": 16, "boss": 34, "route": 82, "normal_nodes": 2, "elite_nodes": 1, "boss_nodes": 1, "refresh": 15, "item_pct": 128, "common_pct": 136, "advanced_pct": 144, "rare_pct": 151},
-		{"act": 6, "normal": 18, "boss": 38, "route": 92, "normal_nodes": 1, "elite_nodes": 2, "boss_nodes": 1, "refresh": 17, "item_pct": 135, "common_pct": 145, "advanced_pct": 153, "rare_pct": 160},
+		{"act": 1, "normal": 6, "boss": 12, "route": 24, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 5, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
+		{"act": 2, "normal": 7, "boss": 14, "route": 28, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 6, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
+		{"act": 3, "normal": 8, "boss": 16, "route": 32, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 7, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
+		{"act": 4, "normal": 9, "boss": 18, "route": 36, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 8, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
+		{"act": 5, "normal": 10, "boss": 20, "route": 40, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 9, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
+		{"act": 6, "normal": 11, "boss": 22, "route": 44, "normal_nodes": 2, "elite_nodes": 0, "boss_nodes": 1, "refresh": 10, "item_pct": 100, "common_pct": 100, "advanced_pct": 100, "rare_pct": 100},
 	]
 
 	for row in expected:
@@ -57,8 +57,8 @@ func test_economy_snapshot_matches_current_balance_targets():
 
 func test_economy_config_uses_json_and_fallback_defaults():
 	var config = EconomyConfigScript.load_config_from_path()
-	assert_eq(int(config.battle_rewards.normal_base), 8)
-	assert_eq(int(config.shop.item_price_act_step_percent), 7)
+	assert_eq(int(config.battle_rewards.normal_base), 6)
+	assert_eq(int(config.shop.item_price_act_step_percent), 0)
 
 	var fallback = EconomyConfigScript.load_config_from_path("res://missing/economy.json")
 	assert_eq(int(fallback.battle_rewards.normal_base), EconomyConfigScript.NORMAL_BATTLE_SHARDS_BASE)
@@ -69,7 +69,7 @@ func test_economy_config_cache_returns_defensive_copies():
 	config.battle_rewards.normal_base = 999
 
 	var cached_config = EconomyConfigScript.load_config_from_path()
-	assert_eq(int(cached_config.battle_rewards.normal_base), 8)
+	assert_eq(int(cached_config.battle_rewards.normal_base), 6)
 
 
 func test_reward_shards_use_economy_config_for_normal_and_boss_nodes():
@@ -90,22 +90,22 @@ func test_shop_prices_and_refresh_use_economy_config():
 	var common_ornament = ornament_db.get_ornament_by_id("dreamcatcher_filter")
 	var rare_ornament = ornament_db.get_ornament_by_id("terminal_pressure_gauge")
 
-	assert_eq(ShopGeneratorScript._calculate_item_price(cheap_item, 1), 5)
-	assert_eq(ShopGeneratorScript._calculate_item_price(cheap_item, 6), 7)
-	assert_eq(ShopGeneratorScript._calculate_item_price(expensive_item, 6), 41)
-	assert_eq(ShopGeneratorScript._calculate_ornament_price(common_ornament, 6), 58)
-	assert_eq(ShopGeneratorScript._calculate_ornament_price(rare_ornament, 6), 256)
+	assert_eq(ShopGeneratorScript._calculate_item_price(cheap_item, 1), 10)
+	assert_eq(ShopGeneratorScript._calculate_item_price(cheap_item, 6), 10)
+	assert_eq(ShopGeneratorScript._calculate_item_price(expensive_item, 6), 22)
+	assert_eq(ShopGeneratorScript._calculate_ornament_price(common_ornament, 6), 36)
+	assert_eq(ShopGeneratorScript._calculate_ornament_price(rare_ornament, 6), 110)
 	assert_eq(ShopGeneratorScript.calculate_refresh_cost(4, 2), EconomyConfigScript.shop_refresh_cost(4, 2))
 
 
-func test_purchase_power_ranges_stay_reasonable_across_acts():
+func test_item_sell_values_follow_half_buy_price_rule_across_acts():
 	for act in range(1, 7):
-		var snapshot = EconomyConfigScript.act_economy_snapshot(act)
-		var cheap_item_price = EconomyConfigScript.shop_item_price(5, act)
-		var expensive_item_price = EconomyConfigScript.shop_item_price(30, act)
-		var cheapest_common_ornament_price = EconomyConfigScript.shop_ornament_price(40, EconomyConfigScript.RARITY_COMMON, act)
+		var one_cell_buy_price = EconomyConfigScript.shop_item_price(8, act)
+		var one_cell_sell_value = EconomyConfigScript.shop_item_sell_value(8, act)
+		var half_bag_sell_income = one_cell_sell_value * 14
+		var common_ornament_baseline = EconomyConfigScript.shop_ornament_price(38, EconomyConfigScript.RARITY_COMMON, act)
 
-		assert_true(cheap_item_price <= int(snapshot.normal_battle_shards))
-		assert_true(expensive_item_price <= int(snapshot.route_battle_shards))
-		assert_true(cheapest_common_ornament_price <= int(snapshot.route_battle_shards) + RunManagerScript.INITIAL_SHARDS)
-		assert_true(int(snapshot.boss_battle_shards) >= int(snapshot.normal_battle_shards) * 2)
+		assert_eq(one_cell_buy_price, 8)
+		assert_eq(one_cell_sell_value, 4)
+		assert_eq(EconomyConfigScript.shop_item_sell_value(10, act), 5)
+		assert_true(abs(half_bag_sell_income - roundi(float(common_ornament_baseline) * 1.5)) <= 2)

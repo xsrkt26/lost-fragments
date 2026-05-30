@@ -61,17 +61,39 @@ func test_stage_routes_point_to_distinct_content_tracks():
 	assert_eq(StageConfig.get_route_id_for_act(6), "act_6_finale")
 
 	var finale_nodes = RouteConfig.get_route_nodes("act_6_finale")
-	assert_eq(finale_nodes.size(), 9)
-	assert_eq(finale_nodes[0].get("type"), RouteConfig.NODE_EVENT)
+	assert_eq(finale_nodes.size(), 7)
+	assert_eq(finale_nodes[0].get("type"), RouteConfig.NODE_BATTLE)
 	assert_eq(finale_nodes[6].get("type"), RouteConfig.NODE_BOSS_BATTLE)
-	assert_eq(RouteConfig.get_score_target_rule(finale_nodes[3], 6).target, 88)
+
+func test_each_stage_route_has_two_growth_battles_and_one_boss():
+	for route_id in [
+		RouteConfig.DEFAULT_ROUTE_ID,
+		"act_2_pollution",
+		"act_3_grove",
+		"act_4_gearworks",
+		"act_5_rift",
+		"act_6_finale",
+	]:
+		var nodes = RouteConfig.get_route_nodes(route_id)
+		var normal_battles := 0
+		var boss_battles := 0
+		for node in nodes:
+			match str(node.get("type", "")):
+				RouteConfig.NODE_BATTLE:
+					normal_battles += 1
+				RouteConfig.NODE_BOSS_BATTLE:
+					boss_battles += 1
+				RouteConfig.NODE_ELITE_BATTLE:
+					fail_test("No elite battle should be present in route %s during baseline tuning." % route_id)
+		assert_eq(normal_battles, 2, route_id)
+		assert_eq(boss_battles, 1, route_id)
 
 func test_stage_config_falls_back_when_file_is_missing():
 	var stage = StageConfig.get_stage(6, "user://missing_stages_for_test.json")
 
 	assert_eq(StageConfig.get_max_act("user://missing_stages_for_test.json"), 6)
 	assert_eq(stage.get("id"), "act_6")
-	assert_eq(StageConfig.get_boss_score_target_rule(6, "user://missing_stages_for_test.json").target, 150)
+	assert_eq(StageConfig.get_boss_score_target_rule(6, "user://missing_stages_for_test.json").target, 165)
 
 func test_stage_config_cache_returns_defensive_copies():
 	var table = StageConfig.load_stage_table_from_path(StageConfig.STAGE_DATA_PATH)
@@ -128,7 +150,7 @@ func test_run_manager_exposes_stage_battle_config_and_completion():
 
 	assert_eq(config.stage.id, "act_5")
 	assert_true(config.is_boss)
-	assert_eq(config.target_score, 130)
+	assert_eq(config.target_score, 135)
 	assert_eq(config.battle_modifiers.draw_cost_delta, 1)
 	assert_eq(config.battle_modifiers.blocked_cells.size(), 1)
 
@@ -157,9 +179,8 @@ func test_stage_battle_modifiers_apply_to_grid_draw_cost_and_pollution():
 	assert_true(manager.backpack_manager.is_pos_blocked(Vector2i(1, 1)))
 	assert_true(manager.backpack_manager.is_pos_blocked(Vector2i(5, 5)))
 
-	manager.request_draw()
-	await get_tree().process_frame
-	await get_tree().process_frame
+	var paper_draw = item_db.get_item_by_id("paper_ball")
+	manager._process_new_item_acquisition(paper_draw)
 	assert_eq(gs.current_sanity, 97)
 
 	manager.backpack_manager.grid.clear()

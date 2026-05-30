@@ -129,6 +129,9 @@ func test_old_pocket_watch_and_safety_pin_modify_sanity_loss_in_order():
 	assert_eq(gs.current_sanity, 100)
 
 	manager._process_new_item_acquisition(item)
+	assert_eq(gs.current_sanity, 100)
+
+	manager._process_new_item_acquisition(item)
 	assert_eq(gs.current_sanity, 98)
 
 func test_dreamcatcher_filter_scores_every_three_draws():
@@ -197,7 +200,7 @@ func test_pollution_ornaments_react_to_pollution_changes():
 
 func test_pollution_chain_ornaments_apply_hit_thresholds():
 	var manager = await _make_manager(["protective_gloves", "waste_receipt", "black_raincoat", "pathology_lens"] as Array[String])
-	var target = _make_instance("polluted_waste", ["废弃物"] as Array[String], -4, ItemData.Direction.RIGHT, 5)
+	var target = _make_instance("polluted_waste", ["废弃物"] as Array[String], 4, ItemData.Direction.RIGHT, 5)
 
 	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(target)] as Array[GameAction])
 
@@ -214,8 +217,8 @@ func test_leaking_valve_adds_pollution_from_root_dream_hits():
 
 func test_stain_sticker_and_black_tide_bottle_add_pollution_on_draws():
 	var manager = await _make_manager(["stain_sticker", "black_tide_bottle"] as Array[String])
-	var waste = _place_runtime_item(manager, "paper_ball", Vector2i(1, 1), ["废弃物"] as Array[String], -1)
-	var drawn_waste = _make_runtime_item("drawn_waste", ["废弃物"] as Array[String], -1)
+	var waste = _place_runtime_item(manager, "paper_ball", Vector2i(1, 1), ["废弃物"] as Array[String], 1)
+	var drawn_waste = _make_runtime_item("drawn_waste", ["废弃物"] as Array[String], 1)
 
 	manager._apply_ornament_item_drawn(drawn_waste)
 	assert_eq(waste.current_pollution, 1)
@@ -227,7 +230,7 @@ func test_stain_sticker_and_black_tide_bottle_add_pollution_on_draws():
 func test_purification_ornaments_score_and_restore_sanity_with_caps():
 	var manager = await _make_manager(["purification_bell", "black_market_trash_bag"] as Array[String])
 	gs.current_sanity = 50
-	var waste = _place_runtime_item(manager, "paper_ball", Vector2i(1, 1), ["废弃物"] as Array[String], -1)
+	var waste = _place_runtime_item(manager, "paper_ball", Vector2i(1, 1), ["废弃物"] as Array[String], 1)
 	waste.current_pollution = 5
 
 	waste.current_pollution = 1
@@ -243,7 +246,8 @@ func test_discard_ornaments_apply_once_and_count_discards():
 	gs.current_sanity = 80
 	var waste = _make_draw_item(0)
 	waste.id = "paper_ball"
-	waste.price = -5
+	waste.tags = ["废弃物"] as Array[String]
+	waste.price = 5
 
 	manager._apply_ornament_item_discarded(waste, null, false)
 	manager._apply_ornament_item_discarded(waste, null, false)
@@ -484,9 +488,9 @@ func test_overload_lamp_scores_on_consecutive_impact_draws():
 	manager._apply_ornament_impact_chain_resolved(null, actions)
 	assert_eq(gs.current_score, 20)
 
-func test_mixed_chain_ornaments_score_tags_negative_value_and_neighbors():
+func test_mixed_chain_ornaments_score_tags_waste_value_and_neighbors():
 	var manager = await _make_manager(["kaleidoscope", "black_market_stamp", "fusion_badge"] as Array[String])
-	var target = _place_runtime_item(manager, "mixed_negative", Vector2i(2, 2), ["机械", "废弃物", "梦境之种"] as Array[String], -7)
+	var target = _place_runtime_item(manager, "mixed_waste", Vector2i(2, 2), ["机械", "废弃物", "梦境之种"] as Array[String], 7)
 	_place_runtime_item(manager, "same_tag_neighbor", Vector2i(3, 2), ["机械"] as Array[String])
 
 	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(target)] as Array[GameAction])
@@ -555,7 +559,7 @@ func test_recycling_coupon_discounts_next_item_after_first_item_purchase():
 
 func test_tool_linked_score_ornaments_react_to_tool_usage():
 	var manager = await _make_manager(["tool_belt", "specimen_pin_case", "gardening_toolkit", "recycling_hook"] as Array[String])
-	var waste = _make_instance("paper_ball", ["废弃物"] as Array[String], -1)
+	var waste = _make_instance("paper_ball", ["废弃物"] as Array[String], 1)
 	var pollution_tool = _make_tool("black_ink_drop", ["污染"] as Array[String])
 
 	manager._apply_ornament_tool_used(pollution_tool, {"type": "item", "instance": waste}, {"success": true})
@@ -570,7 +574,7 @@ func test_tool_linked_score_ornaments_react_to_tool_usage():
 	assert_eq(gs.current_score, 33)
 
 	gs.current_sanity = 50
-	var discarded_waste = _make_runtime_item("paper_ball", ["废弃物"] as Array[String], -1)
+	var discarded_waste = _make_runtime_item("paper_ball", ["废弃物"] as Array[String], 1)
 	manager._apply_ornament_item_discarded(discarded_waste, null, false)
 	manager._apply_ornament_item_discarded(discarded_waste, null, false)
 	manager._apply_ornament_item_discarded(discarded_waste, null, false)
@@ -677,11 +681,11 @@ func test_empty_dream_trophy_bonus_requires_target_and_score_margin():
 	rm.current_ornaments = ["empty_dream_trophy"] as Array[String]
 	rm.current_route_index = 6
 	rm.current_act = 1
-	assert_false(rm.has_empty_dream_trophy_reward_bonus(100))
-	assert_true(rm.has_empty_dream_trophy_reward_bonus(101))
+	assert_false(rm.has_empty_dream_trophy_reward_bonus(95))
+	assert_true(rm.has_empty_dream_trophy_reward_bonus(96))
 
 	rm.current_ornaments = [] as Array[String]
-	assert_false(rm.has_empty_dream_trophy_reward_bonus(101))
+	assert_false(rm.has_empty_dream_trophy_reward_bonus(96))
 
 	rm.current_ornaments = ["empty_dream_trophy"] as Array[String]
 	rm.current_route_index = 0

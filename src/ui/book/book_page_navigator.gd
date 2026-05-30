@@ -486,6 +486,26 @@ func _layout_navigation() -> void:
 	_layout_tab_buttons(viewport_size)
 
 
+func _apply_full_rect_offsets(control: Control) -> void:
+	if control == null:
+		return
+	control.set_anchors_preset(Control.PRESET_FULL_RECT, false)
+	control.offset_left = 0.0
+	control.offset_top = 0.0
+	control.offset_right = 0.0
+	control.offset_bottom = 0.0
+
+
+func _apply_top_left_rect(control: Control, rect_size: Vector2) -> void:
+	if control == null:
+		return
+	if rect_size.x <= 0.0 or rect_size.y <= 0.0:
+		rect_size = DESIGN_SIZE
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	control.position = Vector2.ZERO
+	control.size = rect_size
+
+
 func _layout_turn_visuals(viewport_size: Vector2) -> void:
 	if _turn_effect != null and not _turn_effect.visible:
 		_turn_effect.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
@@ -618,11 +638,7 @@ func _layout_transition_stack_root(viewport_size: Vector2) -> void:
 		return
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
-	_transition_stack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_transition_stack_root.offset_left = 0.0
-	_transition_stack_root.offset_top = 0.0
-	_transition_stack_root.offset_right = 0.0
-	_transition_stack_root.offset_bottom = 0.0
+	_apply_full_rect_offsets(_transition_stack_root)
 
 
 func _prepare_transition_page_stack(previous_page_id: String, target_page_id: String) -> void:
@@ -674,9 +690,7 @@ func _create_transition_global_layer_root(parent: Control, layer_name: String, z
 	root.z_index = z_index
 	root.z_as_relative = true
 	root.clip_contents = false
-	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	root.position = Vector2.ZERO
-	root.size = _get_transition_viewport_size()
+	_apply_top_left_rect(root, _get_transition_viewport_size())
 	parent.add_child(root)
 	return root
 
@@ -692,9 +706,7 @@ func _create_transition_page_layer(page_id: String, stack_index: int) -> Control
 	layer.z_index = (BookBackgroundConfig.PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	return layer
 
 
@@ -705,9 +717,7 @@ func _create_transition_sheet_layer(page_z_index: int) -> Control:
 	layer.z_index = page_z_index
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	layer.pivot_offset = Vector2(layer.size.x, 0.0)
 	return layer
 
@@ -773,9 +783,7 @@ func _create_transition_content_layer(page_id: String, page_z_index: int) -> Con
 	layer.z_index = page_z_index
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	layer.pivot_offset = Vector2(layer.size.x, 0.0)
 	return layer
 
@@ -793,7 +801,7 @@ func _attach_actual_page_content(page_id: String, content_layer: Control) -> Nod
 		canvas_item.visible = true
 	var control := content_node as Control
 	if control != null:
-		control.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+		control.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 		control.position = Vector2.ZERO
 		control.size = _get_transition_viewport_size()
 		control.scale = Vector2.ONE
@@ -1101,11 +1109,7 @@ func _layout_compressed_stack_root(viewport_size: Vector2) -> void:
 		return
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
-	_compressed_stack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_compressed_stack_root.offset_left = 0.0
-	_compressed_stack_root.offset_top = 0.0
-	_compressed_stack_root.offset_right = 0.0
-	_compressed_stack_root.offset_bottom = 0.0
+	_apply_full_rect_offsets(_compressed_stack_root)
 
 
 func _sync_compressed_page_stack() -> void:
@@ -1294,7 +1298,7 @@ func _prepare_compressed_page_content_node(content_node: Node) -> void:
 	var viewport_size := _get_transition_viewport_size()
 	var control := content_node as Control
 	if control != null:
-		control.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+		control.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 		control.position = Vector2.ZERO
 		control.size = viewport_size
 	var canvas_item := content_node as CanvasItem
@@ -1359,11 +1363,7 @@ func _layout_hub_transition_body(viewport_size: Vector2) -> void:
 		return
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
-	_hub_transition_body.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_hub_transition_body.offset_left = 0.0
-	_hub_transition_body.offset_top = 0.0
-	_hub_transition_body.offset_right = 0.0
-	_hub_transition_body.offset_bottom = 0.0
+	_apply_full_rect_offsets(_hub_transition_body)
 	_hub_transition_body.pivot_offset = Vector2(viewport_size.x, 0.0)
 
 
@@ -1418,9 +1418,7 @@ func _create_hub_page_visual_root(root_name: String) -> Control:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.clip_contents = false
 	root.visible = true
-	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	root.position = Vector2.ZERO
-	root.size = _get_transition_viewport_size()
+	_apply_top_left_rect(root, _get_transition_viewport_size())
 	return root
 
 
@@ -1644,9 +1642,7 @@ func _layout_transition_tab_overlay(viewport_size: Vector2) -> void:
 		return
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
-	_transition_tab_overlay.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_transition_tab_overlay.position = Vector2.ZERO
-	_transition_tab_overlay.size = viewport_size
+	_apply_full_rect_offsets(_transition_tab_overlay)
 
 
 func _prepare_transition_tab_overlay(previous_page_id: String, target_page_id: String) -> void:
