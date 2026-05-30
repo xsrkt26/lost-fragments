@@ -1,21 +1,14 @@
+@tool
 extends Node2D
 
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
+const PAGE_MAIN_MENU := BookPageNavigator.PAGE_MAIN_MENU
 const HUB_SOURCE_SIZE := BookBackgroundConfig.DESIGN_SIZE
-const HUB_BACKGROUND_TEXTURES := {
-	"grandma": preload("res://assets/ui/hub/backgrounds/grandma.png"),
-	"xiaojia": preload("res://assets/ui/hub/backgrounds/xiaojia.png"),
-	"parents": preload("res://assets/ui/hub/backgrounds/parents.png"),
-	"cardboard": preload("res://assets/ui/hub/backgrounds/cardboard.png"),
-	"stage": preload("res://assets/ui/hub/backgrounds/stage.png"),
-}
-const HUB_FOREGROUND_TEXTURES := {
-	"xiaojia": preload("res://assets/ui/hub/backgrounds/xiaojia_foreground.png"),
-	"stage": preload("res://assets/ui/hub/backgrounds/stage_foreground.png"),
-}
+const DEFAULT_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
 const PLAYER_START_SOURCE_X := 548.0
 const PLAYER_FLOOR_SOURCE_Y := 1000.0
@@ -32,40 +25,28 @@ const LEFT_BOOKMARK_BUTTON_PATHS := [
 	"CanvasLayer/DesignRoot/SettingsButton",
 	"CanvasLayer/DesignRoot/MainMenuButton",
 ]
+const HUB_LEFT_TAB_BUTTONS := {
+	BookBackgroundConfig.PAGE_HUB: "RouteButton",
+	BookBackgroundConfig.PAGE_BACKPACK: "BackpackButton",
+	BookBackgroundConfig.PAGE_GALLERY: "GalleryButton",
+	BookBackgroundConfig.PAGE_SETTINGS: "SettingsButton",
+}
+const HUB_LEFT_TAB_NODES := {
+	BookBackgroundConfig.PAGE_HUB: "AlbumTab",
+	BookBackgroundConfig.PAGE_BACKPACK: "BackpackTab",
+	BookBackgroundConfig.PAGE_GALLERY: "GalleryTab",
+	BookBackgroundConfig.PAGE_SETTINGS: "SettingsTab",
+}
+const HUB_BACK_TAB_BUTTON := "MainMenuButton"
 const ROUTE_INTERACTION_SOURCE_X := 1326.0
 const GALLERY_INTERACTION_SOURCE_X := 771.0
+const HUB_BATTLE_LAYER_NAME := "BattleLayer"
+const HUB_TO_BATTLE_FOCUS_ZOOM := 1.55
+const HUB_TO_BATTLE_FOCUS_DURATION := 0.72
+const HUB_TO_BATTLE_MIN_FOCUS_ZOOM := 1.05
+const HUB_TO_BATTLE_STATS_TARGET_TOP_GAP := 150.0
+const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
-const MERCHANT_ANIMATION_FRAME_PATHS := {
-	"cat": [
-		"res://assets/characters/merchant/cat/cat_0000.png",
-		"res://assets/characters/merchant/cat/cat_0001.png",
-		"res://assets/characters/merchant/cat/cat_0002.png",
-		"res://assets/characters/merchant/cat/cat_0003.png",
-		"res://assets/characters/merchant/cat/cat_0004.png",
-		"res://assets/characters/merchant/cat/cat_0005.png",
-		"res://assets/characters/merchant/cat/cat_0006.png",
-		"res://assets/characters/merchant/cat/cat_0007.png",
-		"res://assets/characters/merchant/cat/cat_0008.png",
-		"res://assets/characters/merchant/cat/cat_0009.png",
-		"res://assets/characters/merchant/cat/cat_0010.png",
-	],
-	"grandma": [
-		"res://assets/characters/merchant/grandma/grandma_0000.png",
-		"res://assets/characters/merchant/grandma/grandma_0001.png",
-		"res://assets/characters/merchant/grandma/grandma_0002.png",
-		"res://assets/characters/merchant/grandma/grandma_0003.png",
-		"res://assets/characters/merchant/grandma/grandma_0004.png",
-	],
-	"stage": [
-		"res://assets/characters/merchant/stage/stage_0000.png",
-		"res://assets/characters/merchant/stage/stage_0001.png",
-		"res://assets/characters/merchant/stage/stage_0002.png",
-		"res://assets/characters/merchant/stage/stage_0003.png",
-		"res://assets/characters/merchant/stage/stage_0004.png",
-		"res://assets/characters/merchant/stage/stage_0005.png",
-		"res://assets/characters/merchant/stage/stage_0006.png",
-	],
-}
 const MERCHANT_FRAME_BOUNDS := {
 	"cat": Rect2(1236.0, 467.0, 293.0, 367.0),
 	"grandma": Rect2(1295.0, 459.0, 377.0, 476.0),
@@ -76,28 +57,36 @@ const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
 const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
 const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
 
-@export var hub_art_source_offset := Vector2(0.0, 14.0)
+@export var hub_art_source_offset := Vector2(0.0, 14.0):
+	set(value):
+		hub_art_source_offset = value
+		if Engine.is_editor_hint() and is_node_ready():
+			_layout_scene()
 
 @onready var book_canvas_layer: CanvasLayer = $BookCanvasLayer
 @onready var book_design_root: Control = $BookCanvasLayer/BookDesignRoot
 @onready var book_background: Control = $BookCanvasLayer/BookDesignRoot/BookBackground
 @onready var hub_art: Node2D = $HubArt
+@onready var hub_board_viewport: Control = $HubArt/BoardViewport
+@onready var hub_board_content: Node = $HubArt/BoardViewport/BoardContent
 @onready var canvas_design_root: Control = $CanvasLayer/DesignRoot
 @onready var overlay_root: Control = $CanvasLayer/OverlayRoot
 @onready var player: CharacterBody2D = $Player
 @onready var floor_body: StaticBody2D = $Floor
 @onready var interactions: Node2D = $Interactions
-@onready var room_art: Sprite2D = $HubArt/Room
-@onready var foreground_art: Sprite2D = $HubArt/Foreground
-@onready var speech_bubble: Sprite2D = $HubArt/SpeechBubble
-@onready var speech_text: Label = $HubArt/SpeechText
-@onready var dreamcatcher_net: Sprite2D = $HubArt/DreamcatcherNet
-@onready var merchant_sprite: AnimatedSprite2D = $HubArt/MerchantSprite
-@onready var merchant_button: Button = $CanvasLayer/MerchantButton
+@onready var room_art: Sprite2D = $HubArt/BoardViewport/BoardContent/Room
+@onready var foreground_art: Sprite2D = $HubArt/BoardViewport/BoardContent/Foreground
+@onready var speech_bubble: Sprite2D = $HubArt/BoardViewport/BoardContent/SpeechBubble
+@onready var speech_text: Label = $HubArt/BoardViewport/BoardContent/SpeechText
+@onready var dreamcatcher_net: Sprite2D = $HubArt/BoardViewport/BoardContent/DreamcatcherNet
+@onready var merchant_sprite: AnimatedSprite2D = $HubArt/BoardViewport/BoardContent/MerchantSprite
+@onready var merchant_button: Button = $CanvasLayer/DesignRoot/MerchantButton
 @onready var dreamcatcher_button: Button = $CanvasLayer/DesignRoot/DreamcatcherButton
 @onready var book_page_navigator: Control = $CanvasLayer/BookPageNavigator
+@onready var battle_layer: Control = get_node_or_null("CanvasLayer/" + HUB_BATTLE_LAYER_NAME) as Control
 
 var current_zone: String = ""
+var _book_origin: Vector2 = Vector2.ZERO
 var _art_origin: Vector2 = Vector2.ZERO
 var _art_scale: float = 1.0
 var _has_positioned_player := false
@@ -105,24 +94,48 @@ var _default_room_texture: Texture2D = null
 var _default_room_position := Vector2.ZERO
 var _default_room_scale := Vector2.ONE
 var _default_room_display_size := Vector2.ZERO
+var _dreamcatcher_button_source_position := Vector2.ZERO
+var _dreamcatcher_button_source_size := Vector2.ZERO
 var _merchant_frames_cache: Dictionary = {}
+var _hub_background_textures: Dictionary = {}
+var _hub_foreground_textures: Dictionary = {}
 var _pending_auto_interaction := ""
 var _is_player_at_merchant := false
 var _hub_source_size := HUB_SOURCE_SIZE
+var _hub_page_visual_root: Control = null
+var _hub_transition_player_frozen := false
+var _hub_transition_player_process_mode := Node.PROCESS_MODE_INHERIT
 var _dreamcatcher_net_base_position := Vector2.ZERO
 var _dreamcatcher_net_base_rotation := 0.0
 var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _dreamcatcher_idle_tween: Tween = null
 var _is_dreamcatcher_transition_pending := false
+var _hub_battle_manager: BattleManager = null
+var _is_hub_battle_session_active := false
+var _hub_focus_layer_base_transforms: Dictionary = {}
 
 
 func _ready() -> void:
+	_cache_layout_source_data()
+	_capture_default_hub_room_art()
+	_setup_hub_page_visual_root()
+	if Engine.is_editor_hint():
+		_sync_editor_preview_state()
+		_layout_scene()
+		return
+
+	if battle_layer != null:
+		battle_layer.visible = false
+		battle_layer.z_index = 40
+		if _has_node_property(battle_layer, "auto_initialize"):
+			battle_layer.set("auto_initialize", false)
+
 	print("[Hub] Entered dream route.")
+	_hub_background_textures = AssetPaths.load_texture_map(AssetPaths.HUB_BACKGROUND_PATHS)
+	_hub_foreground_textures = AssetPaths.load_texture_map(AssetPaths.HUB_FOREGROUND_PATHS)
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
 	GlobalAudio.play_bgm(_get_stage_bgm_key("hub_bgm_key", "hub"))
 	_hide_speech()
-	_cache_layout_source_data()
-	_capture_default_hub_room_art()
 
 	var rm = get_node_or_null("/root/RunManager")
 	if rm and rm.has_signal("route_changed"):
@@ -156,6 +169,8 @@ func _ready() -> void:
 
 
 func _process(_delta: float) -> void:
+	if Engine.is_editor_hint():
+		return
 	if not _is_book_hub_current():
 		return
 	_sync_merchant_presence_state()
@@ -201,6 +216,9 @@ func _capture_default_hub_room_art() -> void:
 
 func _cache_layout_source_data() -> void:
 	_hub_source_size = BookBackgroundConfig.DESIGN_SIZE
+	if dreamcatcher_button != null:
+		_dreamcatcher_button_source_position = dreamcatcher_button.position
+		_dreamcatcher_button_source_size = dreamcatcher_button.size
 
 
 func _apply_stage_hub_background() -> void:
@@ -238,7 +256,7 @@ func _apply_stage_hub_background() -> void:
 
 
 func _normalize_hub_background_key(key: String) -> String:
-	if HUB_BACKGROUND_TEXTURES.has(key):
+	if _hub_background_textures.has(key):
 		return key
 	return ""
 
@@ -250,7 +268,7 @@ func _get_hub_background_texture(visual: Dictionary, background_key: String) -> 
 		return configured_texture
 	if background_key == "":
 		return null
-	return HUB_BACKGROUND_TEXTURES.get(background_key, null) as Texture2D
+	return _hub_background_textures.get(background_key, null) as Texture2D
 
 
 func _get_hub_foreground_texture(visual: Dictionary, background_key: String) -> Texture2D:
@@ -259,7 +277,7 @@ func _get_hub_foreground_texture(visual: Dictionary, background_key: String) -> 
 	if configured_texture != null:
 		return configured_texture
 	var foreground_key := _normalize_hub_background_key(str(visual.get("hub_foreground_key", background_key)))
-	return HUB_FOREGROUND_TEXTURES.get(foreground_key, null) as Texture2D
+	return _hub_foreground_textures.get(foreground_key, null) as Texture2D
 
 
 func _restore_default_hub_background() -> void:
@@ -318,6 +336,14 @@ func _get_hub_dreamcatcher_scaled_offset() -> Vector2:
 		dreamcatcher_net.offset.x * dreamcatcher_net.scale.x,
 		dreamcatcher_net.offset.y * dreamcatcher_net.scale.y
 	)
+
+
+func _get_hub_dreamcatcher_focus_global_position() -> Vector2:
+	if dreamcatcher_net != null:
+		return dreamcatcher_net.to_global(dreamcatcher_net.offset)
+	if dreamcatcher_button != null:
+		return dreamcatcher_button.get_global_rect().get_center()
+	return INVALID_HUB_POINT
 
 
 func _start_hub_dreamcatcher_idle_swing() -> void:
@@ -445,7 +471,7 @@ func _apply_merchant_animation(animation_key: String) -> void:
 func _get_merchant_sprite_frames(animation_key: String) -> SpriteFrames:
 	if _merchant_frames_cache.has(animation_key):
 		return _merchant_frames_cache[animation_key] as SpriteFrames
-	var paths: Array = MERCHANT_ANIMATION_FRAME_PATHS.get(animation_key, [])
+	var paths := AssetPaths.merchant_frame_paths(animation_key)
 	if paths.is_empty():
 		return null
 	var frames := SpriteFrames.new()
@@ -455,7 +481,7 @@ func _get_merchant_sprite_frames(animation_key: String) -> SpriteFrames:
 	frames.set_animation_loop("idle", false)
 	frames.set_animation_speed("idle", MERCHANT_ANIMATION_SPEED)
 	for path in paths:
-		var texture := load(str(path)) as Texture2D
+		var texture := AssetPaths.load_texture(path)
 		if texture != null:
 			frames.add_frame("idle", texture)
 	if frames.get_frame_count("idle") <= 0:
@@ -470,8 +496,8 @@ func _layout_merchant() -> void:
 		merchant_sprite.scale = room_art.scale
 	if merchant_button == null:
 		return
-	var target := _source_rect_to_viewport(_get_merchant_interaction_source_rect())
-	merchant_button.position = target.position
+	var target := _get_merchant_interaction_source_rect()
+	merchant_button.position = target.position + hub_art_source_offset
 	merchant_button.size = target.size
 
 
@@ -490,7 +516,7 @@ func _get_merchant_interaction_source_rect() -> Rect2:
 
 func _get_merchant_interaction_viewport_rect() -> Rect2:
 	if merchant_button != null and merchant_button.size.x > 0.0 and merchant_button.size.y > 0.0:
-		return Rect2(merchant_button.position, merchant_button.size)
+		return merchant_button.get_global_rect()
 	return _source_rect_to_viewport(_get_merchant_interaction_source_rect())
 
 
@@ -601,6 +627,37 @@ func _load_texture_from_path(path: String) -> Texture2D:
 	return load(path) as Texture2D
 
 
+func _sync_editor_preview_state() -> void:
+	if book_canvas_layer != null:
+		book_canvas_layer.visible = true
+	if hub_art != null:
+		hub_art.visible = true
+	if canvas_design_root != null:
+		canvas_design_root.visible = true
+	if player != null:
+		player.visible = true
+	if floor_body != null:
+		floor_body.visible = true
+	if interactions != null:
+		interactions.visible = false
+	if book_page_navigator != null:
+		book_page_navigator.visible = false
+	if speech_bubble != null:
+		speech_bubble.visible = false
+	if speech_text != null:
+		speech_text.visible = false
+	if foreground_art != null and foreground_art.texture == null:
+		foreground_art.visible = false
+	if merchant_sprite != null:
+		merchant_sprite.visible = false
+	if merchant_button != null:
+		merchant_button.visible = false
+	if canvas_design_root != null:
+		var main_menu_button := canvas_design_root.get_node_or_null(HUB_BACK_TAB_BUTTON) as Control
+		if main_menu_button != null:
+			main_menu_button.visible = true
+
+
 func _fit_hub_room_sprite(sprite: Sprite2D, texture: Texture2D) -> void:
 	var texture_size := texture.get_size()
 	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
@@ -617,17 +674,30 @@ func _fit_hub_room_sprite(sprite: Sprite2D, texture: Texture2D) -> void:
 
 
 func _input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
 	if not GlobalInput.can_cancel():
+		return
+	if _is_hub_battle_session_active:
 		return
 
 	if not _is_book_hub_current():
+		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+			if _activate_book_page_tab_at_position(event.position):
+				get_viewport().set_input_as_handled()
+				return
 		if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
 			_open_book_page(BookPageNavigator.PAGE_HUB)
 			get_viewport().set_input_as_handled()
 		return
 
+	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
+		if _activate_left_bookmark_at_position(event.position):
+			get_viewport().set_input_as_handled()
+			return
+
 	if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
-		if overlay_root.get_child_count() > 0:
+		if _has_overlay_backpack_content():
 			_close_backpack_overlay_with_transition()
 		else:
 			_return_to_main_menu()
@@ -676,14 +746,21 @@ func _advance_current_route_by_shortcut() -> bool:
 
 
 func _unhandled_input(event: InputEvent) -> void:
+	if Engine.is_editor_hint():
+		return
+	if _is_hub_battle_session_active:
+		return
 	if not _is_book_hub_current():
 		return
-	if overlay_root.get_child_count() > 0:
+	if _has_overlay_backpack_content():
 		return
 	if not GlobalInput.is_context(GlobalInput.Context.WORLD):
 		return
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
-		if _is_point_on_left_bookmark(event.position):
+		if _activate_left_bookmark_at_position(event.position):
+			get_viewport().set_input_as_handled()
+			return
+		if _activate_hub_dreamcatcher_at_position(event.position):
 			get_viewport().set_input_as_handled()
 			return
 		_pending_auto_interaction = ""
@@ -693,11 +770,108 @@ func _unhandled_input(event: InputEvent) -> void:
 
 
 func _is_point_on_left_bookmark(point: Vector2) -> bool:
-	for path in LEFT_BOOKMARK_BUTTON_PATHS:
-		var button := get_node_or_null(path) as Control
-		if button != null and button.visible and button.get_global_rect().has_point(point):
-			return true
-	return false
+	return _get_left_bookmark_page_at_position(point) != ""
+
+
+func _activate_left_bookmark_at_position(point: Vector2) -> bool:
+	var page_id := _get_left_bookmark_page_at_position(point)
+	if page_id == "":
+		return false
+	if page_id == PAGE_MAIN_MENU:
+		_return_to_main_menu()
+	else:
+		_open_book_page(page_id)
+	return true
+
+
+func _activate_book_page_tab_at_position(point: Vector2) -> bool:
+	if book_page_navigator == null or not book_page_navigator.has_method("activate_tab_at_position"):
+		return false
+	return bool(book_page_navigator.call("activate_tab_at_position", point))
+
+
+func _activate_hub_dreamcatcher_at_position(point: Vector2) -> bool:
+	if _is_dreamcatcher_transition_pending or not _is_dreamcatcher_game_available():
+		return false
+	if not _is_point_on_hub_dreamcatcher(point):
+		return false
+	_on_dreamcatcher_button_pressed()
+	return true
+
+
+func _is_point_on_hub_dreamcatcher(point: Vector2) -> bool:
+	var visual_rect := _get_hub_dreamcatcher_global_rect()
+	if visual_rect.size.x > 1.0 and visual_rect.size.y > 1.0:
+		return visual_rect.has_point(point)
+	if dreamcatcher_button == null or not dreamcatcher_button.visible:
+		return false
+	return dreamcatcher_button.get_global_rect().has_point(point)
+
+
+func _get_hub_dreamcatcher_global_rect() -> Rect2:
+	if dreamcatcher_net == null or not dreamcatcher_net.visible:
+		return Rect2()
+	return _get_sprite_global_rect(dreamcatcher_net)
+
+
+func _get_sprite_global_rect(sprite: Sprite2D) -> Rect2:
+	if sprite == null or sprite.texture == null:
+		return Rect2()
+	var local_rect := sprite.get_rect()
+	var transform := sprite.get_global_transform()
+	return _get_aabb_from_points([
+		transform * local_rect.position,
+		transform * Vector2(local_rect.end.x, local_rect.position.y),
+		transform * local_rect.end,
+		transform * Vector2(local_rect.position.x, local_rect.end.y),
+	])
+
+
+func _get_aabb_from_points(points: Array) -> Rect2:
+	if points.is_empty():
+		return Rect2()
+	var min_position: Vector2 = points[0]
+	var max_position: Vector2 = points[0]
+	for point: Vector2 in points:
+		min_position.x = minf(min_position.x, point.x)
+		min_position.y = minf(min_position.y, point.y)
+		max_position.x = maxf(max_position.x, point.x)
+		max_position.y = maxf(max_position.y, point.y)
+	return Rect2(min_position, max_position - min_position)
+
+
+func _get_left_bookmark_page_at_position(point: Vector2) -> String:
+	if _is_book_background_child_hit("BackTab", point):
+		return PAGE_MAIN_MENU
+	for page_id in HUB_LEFT_TAB_NODES.keys():
+		var tab_node_name := str(HUB_LEFT_TAB_NODES[page_id])
+		if _is_book_background_child_hit(tab_node_name, point):
+			return str(page_id)
+	if canvas_design_root == null:
+		return ""
+	var main_menu_button := canvas_design_root.get_node_or_null(HUB_BACK_TAB_BUTTON) as Button
+	if _is_bookmark_button_hit(main_menu_button, point):
+		return PAGE_MAIN_MENU
+	for page_id in HUB_LEFT_TAB_BUTTONS.keys():
+		var button := canvas_design_root.get_node_or_null(str(HUB_LEFT_TAB_BUTTONS[page_id])) as Button
+		if _is_bookmark_button_hit(button, point):
+			return str(page_id)
+	return ""
+
+
+func _is_book_background_child_hit(child_name: String, point: Vector2) -> bool:
+	if book_background == null or child_name == "":
+		return false
+	var child := book_background.get_node_or_null(child_name) as Control
+	if child == null or not child.visible:
+		return false
+	return child.get_global_rect().has_point(point)
+
+
+func _is_bookmark_button_hit(button: Button, point: Vector2) -> bool:
+	if button == null or not button.visible or button.disabled:
+		return false
+	return button.get_global_rect().has_point(point)
 
 
 func _queue_auto_interaction(interaction: String, target_x: float) -> void:
@@ -735,7 +909,7 @@ func _source_x_to_viewport(source_x: float) -> float:
 
 func _get_merchant_interaction_target_x() -> float:
 	if merchant_button != null and merchant_button.size.x > 0.0:
-		return merchant_button.position.x + merchant_button.size.x * 0.5
+		return merchant_button.get_global_rect().get_center().x
 	return _source_rect_to_viewport(_get_merchant_interaction_source_rect()).get_center().x
 
 
@@ -757,16 +931,311 @@ func _enter_route_node(index: int) -> void:
 
 	# 获取点击的位置作为缩放中心（捕梦网）
 	var dreamcatcher_uv := Vector2(0.5, 0.5)
-	if dreamcatcher_button != null:
-		var btn_pos = dreamcatcher_button.global_position + dreamcatcher_button.size * 0.5
-		var viewport_size = get_viewport_rect().size
-		dreamcatcher_uv = btn_pos / viewport_size
+	var dreamcatcher_focus := _get_hub_dreamcatcher_focus_global_position()
+	if _is_valid_hub_point(dreamcatcher_focus):
+		var focus_viewport_size = get_viewport_rect().size
+		dreamcatcher_uv = dreamcatcher_focus / focus_viewport_size
 
-	# 设定入场动画的聚焦目标：更靠右下角
-	# 这样在缩放时，原本处于中心偏左位置的捕梦网会被挤压到右上角
 	var end_focus := Vector2(0.85, 0.82)
+	var battle_focus_target := _get_hub_battle_stats_target_global_position()
+	if _is_valid_hub_point(battle_focus_target):
+		var target_viewport_size = get_viewport_rect().size
+		end_focus = battle_focus_target / target_viewport_size
 
-	GlobalScene.transition_with_zoom(rm.get_current_node_scene_type(), dreamcatcher_uv, end_focus)
+	var target_scene: int = rm.get_current_node_scene_type()
+	var route_node_type := str(rm.get_current_route_node_type()) if rm.has_method("get_current_route_node_type") else ""
+	var is_battle_route := target_scene == GlobalScene.SceneType.BATTLE or RouteConfig.is_battle_node_type(route_node_type)
+	var target_scene_name := str(target_scene)
+	if target_scene >= 0 and target_scene < GlobalScene.SceneType.keys().size():
+		target_scene_name = str(GlobalScene.SceneType.keys()[target_scene])
+	print(
+		"[Hub] Entering route node. target_scene=", target_scene_name,
+		", route_node_type=", route_node_type,
+		", is_battle_route=", is_battle_route,
+		", rm_can_enter=", rm.can_enter_route_node(index)
+	)
+	if is_battle_route:
+		print("[Hub] Battle node: starting battle inside hub scene without scene transition.")
+		await _play_hub_to_battle_focus(dreamcatcher_uv, end_focus)
+		if not is_inside_tree():
+			return
+		await _open_hub_battle_session()
+	else:
+		print("[Hub] Non-battle node: fallback to SceneManager transition.")
+		GlobalScene.transition_with_zoom(target_scene, dreamcatcher_uv, end_focus)
+
+
+func _open_hub_battle_session() -> void:
+	if battle_layer == null:
+		push_warning("[Hub] BattleLayer is missing; cannot start battle inside hub.")
+		_return_dreamcatcher_to_ready_state()
+		return
+
+	if _is_hub_battle_session_active:
+		battle_layer.visible = true
+		return
+
+	_clear_overlay_children(true)
+	if battle_layer.has_method("use_hub_dreamcatcher"):
+		battle_layer.call("use_hub_dreamcatcher", dreamcatcher_net, dreamcatcher_button)
+	_set_hub_chrome_visible_for_battle(false)
+
+	if _has_node_property(battle_layer, "auto_initialize"):
+		battle_layer.set("auto_initialize", false)
+
+	var battle_manager := BattleManager.new()
+	_remove_hub_battle_runtime_children()
+	battle_layer.add_child(battle_manager)
+	_hub_battle_manager = battle_manager
+	battle_layer.z_index = 40
+	battle_layer.visible = true
+	_is_hub_battle_session_active = true
+
+	if battle_layer.has_method("setup"):
+		battle_layer.call("setup", battle_manager, Callable(self, "_on_hub_battle_session_closed"))
+	else:
+		push_warning("[Hub] BattleLayer does not expose setup().")
+		_cleanup_hub_battle_session()
+		_return_dreamcatcher_to_ready_state()
+
+
+func _on_hub_battle_session_closed(target_scene: int) -> void:
+	var next_scene = target_scene
+	if next_scene == -1:
+		next_scene = GlobalScene.SceneType.HUB
+
+	_cleanup_hub_battle_session()
+	_return_dreamcatcher_to_ready_state()
+
+	if next_scene == GlobalScene.SceneType.MAIN_MENU:
+		_transition_from_hub(next_scene, false)
+		return
+
+	_layout_scene()
+
+
+func _cleanup_hub_battle_session(do_persist_backpack: bool = true) -> void:
+	if _hub_battle_manager != null and is_instance_valid(_hub_battle_manager):
+		if do_persist_backpack and _hub_battle_manager.has_method("persist_backpack_to_run"):
+			_hub_battle_manager.persist_backpack_to_run()
+		_hub_battle_manager.queue_free()
+	_hub_battle_manager = null
+	_remove_hub_battle_runtime_children()
+	_is_hub_battle_session_active = false
+	if battle_layer != null:
+		battle_layer.visible = false
+
+
+func _remove_hub_battle_runtime_children() -> void:
+	if battle_layer == null or not is_instance_valid(battle_layer):
+		return
+	for child in battle_layer.get_children():
+		if child.name != "ContentLayer":
+			child.queue_free()
+
+
+func _set_hub_chrome_visible_for_battle(is_visible: bool) -> void:
+	if canvas_design_root != null:
+		canvas_design_root.visible = is_visible
+	if player != null:
+		player.visible = is_visible
+		if not is_visible and player.has_method("clear_move_target"):
+			player.clear_move_target()
+	if floor_body != null:
+		floor_body.visible = is_visible
+	if merchant_button != null:
+		merchant_button.visible = is_visible and _should_show_merchant()
+	if is_visible:
+		_restore_hub_focus_layer_base_transforms()
+		_layout_scene()
+		_update_merchant_state()
+		_update_dreamcatcher_state()
+		_start_hub_dreamcatcher_idle_swing()
+	else:
+		_pending_auto_interaction = ""
+		_stop_hub_dreamcatcher_idle_swing()
+		_update_dreamcatcher_state()
+
+
+func _return_dreamcatcher_to_ready_state() -> void:
+	_is_dreamcatcher_transition_pending = false
+	_update_dreamcatcher_state()
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+	_set_hub_chrome_visible_for_battle(true)
+
+
+func _has_overlay_backpack_content() -> bool:
+	if overlay_root == null:
+		return false
+	return overlay_root.get_child_count() > 0
+
+
+func _has_node_property(node: Object, property_name: String) -> bool:
+	for property in node.get_property_list():
+		if str(property.get("name", "")) == property_name:
+			return true
+	return false
+
+
+func _clear_overlay_children(do_persist_backpack: bool = true) -> void:
+	if overlay_root == null:
+		return
+	for child in overlay_root.get_children():
+		if do_persist_backpack:
+			var manager = child.get("battle_manager")
+			if manager != null and manager.has_method("persist_backpack_to_run"):
+				manager.persist_backpack_to_run()
+		child.queue_free()
+
+
+func _play_hub_to_battle_focus(start_focus_uv: Vector2, end_focus_uv: Vector2, duration: float = HUB_TO_BATTLE_FOCUS_DURATION) -> void:
+	if Engine.is_editor_hint() or not is_inside_tree():
+		return
+	_stop_hub_dreamcatcher_idle_swing()
+	var viewport_size := _validated_layout_viewport_size(get_viewport_rect().size)
+	var start_focus := start_focus_uv * viewport_size
+	var end_focus := end_focus_uv * viewport_size
+	var focus_nodes := _get_hub_to_battle_focus_layers()
+	var focus_scale := _get_hub_to_battle_focus_scale(start_focus)
+	_capture_hub_focus_layer_base_transforms(focus_nodes)
+	if duration <= 0.0:
+		for node in focus_nodes:
+			_apply_hub_focus_node(node, start_focus, end_focus, focus_scale)
+		return
+
+	var tween := create_tween()
+	tween.set_parallel(true)
+	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
+	for node in focus_nodes:
+		_tween_hub_focus_node(tween, node, start_focus, end_focus, focus_scale, duration)
+	await tween.finished
+
+
+func _tween_hub_focus_node(tween: Tween, node: Node, focus_point: Vector2, target_point: Vector2, focus_scale: Vector2, duration: float) -> void:
+	if node == null:
+		return
+	var canvas_item := node as CanvasItem
+	if canvas_item == null or not canvas_item.visible:
+		return
+	var current_scale: Vector2 = node.get("scale")
+	var target_scale := Vector2(current_scale.x * focus_scale.x, current_scale.y * focus_scale.y)
+	var target_position := _get_hub_focus_target_local_position(canvas_item, focus_point, target_point, target_scale)
+	tween.tween_property(node, "position", target_position, duration)
+	tween.tween_property(node, "scale", target_scale, duration)
+
+
+func _apply_hub_focus_node(node: Node, focus_point: Vector2, target_point: Vector2, focus_scale: Vector2) -> void:
+	if node == null:
+		return
+	var canvas_item := node as CanvasItem
+	if canvas_item == null or not canvas_item.visible:
+		return
+	var current_scale: Vector2 = node.get("scale")
+	var target_scale := Vector2(current_scale.x * focus_scale.x, current_scale.y * focus_scale.y)
+	node.set("position", _get_hub_focus_target_local_position(canvas_item, focus_point, target_point, target_scale))
+	node.set("scale", target_scale)
+
+
+func _get_hub_focus_target_local_position(canvas_item: CanvasItem, focus_point: Vector2, target_point: Vector2, target_scale: Vector2) -> Vector2:
+	if canvas_item == hub_board_content:
+		var parent_canvas := canvas_item.get_parent() as CanvasItem
+		if parent_canvas != null:
+			var focus_local := canvas_item.get_global_transform().affine_inverse() * focus_point
+			var target_parent_position := parent_canvas.get_global_transform().affine_inverse() * target_point
+			return target_parent_position - Vector2(focus_local.x * target_scale.x, focus_local.y * target_scale.y)
+
+	var current_global_position := canvas_item.get_global_transform().origin
+	var mirrored_focus_target := focus_point - (target_point - focus_point)
+	var fallback_zoom := (target_scale.x + target_scale.y) * 0.5
+	var target_global_position := mirrored_focus_target + (current_global_position - focus_point) * fallback_zoom
+	var fallback_parent_canvas := canvas_item.get_parent() as CanvasItem
+	if fallback_parent_canvas == null:
+		return target_global_position
+	return fallback_parent_canvas.get_global_transform().affine_inverse() * target_global_position
+
+
+func _get_hub_to_battle_focus_zoom(focus_point: Vector2) -> float:
+	return HUB_TO_BATTLE_FOCUS_ZOOM if _is_valid_hub_point(focus_point) else HUB_TO_BATTLE_MIN_FOCUS_ZOOM
+
+
+func _get_hub_to_battle_focus_scale(focus_point: Vector2) -> Vector2:
+	var zoom := _get_hub_to_battle_focus_zoom(focus_point)
+	return Vector2(zoom, zoom)
+
+
+func _get_hub_battle_stats_target_global_position() -> Vector2:
+	if battle_layer == null:
+		return INVALID_HUB_POINT
+	var stats_panel := battle_layer.get_node_or_null("ContentLayer/StatsPanel") as Control
+	if stats_panel == null:
+		return INVALID_HUB_POINT
+	var stats_rect := stats_panel.get_global_rect()
+	if stats_rect.size.x <= 0.0 or stats_rect.size.y <= 0.0:
+		return INVALID_HUB_POINT
+	return Vector2(
+		stats_rect.get_center().x,
+		stats_rect.position.y - HUB_TO_BATTLE_STATS_TARGET_TOP_GAP * _art_scale
+	)
+
+
+func _is_valid_hub_point(point: Vector2) -> bool:
+	return absf(point.x) < INVALID_HUB_POINT.x * 0.5 and absf(point.y) < INVALID_HUB_POINT.y * 0.5
+
+
+func _get_hub_to_battle_focus_layers() -> Array[Node]:
+	var layers: Array[Node] = []
+	if hub_board_content != null:
+		layers.append(hub_board_content)
+	return layers
+
+
+func _is_hub_board_focus_item(canvas_item: CanvasItem) -> bool:
+	if canvas_item == null or hub_board_content == null:
+		return false
+	if canvas_item == hub_board_content:
+		return true
+	var parent := canvas_item.get_parent()
+	while parent != null:
+		if parent == hub_board_content:
+			return true
+		parent = parent.get_parent()
+	return false
+
+
+func _capture_hub_focus_layer_base_transforms(nodes: Array[Node]) -> void:
+	_hub_focus_layer_base_transforms.clear()
+	for node in nodes:
+		if node == null or not is_instance_valid(node):
+			continue
+		var layer_transform := {
+			"node": node,
+			"position": node.get("position"),
+			"scale": node.get("scale"),
+		}
+		if _has_node_property(node, "rotation"):
+			layer_transform["rotation"] = node.get("rotation")
+		if _has_node_property(node, "offset"):
+			layer_transform["offset"] = node.get("offset")
+		_hub_focus_layer_base_transforms[node.get_instance_id()] = layer_transform
+
+
+func _restore_hub_focus_layer_base_transforms() -> void:
+	for layer_transform in _hub_focus_layer_base_transforms.values():
+		if not (layer_transform is Dictionary):
+			continue
+		var node := layer_transform.get("node", null) as Node
+		if node == null or not is_instance_valid(node):
+			continue
+		if layer_transform.has("position"):
+			node.set("position", layer_transform["position"])
+		if layer_transform.has("scale"):
+			node.set("scale", layer_transform["scale"])
+		if layer_transform.has("rotation"):
+			node.set("rotation", layer_transform["rotation"])
+		if layer_transform.has("offset"):
+			node.set("offset", layer_transform["offset"])
+	_hub_focus_layer_base_transforms.clear()
+
 
 func _lock_before_transition() -> void:
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
@@ -884,13 +1353,79 @@ func _is_book_hub_current() -> bool:
 	return bool(book_page_navigator.is_hub_current())
 
 
+func get_book_hub_transition_layer() -> Control:
+	_setup_hub_page_visual_root()
+	_layout_hub_page_visual_root(_get_layout_viewport_size())
+	return _hub_page_visual_root
+
+
+func set_book_hub_transition_frozen(frozen: bool) -> void:
+	if player == null:
+		return
+	if frozen:
+		if _hub_transition_player_frozen:
+			return
+		_hub_transition_player_frozen = true
+		_hub_transition_player_process_mode = player.process_mode
+		if player.has_method("clear_move_target"):
+			player.clear_move_target()
+		player.process_mode = Node.PROCESS_MODE_DISABLED
+		return
+	if not _hub_transition_player_frozen:
+		return
+	player.process_mode = _hub_transition_player_process_mode
+	_hub_transition_player_frozen = false
+
+
+func get_book_hub_transition_layers() -> Array[Node]:
+	var layers: Array[Node] = []
+	var hub_page_layer := get_book_hub_transition_layer()
+	if hub_page_layer != null:
+		layers.append(hub_page_layer)
+	return layers
+
+
+func _setup_hub_page_visual_root() -> void:
+	if _hub_page_visual_root != null and is_instance_valid(_hub_page_visual_root):
+		return
+	var root := Control.new()
+	root.name = "HubPageVisualRoot"
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.clip_contents = false
+	root.visible = true
+	add_child(root)
+	_hub_page_visual_root = root
+	for node in [hub_art, player]:
+		var visual_node := node as Node
+		if visual_node == null or not is_instance_valid(visual_node):
+			continue
+		if visual_node.get_parent() == root:
+			continue
+		visual_node.reparent(root, true)
+
+
+func _layout_hub_page_visual_root(viewport_size: Vector2) -> void:
+	if _hub_page_visual_root == null or not is_instance_valid(_hub_page_visual_root):
+		return
+	_hub_page_visual_root.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	_hub_page_visual_root.position = Vector2.ZERO
+	_hub_page_visual_root.size = viewport_size
+	_hub_page_visual_root.scale = Vector2.ONE
+	_hub_page_visual_root.pivot_offset = Vector2(viewport_size.x, 0.0)
+
+
 func set_book_hub_visible(page_visible: bool) -> void:
+	_setup_hub_page_visual_root()
+	if _hub_page_visual_root != null:
+		_hub_page_visual_root.visible = page_visible
 	if book_canvas_layer != null:
 		book_canvas_layer.visible = page_visible
+	if book_design_root != null:
+		book_design_root.visible = true
 	if hub_art != null:
-		hub_art.visible = page_visible
+		hub_art.visible = true
 	if player != null:
-		player.visible = page_visible
+		player.visible = true
 		if not page_visible and player.has_method("clear_move_target"):
 			player.clear_move_target()
 	if floor_body != null:
@@ -917,10 +1452,10 @@ func _open_backpack_overlay_with_transition() -> void:
 func _open_backpack_overlay() -> void:
 	print("[Hub] 正在打开背包浮层...")
 	GlobalInput.set_context(GlobalInput.Context.UI)
-	var ui_scene = load("res://src/ui/main_game_ui.tscn")
+	var ui_scene = load("res://src/ui/backpack/backpack_page.tscn")
 	var overlay = ui_scene.instantiate()
 	if overlay.has_method("configure_for_backpack_overlay"):
-		overlay.configure_for_backpack_overlay(_close_backpack_overlay_with_transition)
+		overlay.configure_for_backpack_overlay(Callable(self, "_return_to_main_menu"))
 	overlay_root.add_child(overlay)
 
 
@@ -933,22 +1468,40 @@ func _close_backpack_overlay_with_transition() -> void:
 func _close_backpack_overlay() -> void:
 	print("[Hub] 正在关闭背包浮层")
 	for child in overlay_root.get_children():
-		if child.has_method("_on_menu_button_pressed") and child.get("battle_manager") != null:
-			var manager = child.get("battle_manager")
-			if manager and manager.has_method("persist_backpack_to_run"):
-				manager.persist_backpack_to_run()
+		var manager = child.get("battle_manager")
+		if manager != null and manager.has_method("persist_backpack_to_run"):
+			manager.persist_backpack_to_run()
 		child.queue_free()
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
 
 func _layout_scene() -> void:
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = Vector2(1280.0, 720.0)
+	var viewport_size := _get_layout_viewport_size()
+	if Engine.is_editor_hint():
+		_has_positioned_player = false
+	_layout_hub_page_visual_root(viewport_size)
 	_layout_hub_art(viewport_size)
 	_layout_book_design_root()
 	_layout_canvas_design_root()
 	_layout_player_and_floor(viewport_size)
 	_layout_merchant()
+
+
+func _get_layout_viewport_size() -> Vector2:
+	if Engine.is_editor_hint():
+		var width := DEFAULT_VIEWPORT_SIZE.x
+		var height := DEFAULT_VIEWPORT_SIZE.y
+		if ProjectSettings.has_setting("display/window/size/viewport_width"):
+			width = float(ProjectSettings.get_setting("display/window/size/viewport_width"))
+		if ProjectSettings.has_setting("display/window/size/viewport_height"):
+			height = float(ProjectSettings.get_setting("display/window/size/viewport_height"))
+		return _validated_layout_viewport_size(Vector2(width, height))
+	return _validated_layout_viewport_size(get_viewport_rect().size)
+
+
+func _validated_layout_viewport_size(viewport_size: Vector2) -> Vector2:
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return DEFAULT_VIEWPORT_SIZE
+	return viewport_size
 
 
 func _layout_hub_art(viewport_size: Vector2) -> void:
@@ -957,26 +1510,156 @@ func _layout_hub_art(viewport_size: Vector2) -> void:
 		viewport_size.y / _hub_source_size.y
 	)
 	var displayed_size := _hub_source_size * _art_scale
-	_art_origin = (viewport_size - displayed_size) * 0.5 + hub_art_source_offset * _art_scale
+	_book_origin = (viewport_size - displayed_size) * 0.5
+	_art_origin = _book_origin + hub_art_source_offset * _art_scale
 	if hub_art != null:
 		hub_art.position = _art_origin
 		hub_art.scale = Vector2(_art_scale, _art_scale)
+	if hub_board_viewport != null:
+		var clip_rect := _get_hub_art_source_clip_rect()
+		hub_board_viewport.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		hub_board_viewport.position = clip_rect.position
+		hub_board_viewport.size = clip_rect.size
+		hub_board_viewport.clip_contents = true
+		hub_board_viewport.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if hub_board_content != null:
+			var board_content_control := hub_board_content as Control
+			if board_content_control != null:
+				board_content_control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+				board_content_control.position = -clip_rect.position
+				board_content_control.size = _hub_source_size
+				board_content_control.pivot_offset = clip_rect.end
+			else:
+				var board_content_node_2d := hub_board_content as Node2D
+				if board_content_node_2d != null:
+					board_content_node_2d.position = -clip_rect.position
+
+
+func _get_hub_art_source_clip_rect() -> Rect2:
+	var has_clip_rect := false
+	var clip_rect := Rect2(Vector2.ZERO, _hub_source_size)
+	if hub_art == null:
+		return clip_rect
+	for child_name in ["CornerTopLeft", "CornerTopRight", "CornerBottomLeft", "CornerBottomRight"]:
+		var sprite := hub_art.get_node_or_null(child_name) as Sprite2D
+		if sprite == null or sprite.texture == null:
+			continue
+		var sprite_rect := _get_sprite_parent_rect(sprite)
+		if not has_clip_rect:
+			clip_rect = sprite_rect
+			has_clip_rect = true
+		else:
+			clip_rect = clip_rect.merge(sprite_rect)
+	return clip_rect if has_clip_rect else Rect2(Vector2.ZERO, _hub_source_size)
+
+
+func _get_sprite_parent_rect(sprite: Sprite2D) -> Rect2:
+	var texture_size := sprite.texture.get_size()
+	var local_origin := sprite.offset
+	if sprite.centered:
+		local_origin -= texture_size * 0.5
+	var points := [
+		sprite.transform * local_origin,
+		sprite.transform * (local_origin + Vector2(texture_size.x, 0.0)),
+		sprite.transform * (local_origin + texture_size),
+		sprite.transform * (local_origin + Vector2(0.0, texture_size.y)),
+	]
+	var rect := Rect2(points[0], Vector2.ZERO)
+	for index in range(1, points.size()):
+		rect = rect.expand(points[index])
+	return rect
+
 
 func _layout_book_design_root() -> void:
 	if book_design_root == null:
 		return
 	book_design_root.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	book_design_root.position = _art_origin
+	book_design_root.position = _book_origin
 	book_design_root.size = _hub_source_size
 	book_design_root.scale = Vector2(_art_scale, _art_scale)
+	if book_background != null:
+		book_background.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+		book_background.position = Vector2.ZERO
+		book_background.size = _hub_source_size
+		book_background.scale = Vector2.ONE
 
 func _layout_canvas_design_root() -> void:
 	if canvas_design_root == null:
 		return
 	canvas_design_root.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	canvas_design_root.position = _art_origin
+	canvas_design_root.position = _book_origin
 	canvas_design_root.size = _hub_source_size
 	canvas_design_root.scale = Vector2(_art_scale, _art_scale)
+	_layout_hub_back_tab_button()
+	_layout_hub_left_tab_buttons()
+	_layout_hub_world_buttons()
+
+
+func _layout_hub_back_tab_button() -> void:
+	if canvas_design_root == null:
+		return
+	var button := canvas_design_root.get_node_or_null(HUB_BACK_TAB_BUTTON) as Control
+	if button == null:
+		return
+	var rect := _get_book_background_child_rect("BackTab", BookBackgroundConfig.get_back_tab_rect())
+	button.position = rect.position
+	button.size = rect.size
+	button.visible = true
+
+
+func _layout_hub_left_tab_buttons() -> void:
+	if canvas_design_root == null:
+		return
+	for page_id in HUB_LEFT_TAB_BUTTONS.keys():
+		var button := canvas_design_root.get_node_or_null(str(HUB_LEFT_TAB_BUTTONS[page_id])) as Control
+		if button == null:
+			continue
+		var tab_node_name := str(HUB_LEFT_TAB_NODES.get(BookBackgroundConfig.normalize_page_id(str(page_id)), ""))
+		var rect := _get_book_background_child_rect(tab_node_name, BookBackgroundConfig.get_tab_rect(str(page_id), BookBackgroundConfig.PAGE_HUB))
+		button.position = rect.position
+		button.size = rect.size
+
+
+func _get_book_background_child_rect(child_name: String, fallback_rect: Rect2) -> Rect2:
+	if book_background == null or child_name == "":
+		return fallback_rect
+	var child := book_background.get_node_or_null(child_name) as Control
+	if child == null:
+		return fallback_rect
+	var global_rect := child.get_global_rect()
+	if global_rect.size.x <= 1.0 or global_rect.size.y <= 1.0:
+		return fallback_rect
+	var inverse_transform := canvas_design_root.get_global_transform().affine_inverse()
+	var local_position := (inverse_transform * global_rect.position).round()
+	var local_end := (inverse_transform * global_rect.end).round()
+	return Rect2(local_position, local_end - local_position)
+
+
+func _layout_hub_world_buttons() -> void:
+	if dreamcatcher_button != null:
+		var dreamcatcher_rect := _get_hub_dreamcatcher_button_local_rect()
+		if dreamcatcher_rect.size.x > 1.0 and dreamcatcher_rect.size.y > 1.0:
+			dreamcatcher_button.position = dreamcatcher_rect.position
+			dreamcatcher_button.size = dreamcatcher_rect.size
+		else:
+			dreamcatcher_button.position = _dreamcatcher_button_source_position + hub_art_source_offset
+			dreamcatcher_button.size = _dreamcatcher_button_source_size
+
+
+func _get_hub_dreamcatcher_button_local_rect() -> Rect2:
+	if canvas_design_root == null:
+		return Rect2()
+	var global_rect := _get_hub_dreamcatcher_global_rect()
+	if global_rect.size.x <= 1.0 or global_rect.size.y <= 1.0:
+		return Rect2()
+	return _global_rect_to_canvas_design_rect(global_rect)
+
+
+func _global_rect_to_canvas_design_rect(global_rect: Rect2) -> Rect2:
+	var inverse_transform := canvas_design_root.get_global_transform().affine_inverse()
+	var local_position := (inverse_transform * global_rect.position).round()
+	var local_end := (inverse_transform * global_rect.end).round()
+	return Rect2(local_position, local_end - local_position)
 
 
 func _layout_player_and_floor(viewport_size: Vector2) -> void:
@@ -988,7 +1671,7 @@ func _layout_player_and_floor(viewport_size: Vector2) -> void:
 
 	var min_x := _art_origin.x + PLAYER_WALK_MIN_SOURCE_X * _art_scale
 	var max_x := _art_origin.x + PLAYER_WALK_MAX_SOURCE_X * _art_scale
-	if player.has_method("set_walk_bounds"):
+	if not Engine.is_editor_hint() and player.has_method("set_walk_bounds"):
 		player.set_walk_bounds(min_x, max_x)
 
 	if not _has_positioned_player:

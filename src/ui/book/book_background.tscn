@@ -36,9 +36,9 @@ stretch_mode = 0
 z_index = -90
 layout_mode = 0
 offset_left = 32.0
-offset_top = 38.0
+offset_top = 20.0
 offset_right = 1948.0
-offset_bottom = 1085.0
+offset_bottom = 1120.0
 mouse_filter = 2
 texture = ExtResource("3_cover")
 expand_mode = 1
@@ -57,13 +57,14 @@ expand_mode = 1
 stretch_mode = 0
 
 [node name="PageRouteCover" type="TextureRect" parent="."]
-modulate = Color(0.66, 0.6, 0.52, 1)
+modulate = Color(1, 1, 1, 1)
 z_index = 4
+scale = Vector2(1.025, 1)
 layout_mode = 0
 offset_left = 102.0
-offset_top = -8.0
+offset_top = 18.0
 offset_right = 1772.0
-offset_bottom = 1072.0
+offset_bottom = 1098.0
 mouse_filter = 2
 texture = ExtResource("4_page")
 expand_mode = 1
@@ -81,13 +82,14 @@ expand_mode = 1
 stretch_mode = 0
 
 [node name="PageBackpackCover" type="TextureRect" parent="."]
-modulate = Color(0.76, 0.7, 0.61, 1)
+modulate = Color(1, 1, 1, 1)
 z_index = 6
+scale = Vector2(1.017, 1)
 layout_mode = 0
 offset_left = 116.0
-offset_top = 2.0
+offset_top = 18.0
 offset_right = 1786.0
-offset_bottom = 1082.0
+offset_bottom = 1098.0
 mouse_filter = 2
 texture = ExtResource("4_page")
 expand_mode = 1
@@ -105,13 +107,14 @@ expand_mode = 1
 stretch_mode = 0
 
 [node name="PageMiddle" type="TextureRect" parent="."]
-modulate = Color(0.86, 0.79, 0.68, 1)
+modulate = Color(1, 1, 1, 1)
 z_index = 8
+scale = Vector2(1.008, 1)
 layout_mode = 0
 offset_left = 130.0
-offset_top = 10.0
+offset_top = 18.0
 offset_right = 1800.0
-offset_bottom = 1090.0
+offset_bottom = 1098.0
 mouse_filter = 2
 texture = ExtResource("4_page")
 expand_mode = 1
