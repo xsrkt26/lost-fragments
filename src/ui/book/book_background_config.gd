@@ -31,6 +31,31 @@ const TAB_Z_INDEX := {
 
 const ACTIVE_LEFT_TAB_Z_INDEX := 11
 const RIGHT_TAB_Z_INDEX := 12
+const BACK_TAB_Z_INDEX := 1
+const BOOK_PAGE_NAVIGATOR_Z_INDEX := 30
+
+# Z-index ranges for all book pages. Keep page-owned content below navigation
+# and transition effects so slow page changes never reveal target page text above
+# the moving source page.
+const Z_RANGE_BOOK_ART := Vector2i(-100, 99)
+const Z_RANGE_PAGE_CONTENT := Vector2i(100, 999)
+const Z_RANGE_PAGE_FLOATING := Vector2i(1000, 1999)
+const Z_RANGE_BOOK_NAVIGATION := Vector2i(2000, 2899)
+const Z_RANGE_BOOK_TRANSITION := Vector2i(3000, 3099)
+const PAGE_LOCAL_Z_RANGE := Vector2i(Z_RANGE_BOOK_ART.x, Z_RANGE_PAGE_FLOATING.y)
+const PAGE_ROOT_Z_INDEX := 1
+const PAGE_CONTENT_Z_INDEX := 100
+const PAGE_CONTROL_Z_INDEX := 110
+const PAGE_FLOATING_Z_INDEX := 120
+const PAGE_TURN_EFFECT_Z_INDEX := 3000
+const NAV_TAB_BUTTON_Z_INDEX := 3002
+
+const PAGE_Z_RANGES := {
+	PAGE_HUB: PAGE_LOCAL_Z_RANGE,
+	PAGE_GALLERY: PAGE_LOCAL_Z_RANGE,
+	PAGE_BACKPACK: PAGE_LOCAL_Z_RANGE,
+	PAGE_SETTINGS: PAGE_LOCAL_Z_RANGE,
+}
 
 # Visible sheets include the current page and the pages behind it.
 const PAGE_SHEET_COUNT := {
@@ -46,6 +71,7 @@ const TAB_SOURCE_RECTS := {
 	PAGE_GALLERY: Rect2(0.0, 399.0, 255.0, 183.0),
 	PAGE_SETTINGS: Rect2(0.0, 497.0, 222.0, 186.0),
 }
+const BACK_TAB_RECT := Rect2(4.0, 84.0, 207.0, 161.0)
 
 const RIGHT_TAB_X := {
 	PAGE_HUB: 1604.0,
@@ -72,6 +98,22 @@ static func get_tab_z_index(page_id: String, active_page_id: String = "") -> int
 
 static func get_right_tab_z_index() -> int:
 	return RIGHT_TAB_Z_INDEX
+
+
+static func get_back_tab_z_index() -> int:
+	return BACK_TAB_Z_INDEX
+
+
+static func get_back_tab_rect() -> Rect2:
+	return BACK_TAB_RECT
+
+
+static func get_page_z_range(page_id: String) -> Vector2i:
+	return PAGE_Z_RANGES[normalize_page_id(page_id)]
+
+
+static func is_z_index_in_range(z_index: int, z_range: Vector2i) -> bool:
+	return z_index >= z_range.x and z_index <= z_range.y
 
 
 static func should_place_tab_on_right(page_id: String, active_page_id: String) -> bool:

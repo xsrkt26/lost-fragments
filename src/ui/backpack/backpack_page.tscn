@@ -1,0 +1,237 @@
+[gd_scene format=3 uid="uid://bnn5527sqmg38"]
+
+[ext_resource type="Script" uid="uid://ves5pvmh4q3g" path="res://src/ui/backpack/backpack_page.gd" id="1_script"]
+[ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="2_book_background"]
+[ext_resource type="PackedScene" path="res://src/ui/backpack/backpack_ui.tscn" id="3_backpack_ui"]
+[ext_resource type="Script" uid="uid://d7cu15ck1v5q" path="res://src/battle/battle_manager.gd" id="4_battle_manager"]
+[ext_resource type="Texture2D" uid="uid://b3h5et8toys77" path="res://assets/ui/backpack/bag_base.png" id="5_bag_base"]
+[ext_resource type="Texture2D" uid="uid://b1oipoabbvudc" path="res://assets/ui/backpack/bag_patch.png" id="6_bag_patch"]
+[ext_resource type="Texture2D" uid="uid://dng0hj676ssu8" path="res://assets/ui/backpack/ornament_bar.png" id="7_ornament_bar"]
+[ext_resource type="Texture2D" uid="uid://c3gtn5fsmfrnd" path="res://assets/ui/backpack/stats_paper.png" id="8_stats_paper"]
+[ext_resource type="Texture2D" uid="uid://401y561jeyi7" path="res://assets/ui/backpack/trash_icon.png" id="9_trash_icon"]
+
+[sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
+bg_color = Color(1, 1, 1, 0)
+
+[node name="BackpackPage" type="Control" unique_id=1244634137]
+layout_mode = 3
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+script = ExtResource("1_script")
+
+[node name="BattleManager" type="Node" parent="." unique_id=2078376174]
+script = ExtResource("4_battle_manager")
+
+[node name="ContentLayer" type="Control" parent="." unique_id=288401625]
+custom_minimum_size = Vector2(1920, 1080)
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+
+[node name="BackpackArt" parent="ContentLayer" unique_id=1669857390 instance=ExtResource("2_book_background")]
+layout_mode = 1
+anchors_preset = 0
+anchor_right = 0.0
+anchor_bottom = 0.0
+offset_right = 1920.0
+offset_bottom = 1080.0
+grow_horizontal = 1
+grow_vertical = 1
+active_page_id = "backpack"
+
+[node name="BagBase" type="TextureRect" parent="ContentLayer/BackpackArt" unique_id=519242426]
+z_index = 14
+layout_mode = 0
+offset_left = 186.0
+offset_top = 154.0
+offset_right = 1011.0
+offset_bottom = 1061.0
+mouse_filter = 2
+texture = ExtResource("5_bag_base")
+expand_mode = 1
+
+[node name="BagPatch" type="TextureRect" parent="ContentLayer/BackpackArt" unique_id=2049224224]
+z_index = 15
+layout_mode = 0
+offset_left = 242.0
+offset_top = 389.0
+offset_right = 927.0
+offset_bottom = 1010.0
+mouse_filter = 2
+texture = ExtResource("6_bag_patch")
+expand_mode = 1
+
+[node name="OrnamentBar" type="TextureRect" parent="ContentLayer/BackpackArt" unique_id=1407990825]
+z_index = 15
+layout_mode = 0
+offset_left = 237.00003
+offset_top = 102.0
+offset_right = 557.0
+offset_bottom = 234.0
+scale = Vector2(2.2215123, 2.115785)
+mouse_filter = 2
+texture = ExtResource("7_ornament_bar")
+expand_mode = 1
+
+[node name="StatsPaper" type="TextureRect" parent="ContentLayer/BackpackArt" unique_id=762575332]
+z_index = 15
+layout_mode = 0
+offset_left = 968.0
+offset_top = 617.0
+offset_right = 1616.0
+offset_bottom = 1033.0
+scale = Vector2(1.2931652, 1)
+mouse_filter = 2
+texture = ExtResource("8_stats_paper")
+expand_mode = 1
+
+[node name="TrashIcon" type="TextureRect" parent="ContentLayer/BackpackArt" unique_id=2048425014]
+z_index = 16
+layout_mode = 0
+offset_left = 1469.0
+offset_top = 672.0
+offset_right = 1632.0
+offset_bottom = 815.0
+mouse_filter = 2
+texture = ExtResource("9_trash_icon")
+expand_mode = 1
+
+[node name="GridPanel" type="Control" parent="ContentLayer" unique_id=671164080]
+z_index = 100
+anchors_preset = 0
+offset_left = 230.0
+offset_top = 190.0
+offset_right = 945.0
+offset_bottom = 1036.0
+mouse_filter = 2
+
+[node name="BackpackUI" parent="ContentLayer/GridPanel" unique_id=1592398728 instance=ExtResource("3_backpack_ui")]
+layout_mode = 0
+offset_left = 76.0
+offset_top = 222.0
+offset_right = 633.0
+offset_bottom = 756.0
+
+[node name="CloseButton" type="Button" parent="ContentLayer" unique_id=1688639258]
+z_index = 110
+layout_mode = 0
+offset_left = 4.0
+offset_top = 84.0
+offset_right = 211.0
+offset_bottom = 245.0
+tooltip_text = "Back to main menu"
+focus_mode = 0
+mouse_default_cursor_shape = 2
+theme_override_styles/normal = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
+theme_override_styles/disabled = SubResource("StyleBoxFlat_transparent")
+
+[node name="EffectsList" type="VBoxContainer" parent="ContentLayer" unique_id=1203110254]
+z_index = 110
+layout_mode = 0
+offset_left = 1031.0
+offset_top = 213.0
+offset_right = 1486.0
+offset_bottom = 633.0
+mouse_filter = 2
+theme_override_constants/separation = 8
+
+[node name="EffectLabel1" type="Label" parent="ContentLayer/EffectsList" unique_id=512986249]
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+text = "- No active effects"
+
+[node name="EffectLabel2" type="Label" parent="ContentLayer/EffectsList" unique_id=2001918615]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel3" type="Label" parent="ContentLayer/EffectsList" unique_id=1517257047]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel4" type="Label" parent="ContentLayer/EffectsList" unique_id=939959287]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel5" type="Label" parent="ContentLayer/EffectsList" unique_id=1849519125]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel6" type="Label" parent="ContentLayer/EffectsList" unique_id=704230017]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel7" type="Label" parent="ContentLayer/EffectsList" unique_id=295634068]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="EffectLabel8" type="Label" parent="ContentLayer/EffectsList" unique_id=312472256]
+visible = false
+layout_mode = 2
+theme_override_colors/font_color = Color(0.05, 0.03, 0.015, 1)
+theme_override_font_sizes/font_size = 24
+
+[node name="StatsLabel" type="Label" parent="ContentLayer" unique_id=1183189212]
+z_index = 110
+layout_mode = 0
+offset_left = 1073.0
+offset_top = 869.0
+offset_right = 1709.0
+offset_bottom = 1184.0
+theme_override_colors/font_color = Color(0.04, 0.025, 0.012, 1)
+theme_override_font_sizes/font_size = 28
+text = "Run summary
+Act 1 / Node 1
+Backpack changes save when closed."
+autowrap_mode = 3
+
+[node name="PendingItemPanel" type="PanelContainer" parent="ContentLayer" unique_id=742066462]
+visible = false
+z_index = 120
+layout_mode = 0
+offset_left = 1010.0
+offset_top = 430.0
+offset_right = 1530.0
+offset_bottom = 542.0
+mouse_filter = 1
+
+[node name="MarginContainer" type="MarginContainer" parent="ContentLayer/PendingItemPanel" unique_id=1025778799]
+layout_mode = 2
+theme_override_constants/margin_left = 10
+theme_override_constants/margin_top = 8
+theme_override_constants/margin_right = 10
+theme_override_constants/margin_bottom = 8
+
+[node name="VBoxContainer" type="VBoxContainer" parent="ContentLayer/PendingItemPanel/MarginContainer" unique_id=314936757]
+layout_mode = 2
+theme_override_constants/separation = 4
+
+[node name="TitleLabel" type="Label" parent="ContentLayer/PendingItemPanel/MarginContainer/VBoxContainer" unique_id=775974621]
+layout_mode = 2
+text = "Pending items"
+
+[node name="PendingItemArea" type="Control" parent="ContentLayer/PendingItemPanel" unique_id=180663771]
+layout_mode = 2
+mouse_filter = 2
