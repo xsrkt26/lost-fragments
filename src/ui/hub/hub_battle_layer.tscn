@@ -100,40 +100,37 @@ stretch_mode = 0
 
 [node name="GridPanel" type="TextureRect" parent="ContentLayer"]
 layout_mode = 0
-offset_left = 940.0
-offset_top = 79.0
-offset_right = 1765.0
-offset_bottom = 986.0
-scale = Vector2(0.9546806, 1.0118439)
+offset_left = 921.0
+offset_top = -22.0
+offset_right = 1727.6115
+offset_bottom = 996.74243
 mouse_filter = 2
 expand_mode = 1
 
 [node name="GridBackground" type="TextureRect" parent="ContentLayer/GridPanel"]
 visible = false
 layout_mode = 0
-offset_left = 26.186733
-offset_top = 189.7526
-offset_right = 775.1867
-offset_bottom = 873.75256
+offset_left = 119.28073
+offset_top = 384.0497
+offset_right = 696.1302
+offset_bottom = 916.6661
 mouse_filter = 2
 expand_mode = 1
 
 [node name="BackpackUI" parent="ContentLayer/GridPanel" instance=ExtResource("7_backpack")]
 layout_mode = 0
-offset_left = 87.987564
-offset_top = 238.17903
-offset_right = 727.9922
-offset_bottom = 799.5304
-rotation = 0.0048001073
-scale = Vector2(1.0043379, 1.0177745)
+offset_left = 119.28073
+offset_top = 384.0497
+offset_right = 696.1302
+offset_bottom = 916.6661
 
 [node name="TrashBin" type="TextureRect" parent="ContentLayer/GridPanel"]
 visible = false
 layout_mode = 0
-offset_left = -188.0
-offset_top = 626.0
-offset_right = -25.0
-offset_bottom = 769.0
+offset_left = -160.47995
+offset_top = 734.4143
+offset_right = -4.867015
+offset_bottom = 879.108
 mouse_default_cursor_shape = 7
 texture = ExtResource("23_trash_icon")
 expand_mode = 1
