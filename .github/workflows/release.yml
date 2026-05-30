@@ -96,13 +96,18 @@ jobs:
           GH_TOKEN: ${{ github.token }}
         run: |
           $tag = "${{ github.ref_name }}"
+          $notesFile = "docs/releases/$tag.md"
           $args = @(
             "release", "create", $tag,
             $env:RELEASE_ZIP,
             $env:RELEASE_MANIFEST,
-            "--title", $tag,
-            "--generate-notes"
+            "--title", $tag
           )
+          if (Test-Path -LiteralPath $notesFile) {
+            $args += @("--notes-file", $notesFile)
+          } else {
+            $args += "--generate-notes"
+          }
           if ($tag -match "-(alpha|beta|rc)") {
             $args += "--prerelease"
           }
