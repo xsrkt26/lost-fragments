@@ -57,7 +57,8 @@ const TRANSITION_CONTENT_LOCAL_Z := 20
 const TRANSITION_BACK_TAB_Z := 5
 
 @export var hub_stretch_duration := 0.48
-@export var layer_collapse_width_ratio := 0.01
+@export var layer_collapse_width_ratio := 0.1
+@export var compressed_tab_end_offset_x := -120.0
 
 var current_page_id := PAGE_HUB
 var _hub_scene: Node = null
@@ -70,6 +71,9 @@ var _transition_stack_root: Control = null
 var _transition_stack_records: Array[Dictionary] = []
 var _transition_content_records: Array[Dictionary] = []
 var _transition_hidden_background_records: Array[Dictionary] = []
+var _persistent_stack_page_id := ""
+var _compressed_stack_root: Control = null
+var _compressed_stack_page_id := ""
 var _hub_transition_body: Control = null
 var _hub_transition_records: Array[Dictionary] = []
 var _transition_tab_overlay: Control = null
@@ -91,6 +95,7 @@ func configure(hub_scene: Node) -> void:
 	current_page_id = PAGE_HUB
 	_ensure_transition_canvas()
 	_ensure_transition_stack_root()
+	_ensure_compressed_stack_root()
 	_ensure_hub_transition_body()
 	_cleanup_realtime_transition_layers()
 	_set_hub_page_visible(true)
@@ -104,6 +109,7 @@ func go_to_page(page_id: String) -> void:
 	if page_id == current_page_id or _is_turning:
 		return
 	_is_turning = true
+	_hide_compressed_page_stack()
 	var previous_page := current_page_id
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
 	visible = true
@@ -163,14 +169,15 @@ func _play_page_to_page_transition(transition: Dictionary) -> void:
 		await _play_direct_page_switch_transition(page_id)
 		return
 	await _play_page_stack_transition()
-	_cleanup_realtime_transition_layers()
 	current_page_id = page_id
-	_sync_page_visibility()
+	_sync_compressed_page_stack()
+	await get_tree().process_frame
+	_cleanup_realtime_transition_layers()
 	_finish_transition(true)
 
 func _get_transition_layer(page_id: String) -> Control:
 	if page_id == PAGE_HUB:
-		return _ensure_hub_transition_body()
+		return _get_hub_transition_visual_root()
 	return _ensure_page(page_id) as Control
 
 
@@ -208,6 +215,7 @@ func _play_actual_page_layer_transition(previous_layer: Control, target_layer: C
 func _prepare_actual_page_layer_for_animation(layer: Control, transition_rect: Rect2) -> void:
 	if layer == null:
 		return
+	layer.clip_contents = true
 	layer.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
 	var rect := transition_rect
 	if rect.size.x <= 1.0 or rect.size.y <= 1.0:
@@ -383,6 +391,10 @@ func _sync_page_visibility() -> void:
 	_layout_navigation()
 	_sync_tab_buttons()
 	_sync_suppressed_background_tabs()
+	if _is_turning:
+		_hide_compressed_page_stack()
+	else:
+		_sync_compressed_page_stack()
 
 
 func _set_hub_page_visible(page_visible: bool) -> void:
@@ -467,6 +479,7 @@ func _layout_navigation() -> void:
 		viewport_size = DESIGN_SIZE
 	set_anchors_preset(Control.PRESET_FULL_RECT, true)
 	_layout_transition_stack_root(viewport_size)
+	_layout_compressed_stack_root(viewport_size)
 	_layout_hub_transition_body(viewport_size)
 	_layout_transition_tab_overlay(viewport_size)
 	_layout_turn_visuals(viewport_size)
@@ -494,6 +507,8 @@ func _layout_tab_buttons(viewport_size: Vector2) -> void:
 
 
 func _get_tab_hotspot_global_rect(page_id: String, viewport_size: Vector2) -> Rect2:
+	if current_page_id != PAGE_HUB and BookBackgroundConfig.should_place_tab_on_right(page_id, current_page_id):
+		return _get_transition_page_tab_rect_as_global(page_id, 1.0)
 	var background := _get_book_background_for_page(current_page_id) as Control
 	if background != null:
 		var tab_node_name := str(PAGE_TAB_NODE_NAMES.get(BookBackgroundConfig.normalize_page_id(page_id), ""))
@@ -509,6 +524,15 @@ func _get_tab_hotspot_global_rect(page_id: String, viewport_size: Vector2) -> Re
 	var origin := (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
 	var fallback_rect := BookBackgroundConfig.get_tab_rect(page_id, current_page_id)
 	return Rect2(origin + fallback_rect.position * scale_factor, fallback_rect.size * scale_factor)
+
+
+func _get_transition_page_tab_rect_as_global(page_id: String, progress: float) -> Rect2:
+	var viewport_rect := _get_design_rect_as_viewport(_get_transition_page_tab_rect(page_id, progress))
+	var canvas_transform := get_global_transform()
+	return Rect2(
+		canvas_transform * viewport_rect.position,
+		viewport_rect.size * canvas_transform.get_scale().abs()
+	)
 
 
 func _get_page_transition_rect() -> Rect2:
@@ -544,17 +568,16 @@ func _get_book_background_for_page(page_id: String) -> Node:
 
 func _prepare_realtime_transition_layers(previous_page_id: String, target_page_id: String) -> void:
 	_cleanup_realtime_transition_layers()
-	var hub_involved := previous_page_id == PAGE_HUB or target_page_id == PAGE_HUB
-	if hub_involved:
-		_set_hub_page_visible(true)
-	if hub_involved:
-		_prepare_hub_transition_body()
+	_set_hub_page_visible(true)
+	_prepare_hub_transition_body()
 	_prepare_transition_page_stack(previous_page_id, target_page_id)
 
 
 func _cleanup_realtime_transition_layers() -> void:
+	_persistent_stack_page_id = ""
 	_restore_transition_content_nodes()
 	_restore_hub_transition_layers()
+	_set_hub_transition_frozen(false)
 	_restore_transition_hidden_background_visibility()
 	_restore_transition_hidden_backgrounds()
 	_hide_transition_tab_overlay()
@@ -621,15 +644,18 @@ func _prepare_transition_page_stack(previous_page_id: String, target_page_id: St
 		root.add_child(sheet_layer)
 		_add_transition_page_sheet(sheet_layer, page_id)
 		var content_layer: Control = null
-		if page_id == previous_page_id or page_id == target_page_id:
+		var content_node: Node = null
+		if index <= maxi(previous_index, target_index):
 			content_layer = _create_transition_content_layer(page_id, page_z_index + TRANSITION_CONTENT_LOCAL_Z)
 			root.add_child(content_layer)
-			_attach_actual_page_content(page_id, content_layer)
+			content_node = _attach_actual_page_content(page_id, content_layer)
 		var tab := _add_transition_page_tab(root, page_id, page_z_index + TRANSITION_TAB_LOCAL_Z)
 		var record := {
 			"page_id": page_id,
+			"page_index": index,
 			"sheet_layer": sheet_layer,
 			"content_layer": content_layer,
+			"content_node": content_node,
 			"tab": tab,
 			"start_progress": start_progress,
 			"end_progress": end_progress,
@@ -752,12 +778,12 @@ func _create_transition_content_layer(page_id: String, page_z_index: int) -> Con
 	return layer
 
 
-func _attach_actual_page_content(page_id: String, content_layer: Control) -> void:
+func _attach_actual_page_content(page_id: String, content_layer: Control) -> Node:
 	if content_layer == null:
-		return
+		return null
 	var content_node := _get_actual_page_content_node(page_id)
 	if content_node == null or not is_instance_valid(content_node):
-		return
+		return null
 	_transition_content_records.append(_capture_transition_node_record(content_node))
 	content_node.reparent(content_layer, true)
 	var canvas_item := content_node as CanvasItem
@@ -773,11 +799,12 @@ func _attach_actual_page_content(page_id: String, content_layer: Control) -> voi
 		control.set_process_input(false)
 		control.set_process_unhandled_input(false)
 	_hide_transition_book_art_in_node(content_node)
+	return content_node
 
 
 func _get_actual_page_content_node(page_id: String) -> Node:
 	if page_id == PAGE_HUB:
-		return _ensure_hub_transition_body()
+		return _get_hub_transition_visual_root()
 	var page := _ensure_page(page_id)
 	if page != null:
 		page.visible = true
@@ -848,31 +875,126 @@ func _play_page_stack_transition() -> void:
 		await get_tree().process_frame
 
 
-func _apply_transition_page_record_progress(progress: float, record: Dictionary) -> void:
-	var clamped_progress := clampf(progress, 0.0, 1.0)
+func _finalize_persistent_page_stack(page_id: String) -> void:
+	_persistent_stack_page_id = page_id
+	if _transition_stack_root != null and is_instance_valid(_transition_stack_root):
+		_transition_stack_root.visible = true
+	var active_index := _get_page_stack_index(page_id)
+	for record in _transition_stack_records:
+		var page_index := int(record.get("page_index", -1))
+		var final_progress := 1.0 if page_index < active_index else 0.0
+		_apply_transition_page_record_progress(final_progress, record)
+		_sync_persistent_record_visibility(record, active_index)
+	_hide_transition_tab_overlay()
+	_sync_persistent_page_stack_visibility()
+
+
+func _is_persistent_page_stack_active() -> bool:
+	return (
+		_persistent_stack_page_id != ""
+		and _transition_stack_root != null
+		and is_instance_valid(_transition_stack_root)
+		and not _transition_stack_records.is_empty()
+	)
+
+
+func _sync_persistent_page_stack_visibility() -> void:
+	var active_index := _get_page_stack_index(current_page_id)
+	if active_index <= 0:
+		return
+	if _transition_canvas != null and is_instance_valid(_transition_canvas):
+		_transition_canvas.layer = TRANSITION_CANVAS_LAYER
+	if _transition_stack_root != null and is_instance_valid(_transition_stack_root):
+		_transition_stack_root.visible = true
+	for record in _transition_stack_records:
+		_sync_persistent_record_visibility(record, active_index)
+	for page_id in _pages.keys():
+		var page := _pages[page_id] as Control
+		if page == null:
+			continue
+		var page_index := _get_page_stack_index(str(page_id))
+		var page_visible := page_index >= 0 and page_index <= active_index
+		var page_active := str(page_id) == current_page_id
+		page.visible = page_visible
+		page.set_process_input(page_active)
+		page.set_process_unhandled_input(page_active)
+	if _hub_transition_body != null and is_instance_valid(_hub_transition_body):
+		_hub_transition_body.visible = active_index > 0
+		_hub_transition_body.set_process_input(false)
+		_hub_transition_body.set_process_unhandled_input(false)
+	visible = true
+	_layout_navigation()
+	for record in _transition_stack_records:
+		var page_index := int(record.get("page_index", -1))
+		var final_progress := 1.0 if page_index < active_index else 0.0
+		_apply_transition_page_record_progress(final_progress, record)
+		_sync_persistent_record_visibility(record, active_index)
+	_sync_tab_buttons()
+	_sync_suppressed_background_tabs()
+
+
+func _sync_persistent_record_visibility(record: Dictionary, active_index: int) -> void:
+	var page_id := str(record.get("page_id", ""))
+	var page_index := int(record.get("page_index", -1))
+	var visible_in_stack := page_index >= 0 and page_index <= active_index
 	var sheet_layer := record.get("sheet_layer", null) as Control
 	if sheet_layer != null:
-		_prepare_actual_page_layer_for_animation(sheet_layer, _get_page_transition_rect())
+		sheet_layer.visible = visible_in_stack
+	var tab := record.get("tab", null) as Control
+	if tab != null:
+		tab.visible = visible_in_stack
+	var content_layer := record.get("content_layer", null) as Control
+	if content_layer != null:
+		content_layer.visible = visible_in_stack
+	var content_node := record.get("content_node", null) as Node
+	var canvas_item := content_node as CanvasItem
+	if canvas_item != null:
+		canvas_item.visible = visible_in_stack
+	var control := content_node as Control
+	if control != null:
+		var is_active_page := page_id == current_page_id
+		control.set_process_input(is_active_page)
+		control.set_process_unhandled_input(is_active_page)
+
+
+func _apply_transition_page_record_progress(progress: float, record: Dictionary) -> void:
+	var clamped_progress := clampf(progress, 0.0, 1.0)
+	var page_id := str(record.get("page_id", ""))
+	var sheet_layer := record.get("sheet_layer", null) as Control
+	if sheet_layer != null:
+		_prepare_transition_page_layer_for_progress(sheet_layer, page_id)
 		_set_actual_page_layer_progress(sheet_layer, clamped_progress)
 	var content_layer := record.get("content_layer", null) as Control
 	if content_layer != null:
-		_prepare_actual_page_layer_for_animation(content_layer, _get_page_transition_rect())
+		_prepare_transition_page_layer_for_progress(content_layer, page_id)
 		_set_actual_page_layer_progress(content_layer, clamped_progress)
 	var tab := record.get("tab", null) as Control
 	if tab != null:
-		var page_id := str(record.get("page_id", ""))
 		var tab_rect := _get_transition_page_tab_rect(page_id, clamped_progress)
 		var viewport_rect := _get_design_rect_as_viewport(tab_rect)
 		tab.position = viewport_rect.position
 		tab.size = viewport_rect.size
 
 
+func _prepare_transition_page_layer_for_progress(layer: Control, page_id: String) -> void:
+	_prepare_actual_page_layer_for_animation(layer, _get_page_transition_rect())
+	layer.pivot_offset = Vector2(_get_transition_page_pivot_x(page_id), 0.0)
+
+
+func _get_transition_page_pivot_x(page_id: String) -> float:
+	var source: Dictionary = _get_transition_page_sheet_source(page_id)
+	var source_rect: Rect2 = source.get("rect", Rect2(Vector2.ZERO, DESIGN_SIZE))
+	var viewport_rect := _get_design_rect_as_viewport(source_rect)
+	return viewport_rect.end.x
+
+
 func _get_transition_page_tab_rect(page_id: String, progress: float) -> Rect2:
 	var left_rect := BookBackgroundConfig.get_tab_rect(page_id, PAGE_HUB)
 	var right_rect := BookBackgroundConfig.get_tab_rect(page_id, _get_bottom_page_id())
 	var clamped_progress := _get_tab_motion_progress(left_rect, right_rect, progress)
+	var end_offset := Vector2(compressed_tab_end_offset_x * clampf(progress, 0.0, 1.0), 0.0)
 	return Rect2(
-		left_rect.position.lerp(right_rect.position, clamped_progress),
+		left_rect.position.lerp(right_rect.position + end_offset, clamped_progress),
 		left_rect.size.lerp(right_rect.size, clamped_progress)
 	)
 
@@ -954,6 +1076,261 @@ func _hide_transition_stack_root() -> void:
 	_transition_stack_root.visible = false
 
 
+func _ensure_compressed_stack_root() -> Control:
+	if _compressed_stack_root != null and is_instance_valid(_compressed_stack_root):
+		return _compressed_stack_root
+	var canvas := _ensure_transition_canvas()
+	if canvas == null:
+		return null
+	var root := Control.new()
+	root.name = "RightCompressedStackRoot"
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.visible = false
+	root.z_index = TRANSITION_BACK_LAYER_Z
+	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+	canvas.add_child(root)
+	_compressed_stack_root = root
+	_layout_compressed_stack_root(_get_transition_viewport_size())
+	return _compressed_stack_root
+
+
+func _layout_compressed_stack_root(viewport_size: Vector2) -> void:
+	if _compressed_stack_root == null or not is_instance_valid(_compressed_stack_root):
+		return
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		viewport_size = DESIGN_SIZE
+	_compressed_stack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+	_compressed_stack_root.position = Vector2.ZERO
+	_compressed_stack_root.size = viewport_size
+
+
+func _sync_compressed_page_stack() -> void:
+	var active_index := _get_page_stack_index(current_page_id)
+	if current_page_id == PAGE_HUB or active_index <= 0:
+		_hide_compressed_page_stack()
+		return
+	var root := _ensure_compressed_stack_root()
+	if root == null:
+		return
+	if _compressed_stack_page_id == current_page_id and root.visible:
+		return
+	_clear_compressed_page_stack()
+	_compressed_stack_page_id = current_page_id
+	root.visible = true
+	_layout_compressed_stack_root(_get_transition_viewport_size())
+	for index in range(active_index - 1, -1, -1):
+		var page_id := str(BookBackgroundConfig.PAGE_ORDER[index])
+		var page_z := (active_index - index) * TRANSITION_PAGE_Z_STEP
+		_add_compressed_page_stack_item(root, page_id, page_z)
+
+
+func _hide_compressed_page_stack() -> void:
+	_clear_compressed_page_stack()
+	_compressed_stack_page_id = ""
+	if _compressed_stack_root == null or not is_instance_valid(_compressed_stack_root):
+		return
+	_compressed_stack_root.visible = false
+
+
+func _clear_compressed_page_stack() -> void:
+	if _compressed_stack_root == null or not is_instance_valid(_compressed_stack_root):
+		return
+	for child in _compressed_stack_root.get_children():
+		_compressed_stack_root.remove_child(child)
+		child.queue_free()
+
+
+func _add_compressed_page_stack_item(root: Control, page_id: String, page_z: int) -> void:
+	var sheet_layer := Control.new()
+	sheet_layer.name = "%sCompressedSheetLayer" % page_id.capitalize()
+	sheet_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sheet_layer.z_index = page_z + TRANSITION_SHEET_LOCAL_Z
+	root.add_child(sheet_layer)
+	_add_compressed_page_sheet(sheet_layer, page_id)
+
+	var tab := _create_compressed_page_tab(page_id)
+	if tab != null:
+		tab.z_index = page_z + TRANSITION_TAB_LOCAL_Z
+		root.add_child(tab)
+
+	var content_layer := Control.new()
+	content_layer.name = "%sCompressedContentLayer" % page_id.capitalize()
+	content_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	content_layer.z_index = page_z + TRANSITION_CONTENT_LOCAL_Z
+	root.add_child(content_layer)
+	var content_node := _create_compressed_page_content(page_id)
+	if content_node != null:
+		content_layer.add_child(content_node)
+		_prepare_compressed_page_content_node(content_node)
+
+	_apply_transition_page_record_progress(1.0, {
+		"page_id": page_id,
+		"sheet_layer": sheet_layer,
+		"content_layer": content_layer,
+		"tab": tab,
+	})
+
+
+func _add_compressed_page_sheet(parent: Control, page_id: String) -> void:
+	var source: Dictionary = _get_transition_page_sheet_source(page_id)
+	var texture := source.get("texture", null) as Texture2D
+	if texture == null:
+		return
+	var source_rect: Rect2 = source.get("rect", Rect2(Vector2.ZERO, DESIGN_SIZE))
+	var source_modulate: Color = source.get("modulate", Color.WHITE)
+	var viewport_rect := _get_design_rect_as_viewport(source_rect)
+	var sheet := TextureRect.new()
+	sheet.name = "%sCompressedSheet" % page_id.capitalize()
+	sheet.texture = texture
+	sheet.modulate = source_modulate
+	sheet.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	sheet.stretch_mode = TextureRect.STRETCH_SCALE
+	sheet.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	sheet.position = viewport_rect.position
+	sheet.size = viewport_rect.size
+	parent.add_child(sheet)
+
+
+func _create_compressed_page_tab(page_id: String) -> TextureRect:
+	var texture := _get_tab_texture(page_id)
+	if texture == null:
+		return null
+	var tab_rect := _get_transition_page_tab_rect(page_id, 1.0)
+	var viewport_rect := _get_design_rect_as_viewport(tab_rect)
+	var tab := TextureRect.new()
+	tab.name = "%sCompressedTab" % page_id.capitalize()
+	tab.texture = texture
+	tab.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	tab.stretch_mode = TextureRect.STRETCH_SCALE
+	tab.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	tab.position = viewport_rect.position
+	tab.size = viewport_rect.size
+	return tab
+
+
+func _create_compressed_page_content(page_id: String) -> Node:
+	if page_id == PAGE_HUB:
+		return _create_compressed_hub_content()
+	var scene_path := str(PAGE_SCENE_PATHS.get(page_id, ""))
+	if scene_path == "":
+		return null
+	var packed := load(scene_path) as PackedScene
+	if packed == null:
+		return null
+	var page := packed.instantiate() as Control
+	if page == null:
+		return null
+	page.name = "%sCompressedContent" % page_id.capitalize()
+	page.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	page.visible = true
+	return page
+
+
+func _create_compressed_hub_content() -> Control:
+	var container := _create_hub_page_visual_root("HubCompressedVisualRoot")
+	var layers: Array = []
+	var active_hub_content := _get_active_hub_transition_content_node()
+	if active_hub_content != null:
+		layers.append(active_hub_content)
+	elif _hub_scene != null and is_instance_valid(_hub_scene) and _hub_scene.has_method("get_book_hub_transition_layer"):
+		var hub_layer := _hub_scene.call("get_book_hub_transition_layer") as Node
+		if hub_layer != null:
+			layers.append(hub_layer)
+	elif _hub_scene != null and is_instance_valid(_hub_scene) and _hub_scene.has_method("get_book_hub_transition_layers"):
+		layers = _hub_scene.call("get_book_hub_transition_layers")
+	if layers.is_empty() and _hub_scene != null and is_instance_valid(_hub_scene):
+		layers = [
+			_hub_scene.get_node_or_null("BookCanvasLayer/BookDesignRoot"),
+			_hub_scene.get_node_or_null("HubArt"),
+			_hub_scene.get_node_or_null("Player"),
+		]
+	for layer in layers:
+		var source := layer as Node
+		if source == null or not is_instance_valid(source):
+			continue
+		var clone := source.duplicate()
+		if clone == null:
+			continue
+		_prepare_compressed_hub_clone(clone)
+		container.add_child(clone)
+	return container
+
+
+func _get_active_hub_transition_content_node() -> Node:
+	for record in _transition_stack_records:
+		if str(record.get("page_id", "")) != PAGE_HUB:
+			continue
+		var content_node := record.get("content_node", null) as Node
+		if content_node != null and is_instance_valid(content_node):
+			return content_node
+	return null
+
+
+func _prepare_compressed_hub_clone(clone: Node) -> void:
+	var canvas_item := clone as CanvasItem
+	if canvas_item != null:
+		canvas_item.visible = true
+	var control := clone as Control
+	if control != null:
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_clip_compressed_hub_player_to_board(clone)
+
+
+func _clip_compressed_hub_player_to_board(root: Node) -> void:
+	var player := root.get_node_or_null("Player") as Node2D
+	var board_content := root.get_node_or_null("HubArt/BoardViewport/BoardContent") as CanvasItem
+	if player == null or board_content == null:
+		return
+	var player_global_transform := player.get_global_transform()
+	player.reparent(board_content, false)
+	player.transform = board_content.get_global_transform().affine_inverse() * player_global_transform
+
+
+func _prepare_compressed_page_content_node(content_node: Node) -> void:
+	var viewport_size := _get_transition_viewport_size()
+	var control := content_node as Control
+	if control != null:
+		control.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+		control.position = Vector2.ZERO
+		control.size = viewport_size
+	var canvas_item := content_node as CanvasItem
+	if canvas_item != null:
+		canvas_item.visible = true
+	_hide_compressed_book_art_in_node(content_node)
+	_disable_compressed_page_interaction(content_node)
+
+
+func _hide_compressed_book_art_in_node(root: Node) -> void:
+	var background := _find_book_background(root)
+	if background == null:
+		return
+	if background.has_method("set_transition_tabs_hidden"):
+		background.call("set_transition_tabs_hidden", true)
+	for node_name in BOOK_BASE_ART_NODE_NAMES:
+		var base_item := background.get_node_or_null(str(node_name)) as CanvasItem
+		if base_item != null:
+			base_item.visible = false
+	for sheet_name in PAGE_SHEET_NODE_NAMES.values():
+		var sheet := background.get_node_or_null(str(sheet_name)) as CanvasItem
+		if sheet != null:
+			sheet.visible = false
+
+
+func _disable_compressed_page_interaction(root: Node) -> void:
+	root.set_process(false)
+	root.set_physics_process(false)
+	root.set_process_input(false)
+	root.set_process_unhandled_input(false)
+	var control := root as Control
+	if control != null:
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var button := root as BaseButton
+	if button != null:
+		button.disabled = true
+	for child in root.get_children():
+		_disable_compressed_page_interaction(child)
+
+
 func _ensure_hub_transition_body() -> Control:
 	if _hub_transition_body != null and is_instance_valid(_hub_transition_body):
 		return _hub_transition_body
@@ -963,6 +1340,7 @@ func _ensure_hub_transition_body() -> Control:
 	var body := Control.new()
 	body.name = "HubTransitionBody"
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	body.clip_contents = true
 	body.visible = false
 	body.z_index = TRANSITION_BACK_LAYER_Z
 	body.set_anchors_preset(Control.PRESET_FULL_RECT, true)
@@ -987,12 +1365,20 @@ func _prepare_hub_transition_body() -> void:
 	var body := _ensure_hub_transition_body()
 	if body == null or _hub_scene == null or not is_instance_valid(_hub_scene):
 		return
+	_set_hub_transition_frozen(true)
 	_layout_hub_transition_body(_get_transition_viewport_size())
 	body.visible = true
 	body.set_process_input(false)
 	body.set_process_unhandled_input(false)
+	_clear_hub_transition_body_visual_roots()
+	var visual_root := _create_hub_page_visual_root("HubTransitionVisualRoot")
+	body.add_child(visual_root)
 	var layers: Array = []
-	if _hub_scene.has_method("get_book_hub_transition_layers"):
+	if _hub_scene.has_method("get_book_hub_transition_layer"):
+		var hub_layer := _hub_scene.call("get_book_hub_transition_layer") as Node
+		if hub_layer != null:
+			layers.append(hub_layer)
+	elif _hub_scene.has_method("get_book_hub_transition_layers"):
 		layers = _hub_scene.call("get_book_hub_transition_layers")
 	if layers.is_empty():
 		layers = [
@@ -1008,7 +1394,63 @@ func _prepare_hub_transition_body() -> void:
 		if parent == null:
 			continue
 		_hub_transition_records.append(_capture_transition_node_record(node))
-		node.reparent(body, true)
+		node.reparent(visual_root, true)
+		_prepare_hub_transition_visual_node(node)
+
+
+func _set_hub_transition_frozen(frozen: bool) -> void:
+	if _hub_scene == null or not is_instance_valid(_hub_scene):
+		return
+	if not _hub_scene.has_method("set_book_hub_transition_frozen"):
+		return
+	_hub_scene.call("set_book_hub_transition_frozen", frozen)
+
+
+func _create_hub_page_visual_root(root_name: String) -> Control:
+	var root := Control.new()
+	root.name = root_name
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.clip_contents = false
+	root.visible = true
+	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+	root.position = Vector2.ZERO
+	root.size = _get_transition_viewport_size()
+	return root
+
+
+func _prepare_hub_transition_visual_node(node: Node) -> void:
+	var canvas_item := node as CanvasItem
+	if canvas_item != null:
+		canvas_item.visible = true
+	var control := node as Control
+	if control != null:
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		control.set_process_input(false)
+		control.set_process_unhandled_input(false)
+
+
+func _get_hub_transition_visual_root() -> Control:
+	if _hub_transition_body == null or not is_instance_valid(_hub_transition_body):
+		return _ensure_hub_transition_body()
+	var visual_root := _hub_transition_body.get_node_or_null("HubTransitionVisualRoot") as Control
+	if visual_root != null:
+		var hub_page_root := visual_root.get_node_or_null("HubPageVisualRoot") as Control
+		if hub_page_root != null:
+			return hub_page_root
+		return visual_root
+	return _hub_transition_body
+
+
+func _clear_hub_transition_body_visual_roots() -> void:
+	if not _hub_transition_records.is_empty():
+		return
+	if _hub_transition_body == null or not is_instance_valid(_hub_transition_body):
+		return
+	for child in _hub_transition_body.get_children():
+		if child.name != "HubTransitionVisualRoot":
+			continue
+		_hub_transition_body.remove_child(child)
+		child.queue_free()
 
 
 func _capture_transition_node_record(node: Node) -> Dictionary:
@@ -1056,6 +1498,7 @@ func _restore_hub_transition_layers() -> void:
 		parent.move_child(node, target_index)
 		_restore_transition_node_record(node, record)
 	_hub_transition_records.clear()
+	_clear_hub_transition_body_visual_roots()
 
 
 func _restore_transition_content_nodes() -> void:
