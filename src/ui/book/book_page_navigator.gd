@@ -1129,7 +1129,7 @@ func _sync_compressed_page_stack() -> void:
 	for index in range(active_index - 1, -1, -1):
 		var page_id := str(BookBackgroundConfig.PAGE_ORDER[index])
 		var page_z := (active_index - index) * TRANSITION_PAGE_Z_STEP
-		_add_compressed_page_stack_item(root, page_id, page_z)
+		_add_compressed_page_stack_item(root, page_id, page_z, page_id == PAGE_HUB)
 
 
 func _hide_compressed_page_stack() -> void:
@@ -1148,7 +1148,7 @@ func _clear_compressed_page_stack() -> void:
 		child.queue_free()
 
 
-func _add_compressed_page_stack_item(root: Control, page_id: String, page_z: int) -> void:
+func _add_compressed_page_stack_item(root: Control, page_id: String, page_z: int, show_content: bool = true) -> void:
 	var sheet_layer := Control.new()
 	sheet_layer.name = "%sCompressedSheetLayer" % page_id.capitalize()
 	sheet_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -1162,6 +1162,7 @@ func _add_compressed_page_stack_item(root: Control, page_id: String, page_z: int
 		root.add_child(tab)
 
 	var content_layer := Control.new()
+	content_layer.visible = show_content
 	content_layer.name = "%sCompressedContentLayer" % page_id.capitalize()
 	content_layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content_layer.z_index = page_z + TRANSITION_CONTENT_LOCAL_Z
