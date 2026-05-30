@@ -49,6 +49,13 @@ func _get_hub_player(hub: Node) -> CharacterBody2D:
 	return hub_player
 
 
+func _get_hub_art(hub: Node) -> Node2D:
+	var hub_art := hub.get_node_or_null("HubPageVisualRoot/HubArt") as Node2D
+	if hub_art == null:
+		hub_art = hub.get_node_or_null("HubArt") as Node2D
+	return hub_art
+
+
 func _get_texture_image(path: String) -> Image:
 	var texture := load(path) as Texture2D
 	assert_not_null(texture)
@@ -1179,7 +1186,7 @@ func test_hub_book_page_navigator_red_tab_returns_to_hub():
 
 	assert_eq(navigator.current_page_id, "hub")
 	assert_true(hub.get_node("BookCanvasLayer").visible)
-	assert_true(hub.get_node("HubPageVisualRoot/HubArt").visible)
+	assert_true(_get_hub_art(hub).visible)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 
 
@@ -1270,7 +1277,7 @@ func test_hub_scene_serialized_preview_matches_project_default_viewport():
 
 	var book_design_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot") as Control
 	var canvas_design_root := hub.get_node_or_null("CanvasLayer/DesignRoot") as Control
-	var hub_art := hub.get_node_or_null("HubPageVisualRoot/HubArt") as Node2D
+	var hub_art := _get_hub_art(hub)
 	var floor_body := hub.get_node_or_null("Floor") as StaticBody2D
 	var hub_player := _get_hub_player(hub)
 	var interactions := hub.get_node_or_null("Interactions") as Node2D
@@ -1304,7 +1311,7 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 
 	var book_design_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot") as Control
 	var canvas_design_root := hub.get_node_or_null("CanvasLayer/DesignRoot") as Control
-	var hub_art := hub.get_node_or_null("HubPageVisualRoot/HubArt") as Node2D
+	var hub_art := _get_hub_art(hub)
 	assert_not_null(book_design_root)
 	assert_not_null(canvas_design_root)
 	assert_not_null(hub_art)
