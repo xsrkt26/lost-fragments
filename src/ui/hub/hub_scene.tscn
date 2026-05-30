@@ -61,28 +61,45 @@ metadata/_edit_use_anchors_ = true
 position = Vector2(0, 9.333334)
 scale = Vector2(0.6666667, 0.6666667)
 
-[node name="Room" type="Sprite2D" parent="HubArt" unique_id=1195141554]
+[node name="BoardViewport" type="Control" parent="HubArt"]
+clip_contents = true
+layout_mode = 0
+offset_left = 197.99998
+offset_top = 105.99999
+offset_right = 1802.9999
+offset_bottom = 1009.2924
+mouse_filter = 2
+
+[node name="BoardContent" type="Control" parent="HubArt/BoardViewport"]
+layout_mode = 0
+offset_left = -197.99998
+offset_top = -105.99999
+offset_right = 1722.0
+offset_bottom = 974.0
+mouse_filter = 2
+
+[node name="Room" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1195141554]
 z_index = 11
 position = Vector2(197.99998, 105.99999)
 scale = Vector2(0.9599282, 0.9599282)
 texture = ExtResource("6_room")
 centered = false
 
-[node name="DreamcatcherNet" type="Sprite2D" parent="HubArt" unique_id=2066522267]
+[node name="DreamcatcherNet" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=2066522267]
 z_index = 13
-position = Vector2(918, 624)
+position = Vector2(918, 556)
 rotation = 0.018
-scale = Vector2(0.663, 0.663)
+scale = Vector2(0.5, 0.5)
 texture = ExtResource("16_dc_net")
 
-[node name="Foreground" type="Sprite2D" parent="HubArt" unique_id=917239789]
+[node name="Foreground" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=917239789]
 visible = false
 z_index = 15
 position = Vector2(188, 74)
 scale = Vector2(0.9599282, 0.9599282)
 centered = false
 
-[node name="MerchantSprite" type="AnimatedSprite2D" parent="HubArt" unique_id=1419421131]
+[node name="MerchantSprite" type="AnimatedSprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1419421131]
 visible = false
 z_index = 14
 position = Vector2(196, 128)
@@ -116,7 +133,7 @@ scale = Vector2(-1, -1)
 texture = ExtResource("14_photo_corner")
 centered = false
 
-[node name="SpeechBubble" type="Sprite2D" parent="HubArt" unique_id=1463798210]
+[node name="SpeechBubble" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1463798210]
 visible = false
 z_index = 16
 position = Vector2(675, 564)
@@ -124,7 +141,7 @@ scale = Vector2(0.361, 0.229)
 texture = ExtResource("13_speech_bubble")
 centered = false
 
-[node name="SpeechText" type="Label" parent="HubArt" unique_id=75023564]
+[node name="SpeechText" type="Label" parent="HubArt/BoardViewport/BoardContent" unique_id=75023564]
 visible = false
 z_index = 17
 offset_left = 771.0
