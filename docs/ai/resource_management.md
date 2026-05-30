@@ -29,6 +29,21 @@ This project separates runtime assets from source/reference art.
 - Do not reference `res://assets/sourceImage/...` from `.gd`, `.tscn`, `.tres`, or `.json`.
 - `assets/sourceImage/.gdignore` prevents Godot from importing source deliveries by default.
 
+## Runtime Path Registry
+
+Shared runtime paths used from scripts live in `src/core/assets/asset_paths.gd`.
+
+- Add new script-level asset paths there first.
+- Use helper methods such as `intro_bag_reveal_frame_paths()` and `merchant_frame_paths()` for numbered sequences.
+- Scene `.tscn` and data `.tres` files may keep Godot-native `ext_resource` references, but script code should prefer `AssetPaths`.
+- `test/unit/test_asset_paths.gd` verifies registered paths exist and do not point at `assets/sourceImage/`.
+
+## Reuse Rules
+
+- Do not keep duplicate runtime files for timing holds or repeated backgrounds; point multiple frames or keys at the same asset.
+- Keep semantic names in `AssetPaths` when needed, but map them to the shared file instead of copying the file.
+- Run a hash scan before adding large batches to catch identical runtime assets early.
+
 ## Export Rules
 
 `export_presets.cfg` excludes source/reference/build directories from release exports:

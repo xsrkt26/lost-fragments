@@ -7,7 +7,8 @@ var _sequences: Dictionary = {}
 var _played_flags: Dictionary = {}
 var current_playing_sequence: String = ""
 
-const JSON_PATH = "res://assets/story/story_events.json"
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
+const JSON_PATH := AssetPaths.STORY_EVENTS
 const STORY_ENABLED := false
 
 func _ready() -> void:

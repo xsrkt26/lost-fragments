@@ -184,6 +184,8 @@ func _restore_backpack_from_run(rm) -> void:
 	rm.restore_backpack_state(backpack_manager, item_db)
 
 func persist_backpack_to_run() -> void:
+	if not is_inside_tree():
+		return
 	var rm = get_node_or_null("/root/RunManager")
 	if rm and rm.has_method("save_backpack_state"):
 		rm.save_backpack_state(backpack_manager)

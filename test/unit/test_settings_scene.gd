@@ -13,6 +13,18 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	assert_not_null(art_layer)
 	assert_true(art_layer.has_method("get_visible_page_sheet_count"))
 	assert_eq(art_layer.call("get_visible_page_sheet_count"), 1)
+	var album_page := ui.get_node_or_null("DesignRoot/ArtLayer/AlbumPage") as TextureRect
+	var page_middle := ui.get_node_or_null("DesignRoot/ArtLayer/PageMiddle") as TextureRect
+	var backpack_cover := ui.get_node_or_null("DesignRoot/ArtLayer/PageBackpackCover") as TextureRect
+	var route_cover := ui.get_node_or_null("DesignRoot/ArtLayer/PageRouteCover") as TextureRect
+	assert_not_null(album_page)
+	assert_not_null(page_middle)
+	assert_not_null(backpack_cover)
+	assert_not_null(route_cover)
+	assert_false(album_page.visible)
+	assert_false(page_middle.visible)
+	assert_false(backpack_cover.visible)
+	assert_true(route_cover.visible)
 	for node_name in [
 		"WoodFloor",
 		"RedBookCover",
@@ -74,7 +86,6 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	var gallery_tab_right := ui.get_node("DesignRoot/ArtLayer/GalleryTabRight") as TextureRect
 	var settings_tab_right := ui.get_node("DesignRoot/ArtLayer/SettingsTabRight") as TextureRect
 	var settings_tab := ui.get_node("DesignRoot/ArtLayer/SettingsTab") as TextureRect
-	var album_page := ui.get_node("DesignRoot/ArtLayer/AlbumPage") as TextureRect
 	var album_ring_right := ui.get_node("DesignRoot/ArtLayer/AlbumRingRight") as TextureRect
 	assert_true(album_tab_right.visible)
 	assert_true(backpack_tab_right.visible)
@@ -82,12 +93,24 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 	assert_false(settings_tab_right.visible)
 	assert_true(settings_tab.visible)
 	assert_eq(settings_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_SETTINGS, BookBackgroundConfig.PAGE_SETTINGS))
-	assert_true(settings_tab.z_index > album_page.z_index)
+	assert_true(settings_tab.z_index > route_cover.z_index)
 	assert_eq(album_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
 	assert_eq(backpack_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
 	assert_eq(gallery_tab_right.z_index, BookBackgroundConfig.get_right_tab_z_index())
 	assert_true(gallery_tab_right.z_index > album_page.z_index)
 	assert_true(gallery_tab_right.z_index < album_ring_right.z_index)
+	var settings_tab_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_SETTINGS, BookBackgroundConfig.PAGE_SETTINGS)
+	var album_tab_right_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_SETTINGS)
+	var backpack_tab_right_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_BACKPACK, BookBackgroundConfig.PAGE_SETTINGS)
+	var gallery_tab_right_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_GALLERY, BookBackgroundConfig.PAGE_SETTINGS)
+	assert_eq(settings_tab.position, settings_tab_rect.position)
+	assert_eq(settings_tab.size, settings_tab_rect.size)
+	assert_eq(album_tab_right.position, album_tab_right_rect.position)
+	assert_eq(album_tab_right.size, album_tab_right_rect.size)
+	assert_eq(backpack_tab_right.position, backpack_tab_right_rect.position)
+	assert_eq(backpack_tab_right.size, backpack_tab_right_rect.size)
+	assert_eq(gallery_tab_right.position, gallery_tab_right_rect.position)
+	assert_eq(gallery_tab_right.size, gallery_tab_right_rect.size)
 
 func test_settings_scene_updates_audio_values() -> void:
 	var ui = add_child_autofree(SettingsScene.instantiate())

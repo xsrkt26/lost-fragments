@@ -77,3 +77,43 @@ func test_draw_interaction_requires_interactive_battle_state():
 	manager.battle_state = BattleManager.BattleState.INTERACTIVE
 	ui._draw_locked = true
 	assert_false(ui._is_draw_interaction_available())
+
+func test_trash_drop_area_uses_inset_and_texture_alpha():
+	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
+	var trash: TextureRect = autofree(TextureRect.new())
+	trash.position = Vector2(10.0, 20.0)
+	trash.size = Vector2(100.0, 100.0)
+	ui.trash_bin = trash
+	ui.trash_drop_hit_inset = Vector2.ZERO
+	ui.trash_drop_alpha_threshold = 0.5
+
+	var alpha_image := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	alpha_image.fill(Color(0, 0, 0, 0))
+	alpha_image.set_pixel(2, 2, Color(1, 1, 1, 1))
+	trash.texture = ImageTexture.create_from_image(alpha_image)
+
+	assert_true(ui._is_point_in_trash_drop_area(Vector2(72.0, 82.0)))
+	assert_false(ui._is_point_in_trash_drop_area(Vector2(22.0, 32.0)))
+
+	var opaque_image := Image.create(4, 4, false, Image.FORMAT_RGBA8)
+	opaque_image.fill(Color(1, 1, 1, 1))
+	trash.texture = ImageTexture.create_from_image(opaque_image)
+	ui.trash_drop_hit_inset = Vector2(20.0, 20.0)
+
+	assert_false(ui._is_point_in_trash_drop_area(Vector2(20.0, 70.0)))
+	assert_true(ui._is_point_in_trash_drop_area(Vector2(70.0, 70.0)))
+
+func test_trash_hover_feedback_scales_without_tree_tween():
+	var ui = autofree(load("res://src/ui/main_game_ui.gd").new())
+	var trash: TextureRect = autofree(TextureRect.new())
+	trash.size = Vector2(100.0, 100.0)
+	trash.scale = Vector2(1.0, 1.0)
+	ui.trash_bin = trash
+
+	ui._set_trash_bin_drag_hover(true)
+	assert_eq(trash.pivot_offset, Vector2(50.0, 50.0))
+	assert_almost_eq(trash.scale.x, ui.trash_drop_hover_scale, 0.001)
+	assert_almost_eq(trash.scale.y, ui.trash_drop_hover_scale, 0.001)
+
+	ui._set_trash_bin_drag_hover(false)
+	assert_eq(trash.scale, Vector2.ONE)

@@ -3,14 +3,15 @@ extends Node
 ## 全局 UI 字体主题管理器。
 ## 字体文件可后续放入 assets/fonts/，缺失时自动回退到 Godot 默认字体。
 
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BODY_FONT_CANDIDATES := [
-	"res://assets/fonts/chill_huosong_f_regular.otf",
+	AssetPaths.FONT_BODY,
 ]
 const DISPLAY_FONT_CANDIDATES := [
-	"res://assets/fonts/chill_huosong_f_ex_bold.otf",
+	AssetPaths.FONT_DISPLAY,
 ]
 const FALLBACK_FONT_CANDIDATES := [
-	"res://assets/fonts/chill_huosong_f_regular.otf",
+	AssetPaths.FONT_BODY,
 ]
 const THEME_META := "_lost_fragments_theme_applied"
 

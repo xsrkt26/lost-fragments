@@ -95,6 +95,30 @@ func test_backpack_configures_item_ui_with_grid_cell_size():
 	assert_eq(ui.cell_size, Vector2(100.0, 70.0))
 	assert_eq(ui.custom_minimum_size, Vector2(100.0, 70.0))
 
+
+func test_backpack_grid_slots_are_serialized_in_scene():
+	var backpack = autofree(BackpackUIScene.instantiate())
+	var grid := backpack.get_node_or_null("GridContainer") as GridContainer
+	assert_not_null(grid)
+	assert_eq(grid.get_child_count(), 49)
+	assert_not_null(grid.get_node_or_null("Slot_0_0"))
+	assert_not_null(grid.get_node_or_null("Slot_6_6"))
+	for child in grid.get_children():
+		assert_true(child is ColorRect)
+
+
+func test_backpack_refresh_uses_existing_static_grid_slots():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	await get_tree().process_frame
+	var grid := backpack.get_node_or_null("GridContainer") as GridContainer
+	assert_not_null(grid)
+	var slot_count := grid.get_child_count()
+
+	backpack.call("_refresh_grid")
+
+	assert_eq(grid.get_child_count(), slot_count)
+	assert_eq(slot_count, 49)
+
 func test_global_tooltip_shows_dynamic_pollution_status():
 	var item = _make_item_data()
 	var instance = BackpackManager.ItemInstance.new(item, Vector2i(0, 0))

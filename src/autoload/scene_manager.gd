@@ -179,6 +179,43 @@ func transition_with_zoom(target: SceneType, start_focus: Vector2 = Vector2(0.5,
 	_is_transitioning = false
 	transition_finished.emit(get_tree().current_scene)
 
+
+func transition_to_direct(target: SceneType, push_to_history: bool = true) -> void:
+	if _is_transitioning:
+		return
+	_is_transitioning = true
+	if push_to_history:
+		_history_stack.append(current_scene_type)
+
+	print("[SceneManager] 正在直接转场至: ", SceneType.keys()[target])
+	transition_started.emit(target)
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_clear_page_turn_overlay()
+	_sync_transition_ui_to_viewport()
+	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+
+	var packed_scene: PackedScene = await _get_scene_for_transition(target)
+	if packed_scene == null:
+		push_error("[SceneManager] Failed to load scene: %s" % SCENE_PATHS[target])
+		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_is_transitioning = false
+		return
+
+	current_scene_type = target
+	var error: int = get_tree().change_scene_to_packed(packed_scene)
+	if error != OK:
+		push_error("[SceneManager] Failed to change scene: %s" % SCENE_PATHS[target])
+		_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_is_transitioning = false
+		return
+
+	await get_tree().process_frame
+	await get_tree().process_frame
+	_overlay.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_is_transitioning = false
+	transition_finished.emit(get_tree().current_scene)
+
+
 func _transition_with_zoom_expand(target: SceneType, snapshot_texture: Texture2D, start_focus: Vector2, end_focus: Vector2) -> void:
 	_page_material.shader = ZOOM_EXPAND_SHADER
 	_page_material.set_shader_parameter("start_focus", start_focus)

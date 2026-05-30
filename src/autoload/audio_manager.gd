@@ -5,20 +5,9 @@ extends Node
 
 enum Bus { MASTER, MUSIC, SFX }
 
-const BGM_PATHS = {
-	"menu": "res://assets/audio/bgm/main_menu.wav",
-	"hub": "res://assets/audio/bgm/hub_theme.wav",
-	"battle": "res://assets/audio/bgm/battle_theme.wav"
-}
-
-const SFX_PATHS = {
-	"click": "res://assets/audio/sfx/ui_click.wav",
-	"draw": "res://assets/audio/sfx/card_draw.wav",
-	"place": "res://assets/audio/sfx/card_place.wav",
-	"hit": "res://assets/audio/sfx/hit_impact.wav",
-	"score": "res://assets/audio/sfx/score_up.wav",
-	"error": "res://assets/audio/sfx/ui_error.wav"
-}
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
+const BGM_PATHS := AssetPaths.BGM_PATHS
+const SFX_PATHS := AssetPaths.SFX_PATHS
 const REQUIRED_AUDIO_BUSES := [
 	"Music",
 	"SFX",

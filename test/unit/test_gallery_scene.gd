@@ -12,6 +12,18 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_not_null(art_layer)
 	assert_true(art_layer.has_method("get_visible_page_sheet_count"))
 	assert_eq(art_layer.call("get_visible_page_sheet_count"), 3)
+	var album_page := gallery.get_node_or_null("DesignRoot/ArtLayer/AlbumPage") as TextureRect
+	var page_middle := gallery.get_node_or_null("DesignRoot/ArtLayer/PageMiddle") as TextureRect
+	var backpack_cover := gallery.get_node_or_null("DesignRoot/ArtLayer/PageBackpackCover") as TextureRect
+	var route_cover := gallery.get_node_or_null("DesignRoot/ArtLayer/PageRouteCover") as TextureRect
+	assert_not_null(album_page)
+	assert_not_null(page_middle)
+	assert_not_null(backpack_cover)
+	assert_not_null(route_cover)
+	assert_false(album_page.visible)
+	assert_true(page_middle.visible)
+	assert_true(backpack_cover.visible)
+	assert_true(route_cover.visible)
 	for node_name in [
 		"WoodFloor",
 		"RedBookCover",
