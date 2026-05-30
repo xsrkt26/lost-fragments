@@ -57,6 +57,15 @@ const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
 const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
 const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
 
+
+func _first_existing_node(paths: Array[String]) -> Node:
+	for path in paths:
+		var node := get_node_or_null(path)
+		if node != null:
+			return node
+	return null
+
+
 @export var hub_art_source_offset := Vector2(0.0, 14.0):
 	set(value):
 		hub_art_source_offset = value
@@ -67,19 +76,19 @@ const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
 @onready var book_design_root: Control = $BookCanvasLayer/BookDesignRoot
 @onready var book_background: Control = $BookCanvasLayer/BookDesignRoot/BookBackground
 @onready var hub_art: Node2D = $HubArt
-@onready var hub_board_viewport: Control = $HubArt/BoardViewport
-@onready var hub_board_content: Node = $HubArt/BoardViewport/BoardContent
+@onready var hub_board_viewport: Control = _first_existing_node(["HubArt/BoardViewport"]) as Control
+@onready var hub_board_content: Node = _first_existing_node(["HubArt/BoardViewport/BoardContent", "HubArt"])
 @onready var canvas_design_root: Control = $CanvasLayer/DesignRoot
 @onready var overlay_root: Control = $CanvasLayer/OverlayRoot
 @onready var player: CharacterBody2D = $Player
 @onready var floor_body: StaticBody2D = $Floor
 @onready var interactions: Node2D = $Interactions
-@onready var room_art: Sprite2D = $HubArt/BoardViewport/BoardContent/Room
-@onready var foreground_art: Sprite2D = $HubArt/BoardViewport/BoardContent/Foreground
-@onready var speech_bubble: Sprite2D = $HubArt/BoardViewport/BoardContent/SpeechBubble
-@onready var speech_text: Label = $HubArt/BoardViewport/BoardContent/SpeechText
-@onready var dreamcatcher_net: Sprite2D = $HubArt/BoardViewport/BoardContent/DreamcatcherNet
-@onready var merchant_sprite: AnimatedSprite2D = $HubArt/BoardViewport/BoardContent/MerchantSprite
+@onready var room_art: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/Room", "HubArt/Room"]) as Sprite2D
+@onready var foreground_art: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/Foreground", "HubArt/Foreground"]) as Sprite2D
+@onready var speech_bubble: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/SpeechBubble", "HubArt/SpeechBubble"]) as Sprite2D
+@onready var speech_text: Label = _first_existing_node(["HubArt/BoardViewport/BoardContent/SpeechText", "HubArt/SpeechText"]) as Label
+@onready var dreamcatcher_net: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/DreamcatcherNet", "HubArt/DreamcatcherNet"]) as Sprite2D
+@onready var merchant_sprite: AnimatedSprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/MerchantSprite", "HubArt/MerchantSprite"]) as AnimatedSprite2D
 @onready var merchant_button: Button = $CanvasLayer/DesignRoot/MerchantButton
 @onready var dreamcatcher_button: Button = $CanvasLayer/DesignRoot/DreamcatcherButton
 @onready var book_page_navigator: Control = $CanvasLayer/BookPageNavigator
@@ -1354,9 +1363,7 @@ func _is_book_hub_current() -> bool:
 
 
 func get_book_hub_transition_layer() -> Control:
-	_setup_hub_page_visual_root()
-	_layout_hub_page_visual_root(_get_layout_viewport_size())
-	return _hub_page_visual_root
+	return null
 
 
 func set_book_hub_transition_frozen(frozen: bool) -> void:
@@ -1379,29 +1386,17 @@ func set_book_hub_transition_frozen(frozen: bool) -> void:
 
 func get_book_hub_transition_layers() -> Array[Node]:
 	var layers: Array[Node] = []
-	var hub_page_layer := get_book_hub_transition_layer()
-	if hub_page_layer != null:
-		layers.append(hub_page_layer)
+	for node in [book_design_root, hub_art, player]:
+		var layer := node as Node
+		if layer != null and is_instance_valid(layer):
+			layers.append(layer)
 	return layers
 
 
 func _setup_hub_page_visual_root() -> void:
-	if _hub_page_visual_root != null and is_instance_valid(_hub_page_visual_root):
-		return
-	var root := Control.new()
-	root.name = "HubPageVisualRoot"
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.clip_contents = false
-	root.visible = true
-	add_child(root)
-	_hub_page_visual_root = root
-	for node in [hub_art, player]:
-		var visual_node := node as Node
-		if visual_node == null or not is_instance_valid(visual_node):
-			continue
-		if visual_node.get_parent() == root:
-			continue
-		visual_node.reparent(root, true)
+	# Keep HubArt and Player at their stable scene paths; BookPageNavigator
+	# temporarily reparents those layers only while a book transition is active.
+	pass
 
 
 func _layout_hub_page_visual_root(viewport_size: Vector2) -> void:
@@ -1423,9 +1418,9 @@ func set_book_hub_visible(page_visible: bool) -> void:
 	if book_design_root != null:
 		book_design_root.visible = true
 	if hub_art != null:
-		hub_art.visible = true
+		hub_art.visible = page_visible
 	if player != null:
-		player.visible = true
+		player.visible = page_visible
 		if not page_visible and player.has_method("clear_move_target"):
 			player.clear_move_target()
 	if floor_body != null:
