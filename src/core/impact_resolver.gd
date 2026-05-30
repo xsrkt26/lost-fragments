@@ -90,7 +90,7 @@ func _resolve_recursive(current_pos: Vector2i, dir: ItemData.Direction, actions:
 	hit_action.value = {"pos": next_item_pos, "impact_context": resolution_context.to_summary()}
 	actions.append(hit_action)
 
-	var bus = context.state.get_node_or_null("/root/GlobalEventBus") if context and context.state else null
+	var bus = context.get_root_node_or_null("/root/GlobalEventBus") if context and context.state else null
 	if bus:
 		bus.item_impacted.emit(instance, source_instance)
 

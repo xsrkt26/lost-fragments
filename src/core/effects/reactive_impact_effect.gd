@@ -4,7 +4,7 @@ extends ItemEffect
 ## 梦境燃料罐效果：当其他物品被撞击时，自己也触发一次撞击
 
 func on_draw(item_data: ItemData, context: GameContext) -> GameAction:
-	var bus = context.state.get_node_or_null("/root/GlobalEventBus")
+	var bus = context.get_root_node_or_null("/root/GlobalEventBus")
 	if bus:
 		# 注意：这里需要一个闭包或者弱引用，防止内存泄漏
 		# 我们让它监听全局撞击信号

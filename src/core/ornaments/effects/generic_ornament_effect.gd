@@ -339,8 +339,8 @@ func _record_universal_toolbox_target(tool_data, target: Dictionary, context: Ga
 func _grant_common_tool(context: GameContext, excluded_tool_id: String = "") -> void:
 	if context == null or context.state == null:
 		return
-	var tool_db = context.state.get_node_or_null("/root/ToolDatabase")
-	var rm = context.state.get_node_or_null("/root/RunManager")
+	var tool_db = context.get_root_node_or_null("/root/ToolDatabase")
+	var rm = context.get_root_node_or_null("/root/RunManager")
 	if tool_db == null or rm == null or not rm.has_method("grant_tool"):
 		return
 	var tools = tool_db.get_tools_by_rarity("道具") if tool_db.has_method("get_tools_by_rarity") else []
@@ -363,7 +363,7 @@ func _draw_count(context: GameContext) -> int:
 
 func _item_db(context: GameContext):
 	if context != null and context.state != null:
-		return context.state.get_node_or_null("/root/ItemDatabase")
+		return context.get_root_node_or_null("/root/ItemDatabase")
 	return null
 
 func _all_instances(backpack) -> Array:

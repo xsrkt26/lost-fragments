@@ -18,7 +18,7 @@ func _replace_with_random_one_slot_items(instance: BackpackManager.ItemInstance,
 
 	backpack.remove_instance(instance)
 
-	var item_db = context.state.get_node_or_null("/root/ItemDatabase") if context.state else null
+	var item_db = context.get_root_node_or_null("/root/ItemDatabase") if context.state else null
 	if item_db == null:
 		return
 

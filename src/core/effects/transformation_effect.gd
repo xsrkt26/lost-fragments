@@ -7,7 +7,7 @@ extends ItemEffect
 @export var bonus_score: int = 20 # 变身时额外加分
 
 func on_hit(instance: BackpackManager.ItemInstance, _source_instance: BackpackManager.ItemInstance, _resolver: ImpactResolver, context: GameContext, multiplier: int = 1) -> GameAction:
-	var item_db = context.state.get_node_or_null("/root/ItemDatabase")
+	var item_db = context.get_root_node_or_null("/root/ItemDatabase")
 	if not item_db: return null
 	
 	var new_data: ItemData

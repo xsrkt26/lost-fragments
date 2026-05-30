@@ -9,7 +9,7 @@ func on_discard_instance(instance: BackpackManager.ItemInstance, context: GameCo
 		context.state.add_score(score_amount)
 
 	if context and context.battle and instance:
-		var item_db = context.state.get_node_or_null("/root/ItemDatabase")
+		var item_db = context.get_root_node_or_null("/root/ItemDatabase")
 		var core_data = item_db.get_item_by_id(core_item_id) if item_db else null
 		if core_data:
 			context.battle.backpack_manager.place_item(core_data, instance.root_pos)

@@ -4,7 +4,7 @@ extends ItemEffect
 ## 垃圾回收器效果：有废弃物被撞击时，使其价值 +1
 
 func on_draw(item_data: ItemData, context: GameContext) -> GameAction:
-	var bus = context.state.get_node_or_null("/root/GlobalEventBus")
+	var bus = context.get_root_node_or_null("/root/GlobalEventBus")
 	if bus:
 		if not bus.item_impacted.is_connected(_on_item_impacted):
 			bus.item_impacted.connect(_on_item_impacted.bind(item_data, context))

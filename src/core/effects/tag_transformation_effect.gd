@@ -8,7 +8,7 @@ extends ItemEffect
 @export var target_item_id: String = "apple"
 
 func on_draw(item_data: ItemData, context: GameContext) -> GameAction:
-	var bus = context.state.get_node_or_null("/root/GlobalEventBus")
+	var bus = context.get_root_node_or_null("/root/GlobalEventBus")
 	if bus:
 		if not bus.item_drawn.is_connected(_on_item_drawn):
 			bus.item_drawn.connect(_on_item_drawn.bind(item_data, context))
@@ -16,7 +16,7 @@ func on_draw(item_data: ItemData, context: GameContext) -> GameAction:
 
 func _on_item_drawn(drawn_item_data: ItemData, my_data: ItemData, context: GameContext):
 	if drawn_item_data.tags.has(trigger_tag):
-		var item_db = context.state.get_node_or_null("/root/ItemDatabase")
+		var item_db = context.get_root_node_or_null("/root/ItemDatabase")
 		var new_data = item_db.get_item_by_id(target_item_id) if item_db else null
 		
 		if new_data:

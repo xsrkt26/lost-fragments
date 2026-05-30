@@ -11,7 +11,7 @@ var event_bus: Node # 指向 GlobalEventBus
 func _init(p_state: Node, p_battle: Node = null):
 	state = p_state
 	battle = p_battle
-	event_bus = p_state.get_node_or_null("/root/GlobalEventBus") if p_state != null else null
+	event_bus = p_state.get_node_or_null("/root/GlobalEventBus") if p_state != null and p_state.is_inside_tree() else null
 
 ## 快捷访问方法
 func add_score(amount: int):
@@ -43,6 +43,10 @@ func random_index(max_exclusive: int) -> int:
 	return randi() % max_exclusive
 
 func _get_run_manager() -> Node:
+	return get_root_node_or_null("/root/RunManager")
+
+
+func get_root_node_or_null(path: String) -> Node:
 	if state == null or not state.is_inside_tree():
 		return null
-	return state.get_node_or_null("/root/RunManager")
+	return state.get_node_or_null(path)
