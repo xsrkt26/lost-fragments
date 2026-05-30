@@ -5,11 +5,13 @@ extends Node
 const SETTINGS_FILE = "user://settings.cfg"
 const WINDOW_MODE_WINDOWED := "windowed"
 const WINDOW_MODE_FULLSCREEN := "fullscreen"
+const DISPLAY_SETTINGS_VERSION := 2
+const DEFAULT_RESOLUTION := Vector2i(1280, 720)
 const ANIMATION_SPEED_SLOW := "slow"
 const ANIMATION_SPEED_NORMAL := "normal"
 const ANIMATION_SPEED_FAST := "fast"
 const RESOLUTION_OPTIONS := [
-	Vector2i(1280, 720),
+	DEFAULT_RESOLUTION,
 	Vector2i(1600, 900),
 	Vector2i(1920, 1080),
 ]
@@ -28,8 +30,9 @@ var audio_settings = {
 }
 
 var display_settings = {
+	"version": DISPLAY_SETTINGS_VERSION,
 	"window_mode": WINDOW_MODE_WINDOWED,
-	"resolution": Vector2i(1280, 720),
+	"resolution": DEFAULT_RESOLUTION,
 }
 
 var game_settings = {
@@ -57,14 +60,21 @@ func load_settings():
 	if err == OK:
 		for key in audio_settings.keys():
 			audio_settings[key] = config.get_value("audio", key, audio_settings[key])
-		for key in display_settings.keys():
-			display_settings[key] = config.get_value("display", key, display_settings[key])
+		var display_version := int(config.get_value("display", "version", 0))
+		if display_version >= DISPLAY_SETTINGS_VERSION:
+			for key in display_settings.keys():
+				display_settings[key] = config.get_value("display", key, display_settings[key])
+		else:
+			display_settings = _default_display_settings()
 		for key in game_settings.keys():
 			game_settings[key] = config.get_value("game", key, game_settings[key])
 		display_settings["resolution"] = _normalize_resolution(display_settings["resolution"])
 		display_settings["window_mode"] = _normalize_window_mode(str(display_settings["window_mode"]))
+		display_settings["version"] = DISPLAY_SETTINGS_VERSION
 		game_settings["animation_speed"] = _normalize_animation_speed(str(game_settings["animation_speed"]))
 		print("[Settings] 设置已加载")
+		if display_version < DISPLAY_SETTINGS_VERSION:
+			save_settings()
 	else:
 		print("[Settings] 未发现旧设置，使用默认配置")
 
@@ -143,10 +153,7 @@ func reset_to_defaults() -> void:
 		"sfx_volume": 0.9,
 		"is_muted": true,
 	}
-	display_settings = {
-		"window_mode": WINDOW_MODE_WINDOWED,
-		"resolution": Vector2i(1280, 720),
-	}
+	display_settings = _default_display_settings()
 	game_settings = {
 		"animation_speed": ANIMATION_SPEED_NORMAL,
 	}
@@ -188,6 +195,13 @@ func _normalize_resolution(value) -> Vector2i:
 		if parts.size() == 2:
 			return Vector2i(int(parts[0]), int(parts[1]))
 	return RESOLUTION_OPTIONS[0]
+
+func _default_display_settings() -> Dictionary:
+	return {
+		"version": DISPLAY_SETTINGS_VERSION,
+		"window_mode": WINDOW_MODE_WINDOWED,
+		"resolution": DEFAULT_RESOLUTION,
+	}
 
 func _can_control_window() -> bool:
 	if DisplayServer.get_name() == "headless":

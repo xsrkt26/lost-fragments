@@ -3,15 +3,8 @@ extends Node
 ## 全局 UI 字体主题管理器。
 ## 字体文件可后续放入 assets/fonts/，缺失时自动回退到 Godot 默认字体。
 
-const BODY_FONT_CANDIDATES := [
-	AssetPaths.FONT_BODY,
-]
-const DISPLAY_FONT_CANDIDATES := [
-	AssetPaths.FONT_DISPLAY,
-]
-const FALLBACK_FONT_CANDIDATES := [
-	AssetPaths.FONT_BODY,
-]
+const BODY_FONT_RESOURCE: FontFile = preload("res://assets/fonts/chill_huosong_f_regular.otf")
+const DISPLAY_FONT_RESOURCE: FontFile = preload("res://assets/fonts/chill_huosong_f_ex_bold.otf")
 const THEME_META := "_lost_fragments_theme_applied"
 
 var ui_theme: Theme
@@ -26,9 +19,9 @@ func _ready() -> void:
 	call_deferred("apply_theme_to_tree", get_tree().root)
 
 func reload_theme() -> void:
-	body_font = _load_first_font(BODY_FONT_CANDIDATES)
-	display_font = _load_first_font(DISPLAY_FONT_CANDIDATES)
-	fallback_font = _load_first_font(FALLBACK_FONT_CANDIDATES)
+	body_font = BODY_FONT_RESOURCE
+	display_font = DISPLAY_FONT_RESOURCE
+	fallback_font = BODY_FONT_RESOURCE
 	ui_theme = _build_theme()
 
 func apply_theme_to_tree(root: Node) -> void:
@@ -83,15 +76,6 @@ func _build_theme() -> Theme:
 		theme.set_font("font", "DisplayButton", accent_font)
 
 	return theme
-
-func _load_first_font(paths: Array) -> Font:
-	for path in paths:
-		if not FileAccess.file_exists(path):
-			continue
-		var font := load(path) as Font
-		if font != null:
-			return font
-	return null
 
 func _on_node_added(node: Node) -> void:
 	if node is Control:
