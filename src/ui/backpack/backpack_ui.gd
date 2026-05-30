@@ -11,6 +11,9 @@ signal item_dropped_on_grid(item_ui: Control, grid_pos: Vector2i)
 
 const COLOR_LOCKED = Color(0, 0, 0, 0)
 const COLOR_EMPTY = Color(1, 1, 1, 0)
+const EDITOR_SLOT_COLOR = Color(1, 1, 1, 0.12)
+const STATIC_GRID_WIDTH := 7
+const STATIC_GRID_HEIGHT := 7
 const COLOR_OCCUPIED = Color(0.2, 0.5, 0.8, 0.2) # 蓝色表示已有物品
 const COLOR_VALID = Color(0.2, 0.8, 0.2, 0.4)   # 绿色表示可放置
 const COLOR_INVALID = Color(0.8, 0.2, 0.2, 0.4) # 红色表示不可用
@@ -22,6 +25,7 @@ var grid_step = Vector2(103.2857, 97.7142)
 
 func _ready() -> void:
 	_sync_grid_geometry()
+	_sync_static_grid_slots()
 	if not resized.is_connected(_on_resized):
 		resized.connect(_on_resized)
 
@@ -39,24 +43,16 @@ func setup(p_context: GameContext):
 func _refresh_grid():
 	if not manager: 
 		print("[BackpackUI] 警告: manager 为空，无法刷新网格。")
+		_sync_grid_geometry()
+		_sync_static_grid_slots()
 		return
 	
-	print("[BackpackUI] 正在生成网格: ", manager.grid_width, "x", manager.grid_height)
-	for child in grid_container.get_children():
-		child.queue_free()
-	
+	print("[BackpackUI] 正在刷新静态网格: ", manager.grid_width, "x", manager.grid_height)
 	grid_container.columns = manager.grid_width
 	grid_container.add_theme_constant_override("h_separation", 0)
 	grid_container.add_theme_constant_override("v_separation", 0)
 	_sync_grid_geometry()
-	
-	for i in range(manager.grid_width * manager.grid_height):
-		var pos = Vector2i(i % manager.grid_width, floori(float(i) / manager.grid_width))
-		var slot = ColorRect.new()
-		slot.custom_minimum_size = grid_step
-		slot.name = "Slot_%d_%d" % [pos.x, pos.y]
-		slot.tooltip_text = "可用格"
-		grid_container.add_child(slot)
+	_sync_static_grid_slots()
 	
 	update_slot_visuals()
 	print("[BackpackUI] 网格刷新完成，子节点数: ", grid_container.get_child_count())
@@ -70,8 +66,8 @@ func _on_resized() -> void:
 	grid_container.queue_sort()
 
 func _sync_grid_geometry() -> void:
-	var grid_width := manager.grid_width if manager else 7
-	var grid_height := manager.grid_height if manager else 7
+	var grid_width := manager.grid_width if manager else STATIC_GRID_WIDTH
+	var grid_height := manager.grid_height if manager else STATIC_GRID_HEIGHT
 	var grid_size := size
 	if grid_size.x <= 0.0 or grid_size.y <= 0.0:
 		grid_size = custom_minimum_size
@@ -82,6 +78,24 @@ func _sync_grid_geometry() -> void:
 	grid_container.position = Vector2.ZERO
 	grid_container.size = grid_size
 	grid_container.custom_minimum_size = grid_size
+
+func _sync_static_grid_slots() -> void:
+	var grid_width := manager.grid_width if manager else STATIC_GRID_WIDTH
+	var grid_height := manager.grid_height if manager else STATIC_GRID_HEIGHT
+	var active_slot_count := grid_width * grid_height
+	if grid_container.get_child_count() < active_slot_count:
+		push_error("[BackpackUI] Static grid scene has %d slots, but %d are required." % [grid_container.get_child_count(), active_slot_count])
+		return
+	grid_container.columns = grid_width
+	for i in range(grid_container.get_child_count()):
+		var slot := grid_container.get_child(i) as ColorRect
+		if slot == null:
+			continue
+		slot.visible = i < active_slot_count
+		slot.custom_minimum_size = grid_step
+		if manager == null:
+			slot.color = EDITOR_SLOT_COLOR
+			slot.tooltip_text = "Grid slot"
 
 func get_grid_cell_size() -> Vector2:
 	_sync_grid_geometry()
@@ -116,8 +130,11 @@ func configure_item_for_grid(item_ui: Control, target_parent: Node = null) -> vo
 
 func update_slot_visuals(ignore_item_data: ItemData = null):
 	if not manager: return
+	_sync_grid_geometry()
+	_sync_static_grid_slots()
 	
-	for i in range(grid_container.get_child_count()):
+	var active_slot_count := mini(grid_container.get_child_count(), manager.grid_width * manager.grid_height)
+	for i in range(active_slot_count):
 		var slot = grid_container.get_child(i) as ColorRect
 		var pos = Vector2i(i % manager.grid_width, floori(float(i) / manager.grid_width))
 		
@@ -138,6 +155,10 @@ func update_slot_visuals(ignore_item_data: ItemData = null):
 		else:
 			slot.color = COLOR_EMPTY
 			slot.tooltip_text = "可用格"
+	for i in range(active_slot_count, grid_container.get_child_count()):
+		var inactive_slot := grid_container.get_child(i) as ColorRect
+		if inactive_slot != null:
+			inactive_slot.visible = false
 
 ## 高亮显示预测的放置结果 (由外部在 Drag 过程中调用)
 func highlight_placement(root_pos: Vector2i, item_data: ItemData):
@@ -153,6 +174,8 @@ func highlight_placement(root_pos: Vector2i, item_data: ItemData):
 		if target_pos.x >= 0 and target_pos.x < manager.grid_width and \
 		   target_pos.y >= 0 and target_pos.y < manager.grid_height:
 			var index = target_pos.y * manager.grid_width + target_pos.x
+			if index >= grid_container.get_child_count():
+				continue
 			var slot = grid_container.get_child(index) as ColorRect
 			slot.color = highlight_color
 
@@ -217,10 +240,11 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 		min_offset.x = min(min_offset.x, p.x)
 		min_offset.y = min(min_offset.y, p.y)
 	
-	item_ui.position = Vector2(
-		(grid_pos.x + min_offset.x) * grid_step.x,
-		(grid_pos.y + min_offset.y) * grid_step.y
-	)
+	var index = grid_pos.y * manager.grid_width + grid_pos.x
+	if index >= grid_container.get_child_count():
+		return
+	var slot = grid_container.get_child(index) as Control
+	item_ui.position = slot.position + Vector2(min_offset.x * grid_step.x, min_offset.y * grid_step.y)
 
 ## 同步最新的映射关系（当 Data 被克隆后调用）
 func update_item_mapping(old_data: ItemData, new_data: ItemData):

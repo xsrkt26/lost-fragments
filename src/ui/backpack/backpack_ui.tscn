@@ -6,6 +6,8 @@
 custom_minimum_size = Vector2(340, 340)
 layout_mode = 3
 anchors_preset = 0
+offset_right = 340.0
+offset_bottom = 340.0
 mouse_filter = 2
 script = ExtResource("1_script")
 
@@ -14,8 +16,304 @@ layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
 anchor_bottom = 1.0
+offset_right = 340.0
+offset_bottom = 340.0
 grow_horizontal = 2
 grow_vertical = 2
-theme_override_constants/h_separation = 4
-theme_override_constants/v_separation = 4
-columns = 5
+theme_override_constants/h_separation = 0
+theme_override_constants/v_separation = 0
+columns = 7
+
+[node name="Slot_0_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_0" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_1" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_2" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_3" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_4" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_5" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_0_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_1_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_2_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_3_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_4_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_5_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)
+
+[node name="Slot_6_6" type="ColorRect" parent="GridContainer"]
+custom_minimum_size = Vector2(48.5714, 48.5714)
+layout_mode = 2
+mouse_filter = 2
+color = Color(1, 1, 1, 0.12)

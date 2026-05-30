@@ -44,7 +44,8 @@ const HUB_BATTLE_LAYER_NAME := "BattleLayer"
 const HUB_TO_BATTLE_FOCUS_ZOOM := 1.55
 const HUB_TO_BATTLE_FOCUS_DURATION := 0.72
 const HUB_TO_BATTLE_MIN_FOCUS_ZOOM := 1.05
-const HUB_TO_BATTLE_STATS_TARGET_TOP_GAP := 150.0
+const HUB_TO_BATTLE_BOARD_TARGET_UV := Vector2(0.24, 0.35)
+const HUB_TO_BATTLE_BOARD_BOTTOM_LOCK_OFFSET := 0.0
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const MERCHANT_FRAME_BOUNDS := {
@@ -945,8 +946,8 @@ func _enter_route_node(index: int) -> void:
 		var focus_viewport_size = get_viewport_rect().size
 		dreamcatcher_uv = dreamcatcher_focus / focus_viewport_size
 
-	var end_focus := Vector2(0.85, 0.82)
-	var battle_focus_target := _get_hub_battle_stats_target_global_position()
+	var end_focus := Vector2(0.32, 0.36)
+	var battle_focus_target := _get_hub_to_battle_board_target_global_position()
 	if _is_valid_hub_point(battle_focus_target):
 		var target_viewport_size = get_viewport_rect().size
 		end_focus = battle_focus_target / target_viewport_size
@@ -1151,7 +1152,9 @@ func _get_hub_focus_target_local_position(canvas_item: CanvasItem, focus_point: 
 		if parent_canvas != null:
 			var focus_local := canvas_item.get_global_transform().affine_inverse() * focus_point
 			var target_parent_position := parent_canvas.get_global_transform().affine_inverse() * target_point
-			return target_parent_position - Vector2(focus_local.x * target_scale.x, focus_local.y * target_scale.y)
+			var target_position := target_parent_position - Vector2(focus_local.x * target_scale.x, focus_local.y * target_scale.y)
+			target_position.y = _get_hub_board_bottom_locked_focus_y(target_position.y, target_scale.y)
+			return target_position
 
 	var current_global_position := canvas_item.get_global_transform().origin
 	var mirrored_focus_target := focus_point - (target_point - focus_point)
@@ -1163,6 +1166,16 @@ func _get_hub_focus_target_local_position(canvas_item: CanvasItem, focus_point: 
 	return fallback_parent_canvas.get_global_transform().affine_inverse() * target_global_position
 
 
+func _get_hub_board_bottom_locked_focus_y(target_y: float, target_scale_y: float) -> float:
+	if hub_board_viewport == null or target_scale_y <= 0.0:
+		return target_y
+	var clip_rect := _get_hub_board_source_clip_rect()
+	if clip_rect.size.y <= 0.0 or hub_board_viewport.size.y <= 0.0:
+		return target_y
+	var locked_y := hub_board_viewport.size.y + HUB_TO_BATTLE_BOARD_BOTTOM_LOCK_OFFSET - clip_rect.end.y * target_scale_y
+	return minf(target_y, locked_y)
+
+
 func _get_hub_to_battle_focus_zoom(focus_point: Vector2) -> float:
 	return HUB_TO_BATTLE_FOCUS_ZOOM if _is_valid_hub_point(focus_point) else HUB_TO_BATTLE_MIN_FOCUS_ZOOM
 
@@ -1172,18 +1185,15 @@ func _get_hub_to_battle_focus_scale(focus_point: Vector2) -> Vector2:
 	return Vector2(zoom, zoom)
 
 
-func _get_hub_battle_stats_target_global_position() -> Vector2:
-	if battle_layer == null:
+func _get_hub_to_battle_board_target_global_position() -> Vector2:
+	if hub_board_viewport == null:
 		return INVALID_HUB_POINT
-	var stats_panel := battle_layer.get_node_or_null("ContentLayer/StatsPanel") as Control
-	if stats_panel == null:
-		return INVALID_HUB_POINT
-	var stats_rect := stats_panel.get_global_rect()
-	if stats_rect.size.x <= 0.0 or stats_rect.size.y <= 0.0:
+	var board_rect := hub_board_viewport.get_global_rect()
+	if board_rect.size.x <= 0.0 or board_rect.size.y <= 0.0:
 		return INVALID_HUB_POINT
 	return Vector2(
-		stats_rect.get_center().x,
-		stats_rect.position.y - HUB_TO_BATTLE_STATS_TARGET_TOP_GAP * _art_scale
+		board_rect.position.x + board_rect.size.x * HUB_TO_BATTLE_BOARD_TARGET_UV.x,
+		board_rect.position.y + board_rect.size.y * HUB_TO_BATTLE_BOARD_TARGET_UV.y
 	)
 
 
@@ -1500,7 +1510,7 @@ func _validated_layout_viewport_size(viewport_size: Vector2) -> Vector2:
 
 
 func _layout_hub_art(viewport_size: Vector2) -> void:
-	_art_scale = maxf(
+	_art_scale = minf(
 		viewport_size.x / _hub_source_size.x,
 		viewport_size.y / _hub_source_size.y
 	)
@@ -1511,7 +1521,7 @@ func _layout_hub_art(viewport_size: Vector2) -> void:
 		hub_art.position = _art_origin
 		hub_art.scale = Vector2(_art_scale, _art_scale)
 	if hub_board_viewport != null:
-		var clip_rect := _get_hub_art_source_clip_rect()
+		var clip_rect := _get_hub_board_source_clip_rect()
 		hub_board_viewport.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
 		hub_board_viewport.position = clip_rect.position
 		hub_board_viewport.size = clip_rect.size
@@ -1523,14 +1533,28 @@ func _layout_hub_art(viewport_size: Vector2) -> void:
 				board_content_control.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
 				board_content_control.position = -clip_rect.position
 				board_content_control.size = _hub_source_size
-				board_content_control.pivot_offset = clip_rect.end
+				board_content_control.pivot_offset = Vector2.ZERO
 			else:
 				var board_content_node_2d := hub_board_content as Node2D
 				if board_content_node_2d != null:
 					board_content_node_2d.position = -clip_rect.position
 
 
-func _get_hub_art_source_clip_rect() -> Rect2:
+func _get_hub_board_source_clip_rect() -> Rect2:
+	var room_rect := _get_default_room_source_rect()
+	if room_rect.size.x > 0.0 and room_rect.size.y > 0.0:
+		return room_rect
+	return _get_hub_art_corner_source_bounds()
+
+
+func _get_default_room_source_rect() -> Rect2:
+	var room_size := _default_room_display_size
+	if (room_size.x <= 0.0 or room_size.y <= 0.0) and _default_room_texture != null:
+		room_size = _default_room_texture.get_size() * _default_room_scale
+	return Rect2(_default_room_position, room_size)
+
+
+func _get_hub_art_corner_source_bounds() -> Rect2:
 	var has_clip_rect := false
 	var clip_rect := Rect2(Vector2.ZERO, _hub_source_size)
 	if hub_art == null:
