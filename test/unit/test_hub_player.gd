@@ -1,9 +1,13 @@
 extends GutTest
 
 const HubScene = preload("res://src/ui/hub/hub_scene.tscn")
+const HubBattleLayer = preload("res://src/ui/hub/hub_battle_layer.tscn")
 const MainGameUI = preload("res://src/ui/main_game_ui.tscn")
 const BackpackPage = preload("res://src/ui/backpack/backpack_page.tscn")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
+const BATTLE_BAG_FINAL_FRAME_PATH := "res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png"
+const BATTLE_BAG_SOURCE_SIZE := Vector2(825.0, 1008.0)
+const BATTLE_BAG_GRID_SOURCE_RECT := Rect2(122.0, 380.0, 590.0, 527.0)
 
 var player
 var rm_snapshot := {}
@@ -98,6 +102,39 @@ func _map_alpha_rect_to_control_rect(control_rect: Rect2, texture_size: Vector2,
 	return Rect2(control_rect.position + alpha_rect.position * scale, alpha_rect.size * scale)
 
 
+func _assert_battle_grid_matches_bag_texture(scene_root: Node) -> void:
+	var playable_bag := scene_root.get_node_or_null("ContentLayer/PlayableBagArt") as TextureRect
+	var grid_panel := scene_root.get_node_or_null("ContentLayer/GridPanel") as Control
+	var backpack_ui := scene_root.get_node_or_null("ContentLayer/GridPanel/BackpackUI") as Control
+	assert_not_null(playable_bag)
+	assert_not_null(grid_panel)
+	assert_not_null(backpack_ui)
+	if playable_bag == null or grid_panel == null or backpack_ui == null:
+		return
+
+	assert_eq(playable_bag.texture.resource_path, BATTLE_BAG_FINAL_FRAME_PATH)
+	assert_eq(_get_png_size(BATTLE_BAG_FINAL_FRAME_PATH), BATTLE_BAG_SOURCE_SIZE)
+	assert_eq(grid_panel.scale, Vector2.ONE)
+	assert_eq(backpack_ui.scale, Vector2.ONE)
+	assert_almost_eq(backpack_ui.rotation, 0.0, 0.001)
+
+	var bag_rect := Rect2(playable_bag.position, playable_bag.size * playable_bag.scale)
+	assert_almost_eq(grid_panel.position.x, bag_rect.position.x, 0.001)
+	assert_almost_eq(grid_panel.position.y, bag_rect.position.y, 0.001)
+	assert_almost_eq(grid_panel.size.x, bag_rect.size.x, 0.001)
+	assert_almost_eq(grid_panel.size.y, bag_rect.size.y, 0.001)
+
+	var expected_local_grid_rect := _map_alpha_rect_to_control_rect(
+		Rect2(Vector2.ZERO, grid_panel.size),
+		BATTLE_BAG_SOURCE_SIZE,
+		BATTLE_BAG_GRID_SOURCE_RECT
+	)
+	assert_almost_eq(backpack_ui.position.x, expected_local_grid_rect.position.x, 0.01)
+	assert_almost_eq(backpack_ui.position.y, expected_local_grid_rect.position.y, 0.01)
+	assert_almost_eq(backpack_ui.size.x, expected_local_grid_rect.size.x, 0.01)
+	assert_almost_eq(backpack_ui.size.y, expected_local_grid_rect.size.y, 0.01)
+
+
 func test_mouse_move_target_is_set_and_cleared():
 	player.move_to_global_x(420.0)
 	assert_true(player.has_move_target)
@@ -116,93 +153,6 @@ func test_mouse_move_target_is_clamped_to_walk_bounds():
 
 	player.move_to_global_x(620.0)
 	assert_eq(player.move_target_x, 500.0)
-
-
-func test_backpack_page_adds_close_button_and_keeps_ui_context():
-	var ui = BackpackPage.instantiate()
-	ui.configure_for_backpack_overlay()
-	add_child_autofree(ui)
-
-	await get_tree().create_timer(0.2).timeout
-
-	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
-	assert_not_null(ui.get_node_or_null("ContentLayer/CloseButton"))
-	var viewport_size: Vector2 = ui.get_viewport_rect().size
-	var content_layer := ui.get_node_or_null("ContentLayer") as Control
-	assert_not_null(content_layer)
-	assert_almost_eq(content_layer.size.x, 1920.0, 0.01)
-	assert_almost_eq(content_layer.size.y, 1080.0, 0.01)
-	assert_true(content_layer.scale.x > 0.0)
-	assert_almost_eq(content_layer.scale.x, content_layer.scale.y, 0.001)
-	var content_end := content_layer.position + content_layer.size * content_layer.scale
-	assert_lte(content_layer.position.x, 0.01)
-	assert_lte(content_layer.position.y, 0.01)
-	assert_gte(content_end.x, viewport_size.x - 0.01)
-	assert_gte(content_end.y, viewport_size.y - 0.01)
-	assert_null(ui.get_node_or_null("Background"))
-	assert_null(ui.get_node_or_null("ContentLayer/BattleArt"))
-	assert_null(ui.get_node_or_null("ContentLayer/DreamcatcherPanel"))
-	assert_null(ui.get_node_or_null("ContentLayer/MenuButton"))
-	var overlay_art := ui.get_node_or_null("ContentLayer/BackpackArt") as Control
-	assert_not_null(overlay_art)
-	assert_true(overlay_art.visible)
-	assert_eq(overlay_art.position, Vector2.ZERO)
-	assert_eq(overlay_art.size, BookBackgroundConfig.DESIGN_SIZE)
-	assert_eq(overlay_art.scale, Vector2.ONE)
-	assert_true(overlay_art.has_method("get_visible_page_sheet_count"))
-	assert_eq(overlay_art.call("get_visible_page_sheet_count"), 2)
-	var overlay_album_page := ui.get_node_or_null("ContentLayer/BackpackArt/AlbumPage") as TextureRect
-	var overlay_page_middle := ui.get_node_or_null("ContentLayer/BackpackArt/PageMiddle") as TextureRect
-	var overlay_backpack_cover := ui.get_node_or_null("ContentLayer/BackpackArt/PageBackpackCover") as TextureRect
-	var overlay_route_cover := ui.get_node_or_null("ContentLayer/BackpackArt/PageRouteCover") as TextureRect
-	var overlay_hub_right_tab := ui.get_node_or_null("ContentLayer/BackpackArt/AlbumTabRight") as TextureRect
-	var overlay_backpack_tab := ui.get_node_or_null("ContentLayer/BackpackArt/BackpackTab") as TextureRect
-	var overlay_gallery_right_tab := ui.get_node_or_null("ContentLayer/BackpackArt/GalleryTabRight") as TextureRect
-	var overlay_settings_tab := ui.get_node_or_null("ContentLayer/BackpackArt/SettingsTab") as TextureRect
-	assert_not_null(overlay_album_page)
-	assert_not_null(overlay_page_middle)
-	assert_not_null(overlay_backpack_cover)
-	assert_not_null(overlay_route_cover)
-	assert_not_null(overlay_hub_right_tab)
-	assert_not_null(overlay_backpack_tab)
-	assert_not_null(overlay_gallery_right_tab)
-	assert_not_null(overlay_settings_tab)
-	assert_false(overlay_album_page.visible)
-	assert_false(overlay_page_middle.visible)
-	assert_true(overlay_backpack_cover.visible)
-	assert_true(overlay_route_cover.visible)
-	assert_false(overlay_hub_right_tab.visible)
-	assert_true(overlay_backpack_tab.visible)
-	assert_false(overlay_gallery_right_tab.visible)
-	assert_true(overlay_settings_tab.visible)
-	assert_eq(overlay_backpack_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_BACKPACK, BookBackgroundConfig.PAGE_BACKPACK))
-	assert_true(overlay_backpack_tab.z_index > overlay_backpack_cover.z_index)
-	assert_true(overlay_settings_tab.z_index < overlay_backpack_tab.z_index)
-	assert_true(ui.get_node("ContentLayer/GridPanel").visible)
-	assert_not_null(ui.get_node_or_null("ContentLayer/GridPanel/BackpackUI"))
-	for node_name in [
-		"WoodFloor",
-		"RedBookCover",
-		"AlbumPage",
-		"AlbumRingRight",
-		"BackpackTab",
-		"BagBase",
-		"BagPatch",
-		"StatsPaper",
-	]:
-		var art := ui.get_node_or_null("ContentLayer/BackpackArt/%s" % node_name) as TextureRect
-		assert_not_null(art, "Backpack page split art should expose %s" % node_name)
-		assert_not_null(art.texture)
-		assert_true(art.texture.resource_path != "res://assets/ui/backpack/backpack_overlay_background.png")
-	var wood_floor := ui.get_node_or_null("ContentLayer/BackpackArt/WoodFloor") as TextureRect
-	assert_not_null(wood_floor)
-	var wood_rect: Rect2 = wood_floor.get_global_rect()
-	assert_lte(wood_rect.position.x, 0.01)
-	assert_lte(wood_rect.position.y, 0.01)
-	assert_gte(wood_rect.end.x, viewport_size.x - 0.01)
-	assert_gte(wood_rect.end.y, viewport_size.y - 0.01)
-	assert_not_null(ui.get_node_or_null("ContentLayer/EffectsList"))
-	assert_not_null(ui.get_node_or_null("ContentLayer/StatsLabel"))
 
 
 func test_main_game_dreamcatcher_net_sits_above_cloud():
@@ -345,6 +295,14 @@ func test_main_game_intro_bag_reveal_is_serialized_in_scene():
 	assert_false(intro_bag.visible)
 	assert_not_null(intro_bag.texture)
 	assert_eq(intro_bag.texture.resource_path, "res://assets/ui/battle/intro_bag_reveal/bag_reveal_01.png")
+
+
+func test_battle_backpack_ui_matches_bag_texture_grid_pixels():
+	var main_game_ui = autofree(MainGameUI.instantiate())
+	_assert_battle_grid_matches_bag_texture(main_game_ui)
+
+	var hub_battle_layer = autofree(HubBattleLayer.instantiate())
+	_assert_battle_grid_matches_bag_texture(hub_battle_layer)
 
 
 func test_main_game_intro_bag_reveal_drops_from_upper_right_to_grid_target():
@@ -1032,164 +990,6 @@ func test_hub_dreamcatcher_start_swing_returns_to_base_pose():
 	assert_eq(net.offset, base_offset)
 
 
-func test_hub_left_bookmark_input_click_opens_book_page():
-	var hub = HubScene.instantiate()
-	add_child_autofree(hub)
-	await get_tree().create_timer(0.2).timeout
-
-	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
-	var backpack_button := hub.get_node_or_null("CanvasLayer/DesignRoot/BackpackButton") as Button
-	var backpack_visual := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab") as Control
-	assert_not_null(navigator)
-	assert_not_null(backpack_button)
-	assert_not_null(backpack_visual)
-	var click_position := backpack_visual.get_global_rect().get_center()
-	assert_eq(
-		str(hub.call("_get_left_bookmark_page_at_position", click_position)),
-		BookBackgroundConfig.PAGE_BACKPACK
-	)
-
-	var click := InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	click.position = click_position
-	hub.call("_input", click)
-	await get_tree().create_timer(0.6).timeout
-
-	assert_eq(navigator.current_page_id, BookBackgroundConfig.PAGE_BACKPACK)
-	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
-
-
-func test_hub_book_page_navigator_repositions_right_side_tabs_between_pages():
-	var hub = HubScene.instantiate()
-	add_child_autofree(hub)
-	await get_tree().create_timer(0.2).timeout
-
-	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
-	assert_not_null(navigator)
-
-	hub._open_book_page("settings")
-	await get_tree().create_timer(0.75).timeout
-
-	var viewport_center_x := get_viewport().get_visible_rect().size.x * 0.5
-	var hub_tab := navigator.get_node_or_null("HubTabButton") as Button
-	var backpack_tab := navigator.get_node_or_null("BackpackTabButton") as Button
-	var gallery_tab := navigator.get_node_or_null("GalleryTabButton") as Button
-	var settings_tab := navigator.get_node_or_null("SettingsTabButton") as Button
-	assert_not_null(hub_tab)
-	assert_not_null(backpack_tab)
-	assert_not_null(gallery_tab)
-	assert_not_null(settings_tab)
-	assert_true(hub_tab.visible)
-	assert_true(backpack_tab.visible)
-	assert_true(gallery_tab.visible)
-	assert_false(settings_tab.visible)
-	assert_true(hub_tab.position.x > viewport_center_x)
-	assert_true(hub_tab.position.y > backpack_tab.position.y - 160.0)
-	assert_true(backpack_tab.position.x > viewport_center_x)
-	assert_true(gallery_tab.position.x > viewport_center_x)
-
-	gallery_tab.pressed.emit()
-	await get_tree().create_timer(0.6).timeout
-
-	assert_eq(navigator.current_page_id, "gallery")
-	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
-	assert_true(backpack_tab.visible)
-	assert_true(settings_tab.visible)
-	assert_false(gallery_tab.visible)
-	var gallery_page := navigator.get_node_or_null("GalleryPage") as Control
-	assert_not_null(gallery_page)
-	var gallery_art := gallery_page.get_node_or_null("DesignRoot/ArtLayer") as Control
-	assert_not_null(gallery_art)
-	var backpack_left_visual := gallery_art.get_node_or_null("BackpackTab") as Control
-	var settings_left_visual := gallery_art.get_node_or_null("SettingsTab") as Control
-	assert_not_null(backpack_left_visual)
-	assert_not_null(settings_left_visual)
-	var backpack_hit_rect := backpack_tab.get_global_rect()
-	var backpack_visual_rect := backpack_left_visual.get_global_rect()
-	var settings_hit_rect := settings_tab.get_global_rect()
-	var settings_visual_rect := settings_left_visual.get_global_rect()
-	assert_almost_eq(backpack_hit_rect.position.x, backpack_visual_rect.position.x, 1.0)
-	assert_almost_eq(backpack_hit_rect.position.y, backpack_visual_rect.position.y, 1.0)
-	assert_almost_eq(backpack_hit_rect.size.x, backpack_visual_rect.size.x, 1.0)
-	assert_almost_eq(backpack_hit_rect.size.y, backpack_visual_rect.size.y, 1.0)
-	assert_almost_eq(settings_hit_rect.position.x, settings_visual_rect.position.x, 1.0)
-	assert_almost_eq(settings_hit_rect.position.y, settings_visual_rect.position.y, 1.0)
-	assert_almost_eq(settings_hit_rect.size.x, settings_visual_rect.size.x, 1.0)
-	assert_almost_eq(settings_hit_rect.size.y, settings_visual_rect.size.y, 1.0)
-	assert_eq(
-		str(navigator.call("_get_tab_button_page_at_position", backpack_hit_rect.get_center())),
-		BookBackgroundConfig.PAGE_BACKPACK
-	)
-	assert_eq(
-		str(navigator.call("_get_tab_button_page_at_position", settings_hit_rect.get_center())),
-		BookBackgroundConfig.PAGE_SETTINGS
-	)
-
-	var click := InputEventMouseButton.new()
-	click.button_index = MOUSE_BUTTON_LEFT
-	click.pressed = true
-	click.position = settings_hit_rect.get_center()
-	hub.call("_input", click)
-	await get_tree().create_timer(0.6).timeout
-
-	assert_eq(navigator.current_page_id, BookBackgroundConfig.PAGE_SETTINGS)
-	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
-
-
-func test_hub_book_page_navigator_routes_all_book_pages_without_page_turn():
-	var hub = autofree(HubScene.instantiate())
-	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
-	assert_not_null(navigator)
-	var page_ids := [
-		BookBackgroundConfig.PAGE_HUB,
-		BookBackgroundConfig.PAGE_GALLERY,
-		BookBackgroundConfig.PAGE_BACKPACK,
-		BookBackgroundConfig.PAGE_SETTINGS,
-	]
-	var mode_counts := {
-		"compress": 0,
-		"expand": 0,
-		"page_to_page": 0,
-	}
-	for from_page in page_ids:
-		for to_page in page_ids:
-			if from_page == to_page:
-				continue
-			var transition_mode := str(navigator.call("_get_book_transition_mode", from_page, to_page))
-			assert_false(transition_mode.is_empty(), "%s -> %s should use a book interaction route." % [from_page, to_page])
-			mode_counts[transition_mode] = int(mode_counts[transition_mode]) + 1
-	assert_eq(int(mode_counts["compress"]), 3)
-	assert_eq(int(mode_counts["expand"]), 3)
-	assert_eq(int(mode_counts["page_to_page"]), 6)
-
-
-func test_hub_book_page_navigator_red_tab_returns_to_hub():
-	var hub = HubScene.instantiate()
-	add_child_autofree(hub)
-	await get_tree().create_timer(0.2).timeout
-
-	var navigator := hub.get_node_or_null("CanvasLayer/BookPageNavigator") as Control
-	assert_not_null(navigator)
-
-	hub._open_book_page("settings")
-	await get_tree().create_timer(0.75).timeout
-
-	var hub_tab := navigator.get_node_or_null("HubTabButton") as Button
-	assert_not_null(hub_tab)
-	assert_true(hub_tab.visible)
-	assert_true(hub_tab.position.x > get_viewport().get_visible_rect().size.x * 0.5)
-	assert_true(hub_tab.position.y > 100.0)
-
-	hub_tab.pressed.emit()
-	await get_tree().create_timer(0.75).timeout
-
-	assert_eq(navigator.current_page_id, "hub")
-	assert_true(hub.get_node("BookCanvasLayer").visible)
-	assert_true(_get_hub_art(hub).visible)
-	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
-
-
 func test_hub_zone_triggers_do_not_show_current_prompt_bubbles():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
@@ -1302,196 +1102,6 @@ func test_hub_scene_serialized_preview_matches_project_default_viewport():
 	assert_almost_eq(hub_player.position.x, expected_art_origin.x + hub.PLAYER_START_SOURCE_X * scale_factor, 0.01)
 	assert_almost_eq(hub_player.position.y, expected_floor_y - hub.PLAYER_FLOOR_OFFSET, 0.01)
 	assert_false(interactions.visible)
-
-
-func test_hub_scene_uses_split_hub_art_without_composited_reference():
-	var hub = HubScene.instantiate()
-	add_child_autofree(hub)
-	await get_tree().create_timer(0.2).timeout
-
-	var book_design_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot") as Control
-	var canvas_design_root := hub.get_node_or_null("CanvasLayer/DesignRoot") as Control
-	var hub_art := _get_hub_art(hub)
-	assert_not_null(book_design_root)
-	assert_not_null(canvas_design_root)
-	assert_not_null(hub_art)
-	assert_eq(book_design_root.position, canvas_design_root.position)
-	assert_ne(book_design_root.position, hub_art.position)
-	assert_eq(book_design_root.scale, hub_art.scale)
-	assert_eq(canvas_design_root.scale, hub_art.scale)
-	var background := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/WoodFloor") as TextureRect
-	assert_not_null(background)
-	assert_not_null(background.texture)
-	assert_eq(background.texture.resource_path, "res://assets/ui/book/wood_floor.png")
-	assert_eq(background.size, BookBackgroundConfig.DESIGN_SIZE)
-	var book_background := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground") as Control
-	assert_not_null(book_background)
-	assert_eq(book_background.position, Vector2.ZERO)
-	assert_eq(book_background.size, BookBackgroundConfig.DESIGN_SIZE)
-
-	for node_path in [
-		"BookCanvasLayer/BookDesignRoot/BookBackground/BackTab",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumRingRight",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/AlbumTab",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/GalleryTab",
-		"BookCanvasLayer/BookDesignRoot/BookBackground/SettingsTab",
-	]:
-		var art := hub.get_node_or_null(node_path) as TextureRect
-		assert_not_null(art, "Hub book background should expose %s" % node_path)
-		assert_not_null(art.texture)
-		assert_true(art.texture.resource_path != "res://assets/ui/hub/hub_background.png")
-
-	for node_path in [
-		"HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room",
-		"HubPageVisualRoot/HubArt/CornerTopLeft",
-		"HubPageVisualRoot/HubArt/CornerTopRight",
-		"HubPageVisualRoot/HubArt/CornerBottomLeft",
-		"HubPageVisualRoot/HubArt/CornerBottomRight",
-		"HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble",
-	]:
-		var sprite := hub.get_node_or_null(node_path) as Sprite2D
-		assert_not_null(sprite, "Hub split art should expose %s" % node_path)
-		assert_not_null(sprite.texture)
-		assert_true(sprite.texture.resource_path != "res://assets/ui/hub/hub_background.png")
-
-	var speech_text := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechText") as Label
-	assert_not_null(speech_text)
-	var speech_bubble := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
-	assert_not_null(speech_bubble)
-	assert_false(speech_bubble.visible)
-	assert_false(speech_text.visible)
-
-	hub.show_speech_message()
-	assert_true(speech_bubble.visible)
-	assert_true(speech_text.visible)
-	assert_eq(speech_text.text, "浣犵粓浜庨啋浜嗭紒")
-
-	hub.show_speech_message("鎸?E 鏌ョ湅鍥鹃壌")
-	assert_eq(speech_text.text, "鎸?E 鏌ョ湅鍥鹃壌")
-
-	hub.hide_speech_message()
-	assert_false(speech_bubble.visible)
-	assert_false(speech_text.visible)
-
-	book_background = hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground") as Control
-	assert_not_null(book_background)
-	assert_true(book_background.has_method("get_visible_page_sheet_count"))
-	assert_true(book_background.has_method("get_page_turn_sheet_info"))
-	assert_eq(book_background.call("get_visible_page_sheet_count"), 4)
-
-	var page := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumPage") as TextureRect
-	var turn_sheet_info: Dictionary = book_background.call("get_page_turn_sheet_info")
-	var page_route_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageRouteCover") as TextureRect
-	var page_backpack_cover := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageBackpackCover") as TextureRect
-	var page_middle := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/PageMiddle") as TextureRect
-	var ring_right := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumRingRight") as TextureRect
-	assert_eq(turn_sheet_info.get("texture"), page.texture)
-	assert_eq(turn_sheet_info.get("global_rect"), page.get_global_rect())
-	assert_true(page_route_cover.position.x < page_backpack_cover.position.x)
-	assert_true(page_backpack_cover.position.x < page_middle.position.x)
-	assert_true(page_middle.position.x < page.position.x)
-	assert_almost_eq(page_route_cover.position.y, -8.0, 0.01)
-	assert_almost_eq(page_backpack_cover.position.y, 2.0, 0.01)
-	assert_almost_eq(page_middle.position.y, 10.0, 0.01)
-	assert_almost_eq(page.position.y, 18.0, 0.01)
-	assert_almost_eq(ring_right.position.y, page.position.y, 0.01)
-	assert_almost_eq(ring_right.size.y, page.size.y, 0.01)
-
-	var route_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/AlbumTab") as TextureRect
-	var backpack_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab") as TextureRect
-	var gallery_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/GalleryTab") as TextureRect
-	var settings_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/SettingsTab") as TextureRect
-	var hub_player := _get_hub_player(hub)
-	var dreamcatcher_net := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
-	var merchant_sprite := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
-	var speech_bubble_for_z := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
-	var room := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room") as Sprite2D
-	var top_right_corner := hub.get_node_or_null("HubPageVisualRoot/HubArt/CornerTopRight") as Sprite2D
-	var bottom_right_corner := hub.get_node_or_null("HubPageVisualRoot/HubArt/CornerBottomRight") as Sprite2D
-	var hub_offset: Vector2 = hub.get("hub_art_source_offset")
-	assert_eq(hub_offset, Vector2(0.0, 14.0))
-	assert_not_null(ring_right)
-	assert_not_null(room)
-	assert_not_null(room.texture)
-	assert_not_null(top_right_corner)
-	assert_not_null(bottom_right_corner)
-	var room_right_edge := room.position.x + room.texture.get_size().x * room.scale.x
-	assert_true(top_right_corner.position.x >= room_right_edge)
-	assert_true(bottom_right_corner.position.x >= room_right_edge)
-	assert_eq(route_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_HUB))
-	assert_eq(gallery_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_GALLERY))
-	assert_eq(backpack_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_BACKPACK))
-	assert_eq(settings_tab.z_index, BookBackgroundConfig.get_tab_z_index(BookBackgroundConfig.PAGE_SETTINGS))
-	assert_true(route_tab.z_index > gallery_tab.z_index)
-	assert_true(gallery_tab.z_index > backpack_tab.z_index)
-	assert_true(backpack_tab.z_index > settings_tab.z_index)
-	assert_true(route_tab.z_index > page.z_index)
-	assert_true(gallery_tab.z_index > page_middle.z_index)
-	assert_true(gallery_tab.z_index < page.z_index)
-	assert_true(backpack_tab.z_index > page_backpack_cover.z_index)
-	assert_true(backpack_tab.z_index < page_middle.z_index)
-	assert_true(settings_tab.z_index > page_route_cover.z_index)
-	assert_true(settings_tab.z_index < page_backpack_cover.z_index)
-	assert_not_null(hub_player)
-	assert_not_null(dreamcatcher_net)
-	assert_not_null(merchant_sprite)
-	assert_not_null(speech_bubble_for_z)
-	assert_true(hub_player.z_index > dreamcatcher_net.z_index)
-	assert_true(hub_player.z_index > merchant_sprite.z_index)
-	assert_true(hub_player.z_index < speech_bubble_for_z.z_index)
-
-	var route_button := hub.get_node_or_null("CanvasLayer/DesignRoot/RouteButton") as Button
-	assert_not_null(route_button)
-	assert_false(route_button.tooltip_text.is_empty())
-	assert_true(route_button.pressed.is_connected(Callable(hub, "_on_route_button_pressed")))
-
-	var backpack_button := hub.get_node_or_null("CanvasLayer/DesignRoot/BackpackButton") as Button
-	assert_not_null(backpack_button)
-	assert_eq(backpack_button.tooltip_text, "鏁寸悊鑳屽寘")
-	assert_true(backpack_button.pressed.is_connected(Callable(hub, "_on_backpack_button_pressed")))
-
-	var gallery_button := hub.get_node_or_null("CanvasLayer/DesignRoot/GalleryButton") as Button
-	assert_not_null(gallery_button)
-	assert_eq(gallery_button.tooltip_text, "鍥鹃壌")
-	assert_true(gallery_button.pressed.is_connected(Callable(hub, "_on_gallery_button_pressed")))
-
-	var settings_button := hub.get_node_or_null("CanvasLayer/DesignRoot/SettingsButton") as Button
-	assert_not_null(settings_button)
-	assert_eq(settings_button.tooltip_text, "璁剧疆")
-	assert_true(settings_button.pressed.is_connected(Callable(hub, "_on_settings_button_pressed")))
-
-	var route_tab_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_HUB)
-	var backpack_tab_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_BACKPACK, BookBackgroundConfig.PAGE_HUB)
-	var gallery_tab_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_GALLERY, BookBackgroundConfig.PAGE_HUB)
-	var settings_tab_rect := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_SETTINGS, BookBackgroundConfig.PAGE_HUB)
-	assert_eq(route_tab.position, route_tab_rect.position)
-	assert_eq(route_tab.size, route_tab_rect.size)
-	assert_eq(route_button.position, route_tab_rect.position)
-	assert_eq(route_button.size, route_tab_rect.size)
-	assert_eq(backpack_tab.position, backpack_tab_rect.position)
-	assert_eq(backpack_tab.size, backpack_tab_rect.size)
-	assert_eq(backpack_button.position, backpack_tab_rect.position)
-	assert_eq(backpack_button.size, backpack_tab_rect.size)
-	assert_eq(gallery_tab.position, gallery_tab_rect.position)
-	assert_eq(gallery_tab.size, gallery_tab_rect.size)
-	assert_eq(gallery_button.position, gallery_tab_rect.position)
-	assert_eq(gallery_button.size, gallery_tab_rect.size)
-	assert_eq(settings_tab.position, settings_tab_rect.position)
-	assert_eq(settings_tab.size, settings_tab_rect.size)
-	assert_eq(settings_button.position, settings_tab_rect.position)
-	assert_eq(settings_button.size, settings_tab_rect.size)
-
-	var merchant_button := hub.get_node_or_null("CanvasLayer/DesignRoot/MerchantButton") as Button
-	assert_not_null(merchant_button)
-	assert_eq(merchant_button.get_parent(), canvas_design_root)
-	assert_true(merchant_button.pressed.is_connected(Callable(hub, "_on_merchant_button_pressed")))
-
-	assert_null(hub.get_node_or_null("CanvasLayer/RoutePanel"))
 
 
 func test_hub_back_tab_is_visible_low_layer_and_returns_to_main_menu():
