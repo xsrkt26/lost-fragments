@@ -3,17 +3,28 @@ extends Control
 ## 商店场景：允许玩家购买物品和饰品
 
 const RouteConfig = preload("res://src/core/route/route_config.gd")
+const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
+const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
+const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
+
+const SHOP_OFFER_COUNT := ShopGenerator.DEFAULT_OFFER_COUNT
 
 @onready var shard_label = $MarginContainer/VBoxContainer/Header/ShardLabel
 @onready var shelf = $MarginContainer/VBoxContainer/ScrollContainer/GridContainer
 @onready var refresh_button = $MarginContainer/VBoxContainer/Header/RefreshButton
 @onready var back_button = $MarginContainer/VBoxContainer/Header/BackButton
 
+var shop_backpack_manager: BackpackManager = null
+var shop_backpack_ui: Control = null
+var sell_hint_label: Label = null
+
 func _ready():
 	print("[Shop] 欢迎光临梦境商店")
 	GlobalInput.set_context(GlobalInput.Context.UI)
+	_ensure_shop_layout()
 	_update_shard_display()
 	_populate_shelf()
+	_render_backpack_for_sale()
 	
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	back_button.pressed.connect(_on_back_pressed)
@@ -41,6 +52,55 @@ func _update_refresh_button() -> void:
 	refresh_button.tooltip_text = "刷新当前商店库存"
 	refresh_button.disabled = int(rm.current_shards) < cost
 
+func _ensure_shop_layout() -> void:
+	var root_vbox := $MarginContainer/VBoxContainer as VBoxContainer
+	var scroll_container := $MarginContainer/VBoxContainer/ScrollContainer as ScrollContainer
+	if root_vbox == null or scroll_container == null:
+		return
+	if scroll_container.get_parent() is HBoxContainer:
+		return
+	root_vbox.remove_child(scroll_container)
+
+	var body := HBoxContainer.new()
+	body.name = "ShopBody"
+	body.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	body.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_theme_constant_override("separation", 32)
+	root_vbox.add_child(body)
+
+	scroll_container.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	scroll_container.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(scroll_container)
+	shelf.columns = 2
+
+	var side_panel := PanelContainer.new()
+	side_panel.name = "BackpackSellPanel"
+	side_panel.custom_minimum_size = Vector2(430, 0)
+	side_panel.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	body.add_child(side_panel)
+
+	var side_vbox := VBoxContainer.new()
+	side_vbox.name = "BackpackSellBox"
+	side_vbox.add_theme_constant_override("separation", 12)
+	side_panel.add_child(side_vbox)
+
+	var title := Label.new()
+	title.text = "背包售卖"
+	title.add_theme_font_size_override("font_size", 30)
+	side_vbox.add_child(title)
+
+	sell_hint_label = Label.new()
+	sell_hint_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	sell_hint_label.text = "右键或双击背包物品售卖；售价为买入价的一半。根源之梦不可售卖。"
+	side_vbox.add_child(sell_hint_label)
+
+	shop_backpack_ui = BackpackUIScene.instantiate()
+	shop_backpack_ui.name = "ShopBackpackUI"
+	shop_backpack_ui.custom_minimum_size = Vector2(410, 410)
+	shop_backpack_ui.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	shop_backpack_ui.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	side_vbox.add_child(shop_backpack_ui)
+
 func _populate_shelf():
 	var rm = get_node_or_null("/root/RunManager")
 	var item_db = get_node_or_null("/root/ItemDatabase")
@@ -51,7 +111,7 @@ func _populate_shelf():
 	for child in shelf.get_children():
 		child.queue_free()
 	
-	var offers = rm.generate_current_shop_offers(item_db, ornament_db, 4) if rm.has_method("generate_current_shop_offers") else []
+	var offers = rm.generate_current_shop_offers(item_db, ornament_db, SHOP_OFFER_COUNT) if rm.has_method("generate_current_shop_offers") else []
 	for offer in offers:
 		_add_shop_offer(offer)
 	_update_refresh_button()
@@ -97,6 +157,7 @@ func _buy_offer(offer: Dictionary, button: Button):
 		button.text = str(offer.get("title", "商品")) + "\n已购买"
 		_update_shard_display()
 		_refresh_offer_buttons()
+		_render_backpack_for_sale()
 	else:
 		print("[Shop] 购买失败：碎片不足！")
 
@@ -125,6 +186,81 @@ func _show_offer_tooltip(offer: Dictionary) -> void:
 func _hide_offer_tooltip() -> void:
 	GlobalTooltip.hide()
 
+func _render_backpack_for_sale() -> void:
+	if shop_backpack_ui == null:
+		return
+	var rm = get_node_or_null("/root/RunManager")
+	var item_db = get_node_or_null("/root/ItemDatabase")
+	if rm == null or item_db == null:
+		return
+	if shop_backpack_manager == null:
+		shop_backpack_manager = BackpackManager.new()
+		add_child(shop_backpack_manager)
+
+	var config = rm.get_backpack_grid_config() if rm.has_method("get_backpack_grid_config") else {}
+	shop_backpack_manager.setup_grid(
+		int(config.get("grid_width", 7)),
+		int(config.get("grid_height", 7)),
+		int(config.get("usable_width", 5)),
+		int(config.get("usable_height", 5))
+	)
+	if shop_backpack_manager.has_method("set_blocked_cells"):
+		shop_backpack_manager.set_blocked_cells(_to_vector2i_array(config.get("blocked_cells", [])))
+	if rm.has_method("restore_backpack_state"):
+		rm.restore_backpack_state(shop_backpack_manager, item_db)
+
+	if shop_backpack_ui.has_method("clear_item_visuals"):
+		shop_backpack_ui.clear_item_visuals()
+	shop_backpack_ui.set("manager", shop_backpack_manager)
+	if shop_backpack_ui.has_method("_refresh_grid"):
+		shop_backpack_ui._refresh_grid()
+
+	for instance in shop_backpack_manager.get_all_instances():
+		if instance == null or instance.data == null:
+			continue
+		var card := ItemUIScene.instantiate() as Control
+		if card == null:
+			continue
+		card.setup(instance.data)
+		card.set("item_instance", instance)
+		var runtime_id := int(instance.data.runtime_id)
+		card.gui_input.connect(func(event): _on_shop_backpack_item_gui_input(event, runtime_id))
+		if shop_backpack_ui.has_method("add_item_visual"):
+			shop_backpack_ui.add_item_visual(card, instance.root_pos)
+
+func _to_vector2i_array(value: Variant) -> Array[Vector2i]:
+	var result: Array[Vector2i] = []
+	for entry in Array(value):
+		if entry is Vector2i:
+			result.append(entry)
+		elif entry is Dictionary:
+			result.append(Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0))))
+	return result
+
+func _on_shop_backpack_item_gui_input(event: InputEvent, runtime_id: int) -> void:
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if not mouse_event.pressed:
+		return
+	if mouse_event.button_index != MOUSE_BUTTON_RIGHT and not (mouse_event.button_index == MOUSE_BUTTON_LEFT and mouse_event.double_click):
+		return
+	if _sell_backpack_item(runtime_id):
+		get_viewport().set_input_as_handled()
+
+func _sell_backpack_item(runtime_id: int) -> bool:
+	var rm = get_node_or_null("/root/RunManager")
+	var item_db = get_node_or_null("/root/ItemDatabase")
+	if rm == null or not rm.has_method("sell_backpack_item"):
+		return false
+	var gained := int(rm.sell_backpack_item(runtime_id, item_db))
+	if gained <= 0:
+		return false
+	print("[Shop] 售卖背包物品，获得碎片: ", gained)
+	_update_shard_display()
+	_render_backpack_for_sale()
+	return true
+
 func _on_refresh_pressed() -> void:
 	GlobalTooltip.hide()
 	var rm = get_node_or_null("/root/RunManager")
@@ -132,7 +268,7 @@ func _on_refresh_pressed() -> void:
 	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
 	if rm == null or item_db == null or not rm.has_method("refresh_current_shop_offers"):
 		return
-	rm.refresh_current_shop_offers(item_db, ornament_db, 4)
+	rm.refresh_current_shop_offers(item_db, ornament_db, SHOP_OFFER_COUNT)
 	_update_shard_display()
 	_populate_shelf()
 

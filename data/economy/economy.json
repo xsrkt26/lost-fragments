@@ -5,18 +5,18 @@
     "max": 6
   },
   "battle_rewards": {
-    "normal_base": 8,
-    "normal_per_act": 2,
-    "boss_base": 18,
-    "boss_per_act": 4
+    "normal_base": 6,
+    "normal_per_act": 1,
+    "boss_base": 12,
+    "boss_per_act": 2
   },
   "shop": {
-    "refresh_base_cost": 5,
-    "refresh_act_step": 2,
+    "refresh_base_cost": 4,
+    "refresh_act_step": 1,
     "refresh_repeat_step": 3,
-    "item_price_act_step_percent": 7,
-    "ornament_price_act_step_percent": 9,
-    "ornament_advanced_surcharge_percent": 8,
-    "ornament_rare_surcharge_percent": 15
+    "item_price_act_step_percent": 0,
+    "ornament_price_act_step_percent": 0,
+    "ornament_advanced_surcharge_percent": 0,
+    "ornament_rare_surcharge_percent": 0
   }
 }

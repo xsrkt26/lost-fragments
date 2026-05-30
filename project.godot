@@ -35,8 +35,8 @@ GlobalFeedback="*res://src/autoload/feedback_manager.gd"
 
 [display]
 
-window/size/viewport_width=1280
-window/size/viewport_height=720
+window/size/viewport_width=2560
+window/size/viewport_height=1600
 window/stretch/mode="canvas_items"
 window/stretch/aspect="expand"
 

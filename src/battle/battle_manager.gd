@@ -2,6 +2,8 @@ class_name BattleManager
 extends Node
 
 const ToolEffectScript = preload("res://src/core/tools/tool_effect.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
+const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
 
 ## 战斗管理器：游戏的逻辑中枢 (Controller)
 ## 负责协调 backpack 数据、碰撞解析、序列播放和音频触发
@@ -93,6 +95,13 @@ func _initialize_battle_data():
 		print("[BattleManager] 警告: 未找到 RunManager，使用空卡包运行。")
 
 func _make_battle_deck_from_run(rm) -> Array[String]:
+	var item_db = get_node_or_null("/root/ItemDatabase")
+	var tool_db = get_node_or_null("/root/ToolDatabase")
+	if item_db != null and rm.has_method("build_current_draw_deck"):
+		var generated_deck = rm.build_current_draw_deck(item_db, ItemDrawPool.DEFAULT_DECK_SIZE, true)
+		if not generated_deck.is_empty():
+			return _inject_tools_into_battle_deck(generated_deck, rm, tool_db)
+
 	var source_deck := Array(rm.current_deck).duplicate()
 	var shuffled: Array = source_deck
 	if rm.has_method("shuffle_array_for_run"):
@@ -102,6 +111,20 @@ func _make_battle_deck_from_run(rm) -> Array[String]:
 	var result: Array[String] = []
 	for item_id in shuffled:
 		result.append(str(item_id))
+	return _inject_tools_into_battle_deck(result, rm, tool_db)
+
+func _inject_tools_into_battle_deck(item_deck: Array[String], rm: Node, tool_db: Node) -> Array[String]:
+	if item_deck.is_empty() or not ToolDrawPool.tools_enabled_for_route(rm):
+		return item_deck
+	var result := item_deck.duplicate()
+	for index in range(result.size()):
+		if not ToolDrawPool.should_replace_draw_with_tool(rm, tool_db):
+			continue
+		var tool_id := ToolDrawPool.draw_tool_id(rm, tool_db)
+		if tool_id != "":
+			result[index] = ToolDrawPool.make_tool_entry(tool_id)
+	if rm != null and rm.has_method("save_current_state"):
+		rm.save_current_state()
 	return result
 
 func _refill_battle_deck_from_run(rm = null) -> void:
@@ -382,8 +405,10 @@ func request_discard_item(item_ui: Control):
 	print("[BattleManager] 正在丢弃物品: ", item_data.item_name)
 	
 	# 1. 如果在背包内，先移除
-	var old_pos = _find_item_old_pos(item_data)
-	var old_instance = backpack_manager.grid.get(old_pos) if old_pos != Vector2i(-1, -1) else null
+	var old_instance = _get_backpack_instance_from_item_ui(item_ui, item_data)
+	var old_pos = old_instance.root_pos if old_instance != null else Vector2i(-1, -1)
+	if old_instance != null:
+		item_data = old_instance.data
 	if old_pos != Vector2i(-1, -1):
 		backpack_manager.remove_by_runtime_id(item_data.runtime_id)
 	_remove_item_visual_mapping(item_data)
@@ -399,6 +424,12 @@ func request_discard_item(item_ui: Control):
 	var bus = get_node_or_null("/root/GlobalEventBus")
 	if bus:
 		bus.item_discarded.emit(item_data)
+
+	var replacement_instance = backpack_manager.grid.get(old_pos) if old_pos != Vector2i(-1, -1) else null
+	if replacement_instance != null and replacement_instance != old_instance:
+		_reuse_discarded_item_ui_for_replacement(item_ui, replacement_instance)
+		GlobalAudio.play_sfx("discard")
+		return
 		
 	# 3. 视觉表现与清理
 	if managed_item_uis.has(item_ui):
@@ -406,6 +437,27 @@ func request_discard_item(item_ui: Control):
 		
 	item_ui.queue_free()
 	GlobalAudio.play_sfx("discard")
+
+func _get_backpack_instance_from_item_ui(item_ui: Control, fallback_data: ItemData) -> BackpackManager.ItemInstance:
+	var ui_instance = item_ui.get("item_instance") as BackpackManager.ItemInstance
+	if ui_instance != null and _is_instance_in_grid(ui_instance):
+		return ui_instance
+	var old_pos = _find_item_old_pos(fallback_data)
+	if old_pos != Vector2i(-1, -1):
+		return backpack_manager.grid.get(old_pos)
+	return null
+
+func _reuse_discarded_item_ui_for_replacement(item_ui: Control, replacement_instance: BackpackManager.ItemInstance) -> void:
+	if item_ui == null or replacement_instance == null or replacement_instance.data == null:
+		return
+	item_ui.set("item_instance", replacement_instance)
+	item_ui.set("item_data", replacement_instance.data)
+	if item_ui.has_method("setup"):
+		item_ui.setup(replacement_instance.data, context)
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("add_item_visual"):
+		backpack_ui.add_item_visual(item_ui, replacement_instance.root_pos)
+	if is_instance_valid(backpack_ui) and backpack_ui.has_method("update_slot_visuals"):
+		backpack_ui.update_slot_visuals()
 
 ## 清理所有不在背包格宫内的物品
 func discard_all_outside_items():
@@ -497,6 +549,55 @@ func _remove_item_visual_mapping(item_data: ItemData):
 	if item_ui_map is Dictionary and item_ui_map.has(item_data.runtime_id):
 		item_ui_map.erase(item_data.runtime_id)
 		backpack_ui.set("item_ui_map", item_ui_map)
+
+func refresh_backpack_item_visuals() -> void:
+	if not is_instance_valid(backpack_ui):
+		return
+	var item_ui_map = backpack_ui.get("item_ui_map")
+	if not (item_ui_map is Dictionary):
+		return
+	var live_runtime_ids := {}
+	var item_ui_scene = load("res://src/ui/item/item_ui.tscn")
+	for instance in backpack_manager.get_all_instances():
+		if instance == null or instance.data == null:
+			continue
+		var runtime_id := instance.data.runtime_id
+		live_runtime_ids[runtime_id] = true
+		var item_ui = item_ui_map.get(runtime_id)
+		if not is_instance_valid(item_ui):
+			if item_ui_scene == null:
+				continue
+			item_ui = item_ui_scene.instantiate()
+			var visual_parent = get_parent() if get_parent() != null else self
+			visual_parent.add_child(item_ui)
+			if get_parent() != null and get_parent().has_method("_connect_item_ui_signals"):
+				get_parent()._connect_item_ui_signals(item_ui)
+		_bind_item_ui_to_instance(item_ui, instance)
+		if not managed_item_uis.has(item_ui):
+			managed_item_uis.append(item_ui)
+		if backpack_ui.has_method("add_item_visual"):
+			backpack_ui.add_item_visual(item_ui, instance.root_pos)
+
+	for runtime_id in Array(item_ui_map.keys()):
+		if live_runtime_ids.has(runtime_id):
+			continue
+		var stale_ui = item_ui_map.get(runtime_id)
+		item_ui_map.erase(runtime_id)
+		if is_instance_valid(stale_ui) and stale_ui.get_parent() == backpack_ui:
+			if managed_item_uis.has(stale_ui):
+				managed_item_uis.erase(stale_ui)
+			stale_ui.queue_free()
+	backpack_ui.set("item_ui_map", item_ui_map)
+	if backpack_ui.has_method("update_slot_visuals"):
+		backpack_ui.update_slot_visuals()
+
+func _bind_item_ui_to_instance(item_ui: Control, instance: BackpackManager.ItemInstance) -> void:
+	if item_ui == null or instance == null or instance.data == null:
+		return
+	item_ui.set("item_instance", instance)
+	item_ui.set("item_data", instance.data)
+	if item_ui.has_method("setup"):
+		item_ui.setup(instance.data, context)
 
 func _on_backpack_item_data_replaced(old_data: ItemData, new_instance: BackpackManager.ItemInstance) -> void:
 	for runtime in active_ornaments:
@@ -594,7 +695,19 @@ func request_draw():
 		return
 	
 	GlobalAudio.play_sfx("draw")
-	var item_id = _current_battle_deck.pop_back()
+	var deck_entry := str(_current_battle_deck.pop_back())
+	if ToolDrawPool.is_tool_entry(deck_entry):
+		var tool_id := ToolDrawPool.tool_id_from_entry(deck_entry)
+		var tool_db = get_node_or_null("/root/ToolDatabase")
+		var tool = tool_db.get_tool_by_id(tool_id) if tool_db != null and tool_db.has_method("get_tool_by_id") else null
+		if tool:
+			battle_state = BattleState.RESOLVING
+			_process_new_tool_acquisition(tool)
+			await _process_impact_queue()
+		_settle_interactive_state()
+		return
+
+	var item_id = deck_entry
 	var item_db = get_node_or_null("/root/ItemDatabase")
 	var item = item_db.get_item_by_id(item_id)
 	if item:
@@ -611,13 +724,14 @@ func _process_new_item_acquisition(item: ItemData):
 	# 扣除捕梦梦值
 	var gs = get_node_or_null("/root/GameState")
 	if gs:
-		var cost = 0
+		var base_cost = 0
 		if item.base_cost == -1:
 			# 特殊规则：阶梯递增 (例如：基础 1 + 已经抽取的次数)
-			cost = 1 + draw_count
+			base_cost = 1
 		else:
-			# 其他数值取绝对值作为消耗，避免负数变成恢复
-			cost = abs(item.base_cost)
+			# Treat malformed negative costs as costs, not healing.
+			base_cost = abs(item.base_cost)
+		var cost = base_cost + max(0, draw_count - 1)
 		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
 		if _next_draw_cost_discount > 0:
 			cost = max(1, cost - _next_draw_cost_discount)
@@ -637,6 +751,26 @@ func _process_new_item_acquisition(item: ItemData):
 			if effect.has_method("on_global_item_drawn"):
 				effect.on_global_item_drawn(item, inst, context)
 	_apply_ornament_item_drawn(item)
+
+func _process_new_tool_acquisition(tool_data) -> void:
+	if tool_data == null:
+		return
+	draw_count += 1
+	var gs = get_node_or_null("/root/GameState")
+	if gs:
+		var cost = 1 + max(0, draw_count - 1)
+		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
+		if _next_draw_cost_discount > 0:
+			cost = max(1, cost - _next_draw_cost_discount)
+			_next_draw_cost_discount = 0
+		var actual_cost = apply_sanity_loss(cost, "draw", null)
+		print("[BattleManager] 捕梦道具消耗: ", actual_cost, " (原始: ", cost, ") | 当前捕梦次数: ", draw_count)
+	var rm = get_node_or_null("/root/RunManager")
+	var tool_db = get_node_or_null("/root/ToolDatabase")
+	if rm != null and rm.has_method("grant_tool"):
+		rm.grant_tool(str(tool_data.id), 1, tool_db, "draw", true)
+	_apply_ornament_item_drawn(null)
+	print("[BattleManager] 捕梦获得道具: ", tool_data.tool_name, " (", tool_data.id, ")")
 
 func _try_consume_insurance_contract():
 	var gs = get_node_or_null("/root/GameState")
@@ -757,7 +891,7 @@ func _apply_ornament_tool_used(tool_data, target: Dictionary, result: Dictionary
 			ornament.effect.after_tool_used(tool_data, target, result, context, state)
 
 func _is_waste_item(item_data: ItemData) -> bool:
-	return item_data != null and (item_data.tags.has("废弃物") or item_data.price < 0)
+	return item_data != null and item_data.tags.has("废弃物")
 
 func _apply_ornament_impact_chain_resolved(source: BackpackManager.ItemInstance, actions: Array[GameAction]) -> void:
 	for runtime in active_ornaments:

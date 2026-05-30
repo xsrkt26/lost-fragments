@@ -95,7 +95,6 @@ func test_backpack_configures_item_ui_with_grid_cell_size():
 	assert_eq(ui.cell_size, Vector2(100.0, 70.0))
 	assert_eq(ui.custom_minimum_size, Vector2(100.0, 70.0))
 
-
 func test_backpack_grid_slots_are_serialized_in_scene():
 	var backpack = autofree(BackpackUIScene.instantiate())
 	var grid := backpack.get_node_or_null("GridContainer") as GridContainer
@@ -118,6 +117,30 @@ func test_backpack_refresh_uses_existing_static_grid_slots():
 
 	assert_eq(grid.get_child_count(), slot_count)
 	assert_eq(slot_count, 49)
+
+
+func test_backpack_add_item_visual_positions_immediately_from_grid_coordinates():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	backpack.custom_minimum_size = Vector2(700.0, 490.0)
+	backpack.size = Vector2(700.0, 490.0)
+	await get_tree().process_frame
+
+	var manager = autofree(BackpackManager.new())
+	manager.setup_grid(7, 7, 7, 7)
+	backpack.manager = manager
+	backpack._refresh_grid()
+
+	var item = _make_item_data()
+	item.runtime_id = 42
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	backpack.add_item_visual(ui, Vector2i(2, 3))
+
+	assert_eq(ui.get_parent(), backpack)
+	assert_eq(backpack.get_grid_cell_size(), Vector2(100.0, 70.0))
+	assert_eq(ui.position, Vector2(200.0, 210.0))
 
 func test_global_tooltip_shows_dynamic_pollution_status():
 	var item = _make_item_data()

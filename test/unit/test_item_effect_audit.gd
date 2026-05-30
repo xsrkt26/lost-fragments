@@ -342,9 +342,10 @@ func test_draw_and_discard_reactive_items_trigger_their_runtime_hooks():
 	manager.battle_state = BattleManager.BattleState.RESOLVING
 
 	var apple = _place(manager, "apple", Vector2i(2, 1), ItemData.Direction.RIGHT)
+	gs.current_sanity = 50
 	manager.backpack_manager.remove_instance(apple)
 	apple.data.effects[0].on_discard_instance(apple, manager.context)
-	assert_eq(gs.current_score, 3)
+	assert_eq(gs.current_sanity, 53)
 	assert_eq(manager.backpack_manager.grid[Vector2i(2, 1)].data.id, "apple_core")
 
 	manager.backpack_manager.grid.clear()
@@ -392,8 +393,24 @@ func test_special_hit_items_transform_or_copy_effects():
 	var gift_box = _place(manager, "gift_box", Vector2i(2, 1))
 	result = _resolve(manager, gift_box.root_pos, ItemData.Direction.RIGHT)
 	assert_eq(_score_for_instance(result.actions, gift_box), 5)
-	assert_true(manager.backpack_manager.grid.has(Vector2i(2, 1)))
-	assert_ne(manager.backpack_manager.grid[Vector2i(2, 1)].data.id, "gift_box")
+	var gift_footprint := [
+		Vector2i(2, 1),
+		Vector2i(3, 1),
+		Vector2i(2, 2),
+		Vector2i(3, 2),
+	]
+	var generated_instances := []
+	for cell in gift_footprint:
+		if manager.backpack_manager.grid.has(cell):
+			var instance = manager.backpack_manager.grid[cell]
+			if not generated_instances.has(instance):
+				generated_instances.append(instance)
+	assert_false(generated_instances.is_empty())
+	for instance in generated_instances:
+		assert_ne(instance.data.id, "gift_box")
+		assert_true(instance.data.shape.size() <= 2)
+		for offset in instance.data.shape:
+			assert_true(gift_footprint.has(instance.root_pos + offset))
 
 	manager.backpack_manager.grid.clear()
 	var sad_teddy_bear = _place(manager, "sad_teddy_bear", Vector2i(2, 1))

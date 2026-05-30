@@ -60,6 +60,7 @@ func _execute_action(action: GameAction):
 			
 			# 实际执行数值修改
 			_apply_numeric_change(action)
+			_apply_post_numeric_refresh(action)
 			await get_tree().create_timer(0.1).timeout
 
 func _apply_numeric_change(action: GameAction):
@@ -71,3 +72,14 @@ func _apply_numeric_change(action: GameAction):
 		context.add_score(data.amount)
 	elif data.type == "sanity":
 		context.change_sanity(data.amount)
+
+func _apply_post_numeric_refresh(action: GameAction) -> void:
+	var data = action.value
+	if not (data is Dictionary):
+		return
+	if not bool(data.get("refresh_backpack_visuals", false)):
+		return
+	if context == null or context.battle == null:
+		return
+	if context.battle.has_method("refresh_backpack_item_visuals"):
+		context.battle.refresh_backpack_item_visuals()

@@ -64,7 +64,7 @@
 
 ### 2. 战斗类型与分数目标规则
 
-当前状态：普通战斗默认无分数目标，Boss 战从路线节点读取目标分数；达到目标不会自动结束，战斗结束时统一判定。
+当前状态：普通战斗默认无分数目标，Boss 战从路线节点和场景层读取目标分数；Boss 达标会自动请求结束，战斗结束时统一判定。
 
 实现状态：已完成基础版本。
 
@@ -72,7 +72,7 @@
 
 - `RunManager` 新增当前战斗配置接口，统一返回节点类型、是否 Boss、是否有分数目标和目标分数。
 - 普通 `battle` 节点默认无分数目标，UI 显示为“无”。
-- `boss_battle` 节点必须有分数目标，当前目标公式暂定为 `30 + current_act * 20`。
+- `boss_battle` 节点必须有分数目标，当前目标优先使用 `data/stages/stages.json` 的场景层配置。
 - 得分达到目标不再自动结束战斗，只改变目标达成时的分数颜色。
 - 玩家手动结束或梦值归零时，统一按当前战斗配置结算胜负。
 - 无目标普通战斗结束即视为通过并推进路线。
@@ -148,7 +148,7 @@
 - 新增统一结束请求入口 `request_finish_battle(reason)` 和信号 `battle_finish_requested(reason)`。
 - 手动结束和梦值归零都先进入 `BattleManager.request_finish_battle()`，再由 UI 统一结算胜负和结果弹窗。
 - 如果结束请求发生在抽取或结算中，会记录为 pending，等当前结算段落结束后再发出结束信号。
-- 得分达标不会自动结束，仍需玩家手动结束或梦值归零触发结束请求。
+- Boss 得分达标会自动请求结束；普通战斗仍需玩家手动结束或梦值归零触发结束请求。
 - 战斗最终弹窗出现后调用 `mark_battle_finished()`，阻止重复结束请求。
 
 实现假设：
@@ -629,10 +629,10 @@
 完成记录：
 
 - `RouteConfig` 作为路线配置唯一读取入口，负责读取 JSON、规范化节点、回退默认路线和解析节点场景键。
-- 默认路线保持 9 个节点不变：局内游戏 -> 商店 -> 事件 -> 局内游戏 -> 商店 -> 事件 -> Boss局内游戏 -> 商店 -> 事件。
+- 默认路线为 7 个节点：局内游戏 -> 商店 -> 事件 -> 局内游戏 -> 商店 -> 事件 -> Boss局内游戏。
 - 路线配置支持 `id`、`type`、`label`、`scene`、`score_target`、`metadata` 字段。
 - 新增节点类型常量 `cutscene`、`reward`、`elite_battle`，其中 `elite_battle` 归入战斗节点，`reward` 和 `cutscene` 可通过 `scene` 字段映射到现有场景占位。
-- Boss 分数目标从节点配置读取，当前默认配置保持 `30 + current_act * 20` 的旧规则。
+- Boss 分数目标从节点配置和场景层配置读取，当前 1-6 层默认目标为 45/65/85/110/135/165。
 - `RunManager` 保持旧存档兼容；旧存档没有路线字段或路线 ID 非法时仍回到默认路线。
 - 全量 GUT 已通过，固定关键场景 headless 冒烟列表同步通过。
 
@@ -652,8 +652,8 @@
 
 完成记录：
 
-- 新增 `data/stages/stages.json`，当前包含 1-6 层配置，Boss 目标分别为 50/70/90/110/130/150。
-- `data/routes/routes.json` 新增 `act_2_pollution`、`act_3_grove`、`act_4_gearworks`、`act_5_rift`、`act_6_finale` 五条主题路线。每条路线保持 9 个节点和第 7 节点 Boss 节奏，但在商店、事件、普通战斗和精英战斗排序上做差异。
+- 新增 `data/stages/stages.json`，当前包含 1-6 层配置，Boss 目标分别为 45/65/85/110/135/165。
+- `data/routes/routes.json` 新增 `act_2_pollution`、`act_3_grove`、`act_4_gearworks`、`act_5_rift`、`act_6_finale` 五条主题路线。每条路线保持 7 个节点和第 7 节点 Boss 节奏。
 - `data/events/events.json` 新增 5 个主题事件：污染排污口、温室育苗床、失控工作台、裂隙黑市和最终补给箱。
 - 新增 `src/core/stage/stage_config.gd`，提供配置读取、缺失回退、场景层查询、Boss 目标解析和权重修正工具。
 - `RunManager` 以 `StageConfig.get_max_act()` 驱动整局完成判断，并按当前层选择 route、Boss 目标、视觉配置和战斗修正。

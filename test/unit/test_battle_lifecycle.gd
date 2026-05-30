@@ -1,6 +1,7 @@
 extends GutTest
 
 const BattleManagerScript = preload("res://src/battle/battle_manager.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 
 var manager: BattleManager
 var finish_reasons: Array[String]
@@ -65,6 +66,23 @@ func test_deck_refill_does_not_restore_backpack_state():
 	manager._refill_battle_deck_from_run(rm)
 
 	assert_eq(manager.backpack_manager.grid[Vector2i(2, 2)], instance_before)
-	assert_eq(manager._current_battle_deck.size(), 1)
+	assert_eq(manager._current_battle_deck.size(), ItemDrawPool.DEFAULT_DECK_SIZE)
 	if rm and not snapshot.is_empty():
 		rm.deserialize_run(snapshot)
+
+func test_draw_sanity_cost_adds_per_battle_draw_index():
+	var gs = get_node_or_null("/root/GameState")
+	var item_db = get_node_or_null("/root/ItemDatabase")
+	assert_not_null(gs)
+	assert_not_null(item_db)
+	if item_db and item_db.items.is_empty():
+		item_db.load_all_items()
+	gs.reset_game()
+	gs.current_sanity = 100
+
+	manager._process_new_item_acquisition(item_db.get_item_by_id("paper_ball"))
+	manager._process_new_item_acquisition(item_db.get_item_by_id("apple"))
+	manager._process_new_item_acquisition(item_db.get_item_by_id("tin_can"))
+
+	assert_eq(manager.draw_count, 3)
+	assert_eq(gs.current_sanity, 93)

@@ -7,10 +7,16 @@ const TYPE_TOOL := "tool"
 const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
 const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
+const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
 
 const TAG_WEIGHT_STEP := 2.0
+const DEFAULT_OFFER_COUNT := 8
+const SHOP_ITEM_COUNT := 2
+const SHOP_ORNAMENT_COUNT := 4
+const SHOP_TOOL_COUNT := 2
 
-static func generate_offers(run_manager: Node, item_db: Node, ornament_db: Node, count: int = 4, rng: RandomNumberGenerator = null, excluded_keys: Array = []) -> Array[Dictionary]:
+static func generate_offers(run_manager: Node, item_db: Node, ornament_db: Node, count: int = DEFAULT_OFFER_COUNT, rng: RandomNumberGenerator = null, excluded_keys: Array = []) -> Array[Dictionary]:
 	var offers: Array[Dictionary] = []
 	var act = max(1, int(run_manager.get("current_act"))) if run_manager != null else 1
 	var build_tags = _collect_build_tags(run_manager, item_db, ornament_db)
@@ -19,11 +25,12 @@ static func generate_offers(run_manager: Node, item_db: Node, ornament_db: Node,
 
 	var items = _get_item_offers(item_db, act, count, build_tags, weight_modifiers, excluded_keys)
 	var ornaments = _get_ornament_offers(run_manager, ornament_db, act, count, build_tags, weight_modifiers, excluded_keys)
-	var tools = _get_tool_offers(tool_db, act, count, weight_modifiers, excluded_keys)
+	var tools = _get_tool_offers(tool_db, run_manager, act, count, weight_modifiers, excluded_keys)
+	var target_counts = _get_target_offer_counts(count, not tools.is_empty())
 
-	_append_weighted_offer(offers, items, rng)
-	_append_weighted_offer(offers, ornaments, rng)
-	_append_weighted_offer(offers, tools, rng)
+	_append_weighted_offers(offers, ornaments, int(target_counts.get(TYPE_ORNAMENT, 0)), rng)
+	_append_weighted_offers(offers, tools, int(target_counts.get(TYPE_TOOL, 0)), rng)
+	_append_weighted_offers(offers, items, int(target_counts.get(TYPE_ITEM, 0)), rng)
 
 	var pool: Array[Dictionary] = []
 	pool.append_array(items)
@@ -49,8 +56,9 @@ static func _get_item_offers(item_db: Node, act: int, count: int, build_tags: Di
 	var result: Array[Dictionary] = []
 	if item_db == null or not item_db.has_method("get_all_items"):
 		return result
+	var allowed_item_ids := _get_unlocked_item_ids(item_db, act)
 	var items = item_db.get_all_items()
-	items = items.filter(func(item): return item != null and item.can_draw)
+	items = items.filter(func(item): return item != null and item.can_draw and allowed_item_ids.has(str(item.id)))
 	for item in items:
 		var offer = {
 			"type": TYPE_ITEM,
@@ -90,11 +98,11 @@ static func _get_ornament_offers(run_manager: Node, ornament_db: Node, act: int,
 	result.sort_custom(func(a, b): return _compare_offer_priority(a, b))
 	return result.slice(0, max(count * 3, count))
 
-static func _get_tool_offers(tool_db: Node, act: int, count: int, weight_modifiers: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
+static func _get_tool_offers(tool_db: Node, run_manager: Node, act: int, count: int, weight_modifiers: Dictionary, excluded_keys: Array) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
-	if tool_db == null or not tool_db.has_method("get_available_tools"):
+	if tool_db == null or not tool_db.has_method("get_available_tools") or not ToolDrawPool.tools_enabled_for_route(run_manager):
 		return result
-	for tool in tool_db.get_available_tools():
+	for tool in ToolDrawPool.get_available_tools(run_manager, tool_db):
 		var offer = {
 			"type": TYPE_TOOL,
 			"id": tool.id,
@@ -109,6 +117,51 @@ static func _get_tool_offers(tool_db: Node, act: int, count: int, weight_modifie
 			result.append(offer)
 	result.sort_custom(func(a, b): return _compare_offer_priority(a, b))
 	return result.slice(0, max(count * 3, count))
+
+static func _append_weighted_offers(offers: Array[Dictionary], candidates: Array[Dictionary], amount: int, rng: RandomNumberGenerator = null) -> void:
+	for _i in range(max(0, amount)):
+		if candidates.is_empty():
+			return
+		_append_weighted_offer(offers, candidates, rng)
+
+static func _get_target_offer_counts(count: int, include_tools: bool) -> Dictionary:
+	var target_count = max(0, count)
+	var result := {}
+	result[TYPE_ITEM] = 0
+	result[TYPE_ORNAMENT] = 0
+	result[TYPE_TOOL] = 0
+	if target_count <= 0:
+		return result
+
+	var remaining = target_count
+	result[TYPE_ORNAMENT] = min(2, remaining)
+	remaining -= int(result[TYPE_ORNAMENT])
+	if remaining > 0:
+		result[TYPE_ITEM] = 1
+		remaining -= 1
+	if include_tools and remaining > 0:
+		result[TYPE_TOOL] = 1
+		remaining -= 1
+
+	var fill_order = [TYPE_ORNAMENT, TYPE_TOOL, TYPE_ITEM] if include_tools else [TYPE_ORNAMENT, TYPE_ITEM]
+	var caps := {}
+	caps[TYPE_ITEM] = SHOP_ITEM_COUNT
+	caps[TYPE_ORNAMENT] = SHOP_ORNAMENT_COUNT
+	caps[TYPE_TOOL] = SHOP_TOOL_COUNT
+	while remaining > 0:
+		var changed := false
+		for offer_type in fill_order:
+			if remaining <= 0:
+				break
+			var current = int(result.get(offer_type, 0))
+			if current >= int(caps.get(offer_type, 0)):
+				continue
+			result[offer_type] = current + 1
+			remaining -= 1
+			changed = true
+		if not changed:
+			break
+	return result
 
 static func _append_weighted_offer(offers: Array[Dictionary], candidates: Array[Dictionary], rng: RandomNumberGenerator = null) -> void:
 	if candidates.is_empty():
@@ -128,6 +181,15 @@ static func _remove_existing_offers(candidates: Array[Dictionary], offers: Array
 	for index in range(candidates.size() - 1, -1, -1):
 		if keys.has(make_offer_key(candidates[index])):
 			candidates.remove_at(index)
+
+static func _get_unlocked_item_ids(item_db: Node, act: int) -> Dictionary:
+	var result := {}
+	var by_category := ItemDrawPool.get_unlocked_items_by_category(item_db, act)
+	for entries in by_category.values():
+		for entry in Array(entries):
+			if entry is Dictionary:
+				result[str(entry.get("id", ""))] = true
+	return result
 
 static func _compare_offer_priority(a: Dictionary, b: Dictionary) -> bool:
 	var weight_a = float(a.get("weight", 0.0))
@@ -155,9 +217,10 @@ static func _calculate_tool_price(tool, act: int) -> int:
 	return EconomyConfig.shop_item_price(int(tool.price), act)
 
 static func _get_item_weight(item, build_tags: Dictionary) -> float:
-	var price = int(item.price)
+	var price = max(1, int(item.price))
+	var is_waste := Array(item.tags).has("废弃物")
 	var weight := 7.0
-	if price < 0:
+	if is_waste:
 		weight = 4.0
 	elif price >= 10:
 		weight = 6.0
@@ -236,4 +299,7 @@ static func _get_tag_affinity(candidate_tags: Array, build_tags: Dictionary) -> 
 static func _get_tool_db(run_manager: Node):
 	if run_manager != null and run_manager.is_inside_tree():
 		return run_manager.get_node_or_null("/root/ToolDatabase")
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		return tree.root.get_node_or_null("ToolDatabase")
 	return null
