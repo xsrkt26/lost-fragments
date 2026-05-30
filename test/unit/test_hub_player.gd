@@ -42,6 +42,13 @@ func _get_scaled_sprite_offset(sprite: Sprite2D) -> Vector2:
 	return Vector2(sprite.offset.x * sprite.scale.x, sprite.offset.y * sprite.scale.y)
 
 
+func _get_hub_player(hub: Node) -> CharacterBody2D:
+	var hub_player := hub.get_node_or_null("HubPageVisualRoot/Player") as CharacterBody2D
+	if hub_player == null:
+		hub_player = hub.get_node_or_null("Player") as CharacterBody2D
+	return hub_player
+
+
 func _get_texture_image(path: String) -> Image:
 	var texture := load(path) as Texture2D
 	assert_not_null(texture)
@@ -730,7 +737,7 @@ func test_hub_left_click_moves_player_with_mouse():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
-	var hub_player = hub.get_node("Player")
+	var hub_player = _get_hub_player(hub)
 	hub_player.clear_move_target()
 
 	var event = InputEventMouseButton.new()
@@ -748,7 +755,7 @@ func test_hub_left_bookmark_click_does_not_move_player():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
-	var hub_player = hub.get_node("Player")
+	var hub_player = _get_hub_player(hub)
 	hub_player.clear_move_target()
 
 	var bookmark_paths := [
@@ -774,7 +781,7 @@ func test_hub_player_walk_bounds_are_limited_to_scene_range():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
-	var hub_player = hub.get_node("Player")
+	var hub_player = _get_hub_player(hub)
 
 	var min_x: float = hub._source_x_to_viewport(hub.PLAYER_WALK_MIN_SOURCE_X)
 	var max_x: float = hub._source_x_to_viewport(hub.PLAYER_WALK_MAX_SOURCE_X)
@@ -793,11 +800,11 @@ func test_hub_player_uses_character_animation_frames():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	var hub_player := _get_hub_player(hub)
 	assert_not_null(hub_player)
 	assert_true(hub_player.visible)
 
-	var animated_sprite := hub.get_node_or_null("Player/AnimatedSprite2D") as AnimatedSprite2D
+	var animated_sprite := hub_player.get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 	assert_not_null(animated_sprite)
 	assert_not_null(animated_sprite.sprite_frames)
 	assert_true(animated_sprite.sprite_frames.has_animation("idle"))
@@ -820,7 +827,7 @@ func test_hub_merchant_animation_follows_player_arrival_and_departure():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var merchant_sprite := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
+	var merchant_sprite := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
 	assert_not_null(merchant_sprite)
 	assert_true(merchant_sprite.visible)
 	assert_not_null(merchant_sprite.sprite_frames)
@@ -834,7 +841,7 @@ func test_hub_merchant_animation_follows_player_arrival_and_departure():
 	assert_false(merchant_sprite.is_playing())
 	assert_eq(merchant_sprite.frame, 0)
 
-	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	var hub_player := _get_hub_player(hub)
 	assert_not_null(hub_player)
 	var merchant_x: float = hub._get_merchant_interaction_target_x()
 	var merchant_rect: Rect2 = hub._get_merchant_interaction_viewport_rect()
@@ -866,7 +873,7 @@ func test_hub_merchant_animation_follows_player_arrival_and_departure():
 	assert_false(merchant_button.disabled)
 	assert_true(merchant_button.size.x > 0.0)
 	assert_true(merchant_button.size.y > 0.0)
-	var room := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Room") as Sprite2D
+	var room := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room") as Sprite2D
 	assert_not_null(room)
 	var frame_bounds: Rect2 = hub.MERCHANT_FRAME_BOUNDS[hub._get_merchant_animation_key()]
 	var unshifted_center: float = hub._source_x_to_viewport(room.position.x + frame_bounds.get_center().x * room.scale.x)
@@ -884,7 +891,7 @@ func test_hub_keeps_merchant_visible_before_shop_node_but_disables_entry():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var merchant_sprite := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
+	var merchant_sprite := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
 	var merchant_button := hub.get_node_or_null("CanvasLayer/DesignRoot/MerchantButton") as Button
 	assert_not_null(merchant_sprite)
 	assert_not_null(merchant_button)
@@ -952,7 +959,7 @@ func test_hub_route_tab_no_longer_drives_route_progression():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
-	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	var hub_player := _get_hub_player(hub)
 	assert_not_null(hub_player)
 	hub_player.clear_move_target()
 	hub._pending_auto_interaction = ""
@@ -977,7 +984,7 @@ func test_hub_dreamcatcher_tracks_current_stage_and_disables_on_shop_node():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var net := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
+	var net := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
 	assert_not_null(net)
 	assert_not_null(net.texture)
 	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_4_parents.png")
@@ -1004,7 +1011,7 @@ func test_hub_dreamcatcher_start_swing_returns_to_base_pose():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var net := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
+	var net := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
 	assert_not_null(net)
 	hub._stop_hub_dreamcatcher_idle_swing()
 	var base_position: Vector2 = hub._dreamcatcher_net_base_position
@@ -1103,7 +1110,7 @@ func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
 	assert_almost_eq(collapsed_tab_rect.size.y, tab_source_rect.size.y, 0.01)
 	assert_true(collapsed_tab_rect.position.x > moving_tab_rect.position.x)
 	assert_false(hub.get_node("BookCanvasLayer").visible)
-	assert_false(hub.get_node("HubArt").visible)
+	assert_false(hub.get_node("HubPageVisualRoot/HubArt").visible)
 	assert_false(hub.get_node("CanvasLayer/DesignRoot").visible)
 	var gallery_page := navigator.get_node_or_null("GalleryPage") as Control
 	assert_not_null(gallery_page)
@@ -1125,7 +1132,7 @@ func test_hub_book_page_navigator_opens_gallery_and_returns_to_hub():
 	assert_eq(navigator.current_page_id, "hub")
 	assert_false(hub_stretch_effect.visible)
 	assert_true(hub.get_node("BookCanvasLayer").visible)
-	assert_true(hub.get_node("HubArt").visible)
+	assert_true(hub.get_node("HubPageVisualRoot/HubArt").visible)
 	assert_true(hub.get_node("CanvasLayer/DesignRoot").visible)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 
@@ -1383,7 +1390,7 @@ func test_hub_book_page_navigator_red_tab_returns_to_hub():
 
 	assert_eq(navigator.current_page_id, "hub")
 	assert_true(hub.get_node("BookCanvasLayer").visible)
-	assert_true(hub.get_node("HubArt").visible)
+	assert_true(hub.get_node("HubPageVisualRoot/HubArt").visible)
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 
 
@@ -1451,8 +1458,8 @@ func test_hub_zone_triggers_do_not_show_current_prompt_bubbles():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var speech_bubble := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
-	var speech_text := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/SpeechText") as Label
+	var speech_bubble := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
+	var speech_text := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechText") as Label
 	assert_not_null(speech_bubble)
 	assert_not_null(speech_text)
 
@@ -1479,7 +1486,7 @@ func test_hub_scene_applies_stage_background_and_foreground():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var room := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Room") as Sprite2D
+	var room := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room") as Sprite2D
 	assert_not_null(room)
 	assert_not_null(room.texture)
 	assert_eq(room.texture.resource_path, "res://assets/ui/hub/backgrounds/xiaojia.png")
@@ -1487,7 +1494,7 @@ func test_hub_scene_applies_stage_background_and_foreground():
 	assert_true(room.scale.x > 0.0)
 	assert_eq(room.scale.x, room.scale.y)
 
-	var foreground := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Foreground") as Sprite2D
+	var foreground := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Foreground") as Sprite2D
 	assert_not_null(foreground)
 	assert_true(foreground.visible)
 	assert_not_null(foreground.texture)
@@ -1506,12 +1513,12 @@ func test_hub_scene_keeps_default_room_art_without_active_run():
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
-	var room := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Room") as Sprite2D
+	var room := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room") as Sprite2D
 	assert_not_null(room)
 	assert_not_null(room.texture)
 	assert_eq(room.texture.resource_path, "res://assets/ui/hub/hub_room.png")
 
-	var foreground := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Foreground") as Sprite2D
+	var foreground := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Foreground") as Sprite2D
 	assert_not_null(foreground)
 	assert_false(foreground.visible)
 	assert_null(foreground.texture)
@@ -1533,9 +1540,9 @@ func test_hub_scene_serialized_preview_matches_project_default_viewport():
 
 	var book_design_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot") as Control
 	var canvas_design_root := hub.get_node_or_null("CanvasLayer/DesignRoot") as Control
-	var hub_art := hub.get_node_or_null("HubArt") as Node2D
+	var hub_art := hub.get_node_or_null("HubPageVisualRoot/HubArt") as Node2D
 	var floor_body := hub.get_node_or_null("Floor") as StaticBody2D
-	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
+	var hub_player := _get_hub_player(hub)
 	var interactions := hub.get_node_or_null("Interactions") as Node2D
 	assert_not_null(book_design_root)
 	assert_not_null(canvas_design_root)
@@ -1590,7 +1597,7 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 
 	var book_design_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot") as Control
 	var canvas_design_root := hub.get_node_or_null("CanvasLayer/DesignRoot") as Control
-	var hub_art := hub.get_node_or_null("HubArt") as Node2D
+	var hub_art := hub.get_node_or_null("HubPageVisualRoot/HubArt") as Node2D
 	assert_not_null(book_design_root)
 	assert_not_null(canvas_design_root)
 	assert_not_null(hub_art)
@@ -1626,21 +1633,21 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 		assert_true(art.texture.resource_path != "res://assets/ui/hub/hub_background.png")
 
 	for node_path in [
-		"HubArt/BoardViewport/BoardContent/Room",
-		"HubArt/CornerTopLeft",
-		"HubArt/CornerTopRight",
-		"HubArt/CornerBottomLeft",
-		"HubArt/CornerBottomRight",
-		"HubArt/BoardViewport/BoardContent/SpeechBubble",
+		"HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room",
+		"HubPageVisualRoot/HubArt/CornerTopLeft",
+		"HubPageVisualRoot/HubArt/CornerTopRight",
+		"HubPageVisualRoot/HubArt/CornerBottomLeft",
+		"HubPageVisualRoot/HubArt/CornerBottomRight",
+		"HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble",
 	]:
 		var sprite := hub.get_node_or_null(node_path) as Sprite2D
 		assert_not_null(sprite, "Hub split art should expose %s" % node_path)
 		assert_not_null(sprite.texture)
 		assert_true(sprite.texture.resource_path != "res://assets/ui/hub/hub_background.png")
 
-	var speech_text := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/SpeechText") as Label
+	var speech_text := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechText") as Label
 	assert_not_null(speech_text)
-	var speech_bubble := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
+	var speech_bubble := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
 	assert_not_null(speech_bubble)
 	assert_false(speech_bubble.visible)
 	assert_false(speech_text.visible)
@@ -1685,13 +1692,13 @@ func test_hub_scene_uses_split_hub_art_without_composited_reference():
 	var backpack_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/BackpackTab") as TextureRect
 	var gallery_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/GalleryTab") as TextureRect
 	var settings_tab := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BookBackground/SettingsTab") as TextureRect
-	var hub_player := hub.get_node_or_null("Player") as CharacterBody2D
-	var dreamcatcher_net := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
-	var merchant_sprite := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
-	var speech_bubble_for_z := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
-	var room := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/Room") as Sprite2D
-	var top_right_corner := hub.get_node_or_null("HubArt/CornerTopRight") as Sprite2D
-	var bottom_right_corner := hub.get_node_or_null("HubArt/CornerBottomRight") as Sprite2D
+	var hub_player := _get_hub_player(hub)
+	var dreamcatcher_net := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
+	var merchant_sprite := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/MerchantSprite") as AnimatedSprite2D
+	var speech_bubble_for_z := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/SpeechBubble") as Sprite2D
+	var room := hub.get_node_or_null("HubPageVisualRoot/HubArt/BoardViewport/BoardContent/Room") as Sprite2D
+	var top_right_corner := hub.get_node_or_null("HubPageVisualRoot/HubArt/CornerTopRight") as Sprite2D
+	var bottom_right_corner := hub.get_node_or_null("HubPageVisualRoot/HubArt/CornerBottomRight") as Sprite2D
 	var hub_offset: Vector2 = hub.get("hub_art_source_offset")
 	assert_eq(hub_offset, Vector2(0.0, 14.0))
 	assert_not_null(ring_right)
