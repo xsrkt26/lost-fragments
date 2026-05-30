@@ -532,6 +532,55 @@ func _remove_item_visual_mapping(item_data: ItemData):
 		item_ui_map.erase(item_data.runtime_id)
 		backpack_ui.set("item_ui_map", item_ui_map)
 
+func refresh_backpack_item_visuals() -> void:
+	if not is_instance_valid(backpack_ui):
+		return
+	var item_ui_map = backpack_ui.get("item_ui_map")
+	if not (item_ui_map is Dictionary):
+		return
+	var live_runtime_ids := {}
+	var item_ui_scene = load("res://src/ui/item/item_ui.tscn")
+	for instance in backpack_manager.get_all_instances():
+		if instance == null or instance.data == null:
+			continue
+		var runtime_id := instance.data.runtime_id
+		live_runtime_ids[runtime_id] = true
+		var item_ui = item_ui_map.get(runtime_id)
+		if not is_instance_valid(item_ui):
+			if item_ui_scene == null:
+				continue
+			item_ui = item_ui_scene.instantiate()
+			var visual_parent = get_parent() if get_parent() != null else self
+			visual_parent.add_child(item_ui)
+			if get_parent() != null and get_parent().has_method("_connect_item_ui_signals"):
+				get_parent()._connect_item_ui_signals(item_ui)
+		_bind_item_ui_to_instance(item_ui, instance)
+		if not managed_item_uis.has(item_ui):
+			managed_item_uis.append(item_ui)
+		if backpack_ui.has_method("add_item_visual"):
+			backpack_ui.add_item_visual(item_ui, instance.root_pos)
+
+	for runtime_id in Array(item_ui_map.keys()):
+		if live_runtime_ids.has(runtime_id):
+			continue
+		var stale_ui = item_ui_map.get(runtime_id)
+		item_ui_map.erase(runtime_id)
+		if is_instance_valid(stale_ui) and stale_ui.get_parent() == backpack_ui:
+			if managed_item_uis.has(stale_ui):
+				managed_item_uis.erase(stale_ui)
+			stale_ui.queue_free()
+	backpack_ui.set("item_ui_map", item_ui_map)
+	if backpack_ui.has_method("update_slot_visuals"):
+		backpack_ui.update_slot_visuals()
+
+func _bind_item_ui_to_instance(item_ui: Control, instance: BackpackManager.ItemInstance) -> void:
+	if item_ui == null or instance == null or instance.data == null:
+		return
+	item_ui.set("item_instance", instance)
+	item_ui.set("item_data", instance.data)
+	if item_ui.has_method("setup"):
+		item_ui.setup(instance.data, context)
+
 func _on_backpack_item_data_replaced(old_data: ItemData, new_instance: BackpackManager.ItemInstance) -> void:
 	for runtime in active_ornaments:
 		var ornament = runtime.get("data")
@@ -650,7 +699,7 @@ func _process_new_item_acquisition(item: ItemData):
 			# 特殊规则：阶梯递增 (例如：基础 1 + 已经抽取的次数)
 			base_cost = 1
 		else:
-			# 其他数值取绝对值作为消耗，避免负数变成恢复
+			# Treat malformed negative costs as costs, not healing.
 			base_cost = abs(item.base_cost)
 		var cost = base_cost + max(0, draw_count - 1)
 		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
@@ -792,7 +841,7 @@ func _apply_ornament_tool_used(tool_data, target: Dictionary, result: Dictionary
 			ornament.effect.after_tool_used(tool_data, target, result, context, state)
 
 func _is_waste_item(item_data: ItemData) -> bool:
-	return item_data != null and (item_data.tags.has("废弃物") or item_data.price < 0)
+	return item_data != null and item_data.tags.has("废弃物")
 
 func _apply_ornament_impact_chain_resolved(source: BackpackManager.ItemInstance, actions: Array[GameAction]) -> void:
 	for runtime in active_ornaments:

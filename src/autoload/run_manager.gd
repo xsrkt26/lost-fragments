@@ -804,7 +804,8 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 		runtime_data.direction = int(entry.get("direction", runtime_data.direction))
 		runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
 		var root_pos = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
-		backpack.place_item(runtime_data, root_pos)
+		if not backpack.place_item(runtime_data, root_pos, true):
+			push_warning("[RunManager] Failed to restore backpack item '%s' at %s." % [item_id, root_pos])
 	_ensure_required_backpack_items(backpack, item_db)
 
 func _serialize_backpack_instance(instance: BackpackManager.ItemInstance) -> Dictionary:

@@ -7,19 +7,19 @@ const ECONOMY_CONFIG_PATH := "res://data/economy/economy.json"
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
 
-const NORMAL_BATTLE_SHARDS_BASE := 8
-const NORMAL_BATTLE_SHARDS_PER_ACT := 2
-const BOSS_BATTLE_SHARDS_BASE := 18
-const BOSS_BATTLE_SHARDS_PER_ACT := 4
+const NORMAL_BATTLE_SHARDS_BASE := 6
+const NORMAL_BATTLE_SHARDS_PER_ACT := 1
+const BOSS_BATTLE_SHARDS_BASE := 12
+const BOSS_BATTLE_SHARDS_PER_ACT := 2
 
-const SHOP_REFRESH_BASE_COST := 5
-const SHOP_REFRESH_ACT_STEP := 2
+const SHOP_REFRESH_BASE_COST := 4
+const SHOP_REFRESH_ACT_STEP := 1
 const SHOP_REFRESH_REPEAT_STEP := 3
 
-const ITEM_PRICE_ACT_STEP_PERCENT := 7
-const ORNAMENT_PRICE_ACT_STEP_PERCENT := 9
-const ORNAMENT_ADVANCED_SURCHARGE_PERCENT := 8
-const ORNAMENT_RARE_SURCHARGE_PERCENT := 15
+const ITEM_PRICE_ACT_STEP_PERCENT := 0
+const ORNAMENT_PRICE_ACT_STEP_PERCENT := 0
+const ORNAMENT_ADVANCED_SURCHARGE_PERCENT := 0
+const ORNAMENT_RARE_SURCHARGE_PERCENT := 0
 
 const RARITY_COMMON := "普通"
 const RARITY_ADVANCED := "进阶"
@@ -73,8 +73,12 @@ static func shop_refresh_cost(act: int, refresh_count: int) -> int:
 
 
 static func shop_item_price(base_price: int, act: int) -> int:
-	var sanitized_price = max(1, abs(base_price))
+	var sanitized_price = max(1, base_price)
 	return _apply_percent(sanitized_price, shop_item_price_multiplier_percent(act))
+
+
+static func shop_item_sell_value(base_price: int, act: int) -> int:
+	return max(1, floori(float(shop_item_price(base_price, act)) * 0.5))
 
 
 static func shop_ornament_price(base_price: int, rarity: String, act: int) -> int:

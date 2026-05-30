@@ -95,6 +95,34 @@ func test_initial_act_one_draw_deck_can_show_all_starter_general_items():
 	for expected_id in ["alarm_clock", "apple", "baseball", "mineral_water_bottle", "tin_can"]:
 		assert_true(unique_ids.has(expected_id), "Act 1 starter pool should include %s" % expected_id)
 
+func test_cell_count_draw_uses_current_act_unlocked_pool():
+	var run_manager = autofree(RunManagerScript.new())
+	run_manager.is_run_active = true
+	run_manager.current_deck = [] as Array[String]
+	run_manager.current_backpack_items = [] as Array[Dictionary]
+
+	run_manager.current_act = 1
+	run_manager.set_random_seed(111)
+	for _i in range(20):
+		var item_id := ItemDrawPool.draw_item_id_by_cell_count(run_manager, item_db, 1)
+		var item = item_db.get_item_by_id(item_id)
+		assert_not_null(item)
+		assert_eq(item.shape.size(), 1)
+		assert_lte(int(ItemDrawPool.get_item_rule(item_id).get("unlock_act", 99)), 1)
+
+	run_manager.current_act = 5
+	run_manager.set_random_seed(222)
+	var seen_act_five_item := false
+	for _i in range(80):
+		var item_id := ItemDrawPool.draw_item_id_by_cell_count(run_manager, item_db, 1)
+		var item = item_db.get_item_by_id(item_id)
+		assert_not_null(item)
+		assert_eq(item.shape.size(), 1)
+		assert_lte(int(ItemDrawPool.get_item_rule(item_id).get("unlock_act", 99)), 5)
+		if int(ItemDrawPool.get_item_rule(item_id).get("unlock_act", 1)) == 5:
+			seen_act_five_item = true
+	assert_true(seen_act_five_item)
+
 func _ids_from_entries(entries: Array) -> Array[String]:
 	var ids: Array[String] = []
 	for entry in entries:

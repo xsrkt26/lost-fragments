@@ -74,6 +74,12 @@ func set_blocked_cells(cells: Array[Vector2i]) -> void:
 func is_pos_blocked(pos: Vector2i) -> bool:
 	return blocked_cells.has(pos)
 
+func _is_pos_inside_usable_rect(pos: Vector2i) -> bool:
+	var start_x = floori((grid_width - usable_width) / 2.0)
+	var start_y = floori((grid_height - usable_height) / 2.0)
+	return pos.x >= start_x and pos.x < (start_x + usable_width) and \
+		   pos.y >= start_y and pos.y < (start_y + usable_height)
+
 ## 检查是否处于可用区域内 (居中算法)
 func is_pos_usable(pos: Vector2i) -> bool:
 	if is_pos_blocked(pos):
@@ -92,7 +98,7 @@ func is_pos_usable(pos: Vector2i) -> bool:
 	return is_usable
 
 ## 检查指定位置是否可以放置该物品
-func can_place_item(item_data: ItemData, root_pos: Vector2i) -> bool:
+func can_place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: bool = false) -> bool:
 	if item_data == null or item_data.shape.is_empty():
 		return false
 	for offset in item_data.shape:
@@ -104,7 +110,7 @@ func can_place_item(item_data: ItemData, root_pos: Vector2i) -> bool:
 			return false
 			
 		# 可用区域检查
-		if not is_pos_usable(target_pos):
+		if (not ignore_blocked_cells and is_pos_blocked(target_pos)) or not _is_pos_inside_usable_rect(target_pos):
 			print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 处于未解锁区域")
 			return false
 
@@ -118,8 +124,8 @@ func can_place_item(item_data: ItemData, root_pos: Vector2i) -> bool:
 	return true
 
 ## 放置物品到网格
-func place_item(item_data: ItemData, root_pos: Vector2i) -> bool:
-	if not can_place_item(item_data, root_pos):
+func place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: bool = false) -> bool:
+	if not can_place_item(item_data, root_pos, ignore_blocked_cells):
 		return false
 	
 	# --- 核心重构：资源隔离 ---

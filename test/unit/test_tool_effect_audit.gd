@@ -113,7 +113,7 @@ func test_common_tools_apply_patch_discount_rotation_and_queued_impact():
 	}
 
 	assert_true(manager.request_use_tool("small_patch", {"type": "item", "instance": target}))
-	assert_eq(target.data.price, -2)
+	assert_eq(target.data.price, 13)
 
 	assert_true(manager.request_use_tool("dream_value_candy", {"type": "dreamcatcher"}))
 	assert_eq(manager._next_draw_cost_discount, 2)

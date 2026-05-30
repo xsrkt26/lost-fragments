@@ -101,6 +101,33 @@ static func draw_item_id(run_manager: Node, item_db: Node) -> String:
 	)
 	return _pick_weighted_key(item_candidates, run_manager)
 
+static func draw_item_id_by_cell_count(run_manager: Node, item_db: Node, cell_count: int) -> String:
+	if cell_count <= 0:
+		return ""
+	var act := _get_act(run_manager)
+	var by_category := _filter_unlocked_items_by_cell_count(
+		get_unlocked_items_by_category(item_db, act),
+		item_db,
+		cell_count
+	)
+	var category_candidates := _build_category_candidates(act, by_category)
+	var picked_category := _pick_weighted_key(category_candidates, run_manager)
+	if picked_category == "":
+		return ""
+
+	var role_candidates := _build_role_candidates(act, Array(by_category.get(picked_category, [])))
+	var picked_role := _pick_weighted_key(role_candidates, run_manager)
+	if picked_role == "":
+		return ""
+
+	var item_candidates := _build_item_candidates(
+		act,
+		Array(by_category.get(picked_category, [])),
+		picked_role,
+		_get_owned_counts(run_manager)
+	)
+	return _pick_weighted_key(item_candidates, run_manager)
+
 static func get_unlocked_items_by_category(item_db: Node, act: int) -> Dictionary:
 	var result := {
 		CATEGORY_GENERAL: [],
@@ -176,6 +203,27 @@ static func _build_item_candidates(act: int, category_items: Array, role: String
 			weight *= 1.25
 		weight *= _duplicate_modifier(int(owned_counts.get(item_id, 0)))
 		result.append({"id": item_id, "weight": max(0.01, weight)})
+	return result
+
+static func _filter_unlocked_items_by_cell_count(by_category: Dictionary, item_db: Node, cell_count: int) -> Dictionary:
+	var result := {
+		CATEGORY_GENERAL: [],
+		CATEGORY_POLLUTION: [],
+		CATEGORY_DREAM_SEED: [],
+		CATEGORY_MECHANICAL: [],
+	}
+	if item_db == null or not item_db.has_method("get_item_by_id"):
+		return result
+	for category in [CATEGORY_GENERAL, CATEGORY_POLLUTION, CATEGORY_DREAM_SEED, CATEGORY_MECHANICAL]:
+		var entries: Array = []
+		for entry in Array(by_category.get(category, [])):
+			if not (entry is Dictionary):
+				continue
+			var item = item_db.get_item_by_id(str(entry.get("id", "")))
+			if item == null or item.shape.size() != cell_count:
+				continue
+			entries.append(entry)
+		result[category] = entries
 	return result
 
 static func _has_role_items(category_items: Array, role: String) -> bool:

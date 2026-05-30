@@ -52,6 +52,29 @@ func test_restore_backpack_rebuilds_saved_items_without_pollution():
 	assert_eq(tin_can.data.runtime_id, 1234)
 	assert_eq(tin_can.current_pollution, 0)
 
+func test_restore_backpack_preserves_saved_position_on_blocked_stage_cell():
+	run_manager.current_backpack_items.clear()
+	run_manager.current_backpack_items.append({
+		"id": "paper_ball",
+		"x": 1,
+		"y": 1,
+		"direction": ItemData.Direction.RIGHT,
+		"shape": [{"x": 0, "y": 0}],
+		"runtime_id": 5678
+	})
+	var backpack = autofree(BackpackManager.new())
+	backpack.setup_grid(7, 7, 5, 5)
+	backpack.set_blocked_cells([Vector2i(1, 1), Vector2i(5, 5)] as Array[Vector2i])
+
+	run_manager.restore_backpack_state(backpack, item_db)
+
+	var paper = _find_instance(backpack, "paper_ball")
+	assert_not_null(paper)
+	assert_eq(paper.root_pos, Vector2i(1, 1))
+	assert_eq(paper.data.runtime_id, 5678)
+	assert_true(backpack.is_pos_blocked(Vector2i(1, 1)))
+	assert_false(backpack.can_place_item(item_db.get_item_by_id("paper_ball"), Vector2i(5, 5)))
+
 func test_new_run_starts_with_root_dream():
 	run_manager.start_new_run()
 

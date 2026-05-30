@@ -208,8 +208,7 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 	configure_item_for_grid(item_ui, self)
 	item_ui.scale = Vector2.ONE
 	
-	grid_container.force_update_transform()
-	await get_tree().process_frame
+	_sync_grid_geometry()
 	
 	# --- 核心修复：多格物品对齐 ---
 	# 计算形状的最小偏移量（防止形状不是从 (0,0) 开始的情况）
@@ -218,9 +217,10 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 		min_offset.x = min(min_offset.x, p.x)
 		min_offset.y = min(min_offset.y, p.y)
 	
-	var index = grid_pos.y * manager.grid_width + grid_pos.x
-	var slot = grid_container.get_child(index) as Control
-	item_ui.position = slot.position + Vector2(min_offset.x * grid_step.x, min_offset.y * grid_step.y)
+	item_ui.position = Vector2(
+		(grid_pos.x + min_offset.x) * grid_step.x,
+		(grid_pos.y + min_offset.y) * grid_step.y
+	)
 
 ## 同步最新的映射关系（当 Data 被克隆后调用）
 func update_item_mapping(old_data: ItemData, new_data: ItemData):

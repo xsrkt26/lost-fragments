@@ -77,7 +77,7 @@ func after_item_discarded(item_data: ItemData, old_instance: BackpackManager.Ite
 		"light_pendant":
 			if not state.get("used", false):
 				_add_score(context, 6)
-				if item_data != null and item_data.price < 0:
+				if _is_waste(item_data):
 					_add_score(context, 4)
 				state["used"] = true
 		"compost_bag":
@@ -190,8 +190,8 @@ func after_impact_chain_resolved(source: BackpackManager.ItemInstance, actions: 
 				_add_score(context, 15)
 		"black_market_stamp":
 			for target in targets:
-				if target.data.price < 0:
-					_add_score(context, int(abs(target.data.price) / 2))
+				if _is_waste(target.data):
+					_add_score(context, int(target.data.price / 2))
 		"fusion_badge":
 			for target in targets:
 				if _has_same_tag_neighbor(_backpack(context), target):
@@ -396,7 +396,7 @@ func _has_tag(item_data: ItemData, tag: String) -> bool:
 	return item_data != null and item_data.tags.has(tag)
 
 func _is_waste(item_data: ItemData) -> bool:
-	return _has_tag(item_data, WASTE_TAG) or (item_data != null and item_data.price < 0)
+	return _has_tag(item_data, WASTE_TAG)
 
 func _is_food(item_data: ItemData) -> bool:
 	return item_data != null and (item_data.tags.has("食物") or FOOD_IDS.has(item_data.id))

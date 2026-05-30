@@ -128,17 +128,17 @@ static func _get_tool_weight(tool) -> float:
 	return 3.0
 
 static func _get_item_weight(item, prefer_high_value: bool, build_tags: Dictionary) -> float:
-	var price = int(item.price)
-	var abs_price = abs(price)
+	var price = max(1, int(item.price))
+	var is_waste := Array(item.tags).has("废弃物")
 	var weight := 8.0
-	if price < 0:
+	if is_waste:
 		weight = 4.0
 	elif price >= 10:
 		weight = 7.0
 	if prefer_high_value:
-		weight += float(abs_price) * 0.35
+		weight += float(price) * 0.35
 	else:
-		weight += max(0.0, 12.0 - float(abs_price)) * 0.25
+		weight += max(0.0, 12.0 - float(price)) * 0.25
 	weight += _get_tag_affinity(item.tags, build_tags)
 	if Array(item.tags).has("废弃物") and _has_build_tag(build_tags, "废弃物"):
 		weight += 4.0

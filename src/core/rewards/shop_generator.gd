@@ -155,9 +155,10 @@ static func _calculate_tool_price(tool, act: int) -> int:
 	return EconomyConfig.shop_item_price(int(tool.price), act)
 
 static func _get_item_weight(item, build_tags: Dictionary) -> float:
-	var price = int(item.price)
+	var price = max(1, int(item.price))
+	var is_waste := Array(item.tags).has("废弃物")
 	var weight := 7.0
-	if price < 0:
+	if is_waste:
 		weight = 4.0
 	elif price >= 10:
 		weight = 6.0

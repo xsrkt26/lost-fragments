@@ -67,7 +67,7 @@
     "price": 34,
     "target_type": "item",
     "tags": ["道具", "污染"],
-    "effect_text": "目标物品 +2 污染，并使其本局内价值 -5。"
+    "effect_text": "目标物品 +2 污染，并使其本局内价值 -5，最低为 1。"
   },
   {
     "id": "small_water_drop",

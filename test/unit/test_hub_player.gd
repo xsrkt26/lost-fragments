@@ -497,6 +497,33 @@ func test_hub_dreamcatcher_is_stage_art_and_battle_entry_hotspot():
 	assert_true(hub._is_dreamcatcher_game_available())
 
 
+func test_hub_z_shortcut_enters_battle_without_hidden_layer_locking_input():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
+	var event := InputEventKey.new()
+	event.keycode = KEY_Z
+	event.physical_keycode = KEY_Z
+	event.pressed = true
+	hub._input(event)
+	await get_tree().create_timer(2.0).timeout
+
+	var battle_layer := hub.get_node_or_null("CanvasLayer/BattleLayer") as Control
+	assert_not_null(battle_layer)
+	assert_true(battle_layer.visible)
+	assert_true(bool(hub.get("_is_hub_battle_session_active")))
+
+
 func test_hub_route_tab_no_longer_drives_route_progression():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)

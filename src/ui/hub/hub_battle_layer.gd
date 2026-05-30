@@ -5,6 +5,11 @@ extends "res://src/ui/main_game_ui.gd"
 var _hub_close_callback: Callable = Callable()
 
 
+func _enter_tree() -> void:
+	if not auto_initialize:
+		play_battle_intro = false
+
+
 func _ensure_battle_manager_setup() -> void:
 	if auto_initialize:
 		super._ensure_battle_manager_setup()

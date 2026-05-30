@@ -5,4 +5,5 @@
 
 [node name="HubBattleLayer" instance=ExtResource("1_base")]
 script = ExtResource("2_script")
+play_battle_intro = false
 auto_initialize = false
