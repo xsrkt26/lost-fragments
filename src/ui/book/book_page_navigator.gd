@@ -496,6 +496,16 @@ func _apply_full_rect_offsets(control: Control) -> void:
 	control.offset_bottom = 0.0
 
 
+func _apply_top_left_rect(control: Control, rect_size: Vector2) -> void:
+	if control == null:
+		return
+	if rect_size.x <= 0.0 or rect_size.y <= 0.0:
+		rect_size = DESIGN_SIZE
+	control.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
+	control.position = Vector2.ZERO
+	control.size = rect_size
+
+
 func _layout_turn_visuals(viewport_size: Vector2) -> void:
 	if _turn_effect != null and not _turn_effect.visible:
 		_turn_effect.set_anchors_preset(Control.PRESET_TOP_LEFT, false)
@@ -680,9 +690,7 @@ func _create_transition_global_layer_root(parent: Control, layer_name: String, z
 	root.z_index = z_index
 	root.z_as_relative = true
 	root.clip_contents = false
-	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	root.position = Vector2.ZERO
-	root.size = _get_transition_viewport_size()
+	_apply_top_left_rect(root, _get_transition_viewport_size())
 	parent.add_child(root)
 	return root
 
@@ -698,9 +706,7 @@ func _create_transition_page_layer(page_id: String, stack_index: int) -> Control
 	layer.z_index = (BookBackgroundConfig.PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	return layer
 
 
@@ -711,9 +717,7 @@ func _create_transition_sheet_layer(page_z_index: int) -> Control:
 	layer.z_index = page_z_index
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	layer.pivot_offset = Vector2(layer.size.x, 0.0)
 	return layer
 
@@ -779,9 +783,7 @@ func _create_transition_content_layer(page_id: String, page_z_index: int) -> Con
 	layer.z_index = page_z_index
 	layer.z_as_relative = true
 	layer.clip_contents = false
-	layer.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	layer.position = Vector2.ZERO
-	layer.size = _get_transition_viewport_size()
+	_apply_top_left_rect(layer, _get_transition_viewport_size())
 	layer.pivot_offset = Vector2(layer.size.x, 0.0)
 	return layer
 
@@ -1416,9 +1418,7 @@ func _create_hub_page_visual_root(root_name: String) -> Control:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.clip_contents = false
 	root.visible = true
-	root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	root.position = Vector2.ZERO
-	root.size = _get_transition_viewport_size()
+	_apply_top_left_rect(root, _get_transition_viewport_size())
 	return root
 
 
