@@ -40,6 +40,13 @@ func setup(p_context: GameContext):
 	
 	_refresh_grid()
 
+func clear_item_visuals() -> void:
+	for child in get_children():
+		if child == grid_container:
+			continue
+		child.queue_free()
+	item_ui_map.clear()
+
 func _refresh_grid():
 	if not manager: 
 		print("[BackpackUI] 警告: manager 为空，无法刷新网格。")

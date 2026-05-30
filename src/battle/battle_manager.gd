@@ -3,6 +3,7 @@ extends Node
 
 const ToolEffectScript = preload("res://src/core/tools/tool_effect.gd")
 const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
+const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
 
 ## 战斗管理器：游戏的逻辑中枢 (Controller)
 ## 负责协调 backpack 数据、碰撞解析、序列播放和音频触发
@@ -95,10 +96,11 @@ func _initialize_battle_data():
 
 func _make_battle_deck_from_run(rm) -> Array[String]:
 	var item_db = get_node_or_null("/root/ItemDatabase")
+	var tool_db = get_node_or_null("/root/ToolDatabase")
 	if item_db != null and rm.has_method("build_current_draw_deck"):
 		var generated_deck = rm.build_current_draw_deck(item_db, ItemDrawPool.DEFAULT_DECK_SIZE, true)
 		if not generated_deck.is_empty():
-			return generated_deck
+			return _inject_tools_into_battle_deck(generated_deck, rm, tool_db)
 
 	var source_deck := Array(rm.current_deck).duplicate()
 	var shuffled: Array = source_deck
@@ -109,6 +111,20 @@ func _make_battle_deck_from_run(rm) -> Array[String]:
 	var result: Array[String] = []
 	for item_id in shuffled:
 		result.append(str(item_id))
+	return _inject_tools_into_battle_deck(result, rm, tool_db)
+
+func _inject_tools_into_battle_deck(item_deck: Array[String], rm: Node, tool_db: Node) -> Array[String]:
+	if item_deck.is_empty() or not ToolDrawPool.tools_enabled_for_route(rm):
+		return item_deck
+	var result := item_deck.duplicate()
+	for index in range(result.size()):
+		if not ToolDrawPool.should_replace_draw_with_tool(rm, tool_db):
+			continue
+		var tool_id := ToolDrawPool.draw_tool_id(rm, tool_db)
+		if tool_id != "":
+			result[index] = ToolDrawPool.make_tool_entry(tool_id)
+	if rm != null and rm.has_method("save_current_state"):
+		rm.save_current_state()
 	return result
 
 func _refill_battle_deck_from_run(rm = null) -> void:
@@ -677,7 +693,19 @@ func request_draw():
 		return
 	
 	GlobalAudio.play_sfx("draw")
-	var item_id = _current_battle_deck.pop_back()
+	var deck_entry := str(_current_battle_deck.pop_back())
+	if ToolDrawPool.is_tool_entry(deck_entry):
+		var tool_id := ToolDrawPool.tool_id_from_entry(deck_entry)
+		var tool_db = get_node_or_null("/root/ToolDatabase")
+		var tool = tool_db.get_tool_by_id(tool_id) if tool_db != null and tool_db.has_method("get_tool_by_id") else null
+		if tool:
+			battle_state = BattleState.RESOLVING
+			_process_new_tool_acquisition(tool)
+			await _process_impact_queue()
+		_settle_interactive_state()
+		return
+
+	var item_id = deck_entry
 	var item_db = get_node_or_null("/root/ItemDatabase")
 	var item = item_db.get_item_by_id(item_id)
 	if item:
@@ -721,6 +749,26 @@ func _process_new_item_acquisition(item: ItemData):
 			if effect.has_method("on_global_item_drawn"):
 				effect.on_global_item_drawn(item, inst, context)
 	_apply_ornament_item_drawn(item)
+
+func _process_new_tool_acquisition(tool_data) -> void:
+	if tool_data == null:
+		return
+	draw_count += 1
+	var gs = get_node_or_null("/root/GameState")
+	if gs:
+		var cost = 1 + max(0, draw_count - 1)
+		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
+		if _next_draw_cost_discount > 0:
+			cost = max(1, cost - _next_draw_cost_discount)
+			_next_draw_cost_discount = 0
+		var actual_cost = apply_sanity_loss(cost, "draw", null)
+		print("[BattleManager] 捕梦道具消耗: ", actual_cost, " (原始: ", cost, ") | 当前捕梦次数: ", draw_count)
+	var rm = get_node_or_null("/root/RunManager")
+	var tool_db = get_node_or_null("/root/ToolDatabase")
+	if rm != null and rm.has_method("grant_tool"):
+		rm.grant_tool(str(tool_data.id), 1, tool_db, "draw", true)
+	_apply_ornament_item_drawn(null)
+	print("[BattleManager] 捕梦获得道具: ", tool_data.tool_name, " (", tool_data.id, ")")
 
 func _try_consume_insurance_contract():
 	var gs = get_node_or_null("/root/GameState")

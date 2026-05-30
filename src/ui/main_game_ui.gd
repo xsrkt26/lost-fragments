@@ -470,11 +470,7 @@ func setup(p_battle_manager: BattleManager, embedded_return_callback: Callable =
 	if p_battle_manager == null:
 		push_warning("[MainGameUI] setup called with null battle manager.")
 		return
-	_is_battle_ended = false
-	_draw_locked = false
-	_selected_tool_id = ""
-	_dragged_tool_id = ""
-	_tool_drag_start = Vector2.ZERO
+	_reset_battle_session_state()
 	_set_intro_playing(false)
 	_clear_intro_bag_reveal()
 	if battle_manager != null and battle_manager != p_battle_manager:
@@ -499,6 +495,7 @@ func setup(p_battle_manager: BattleManager, embedded_return_callback: Callable =
 		print("[MainGameUI] Error: backpack_ui is null.")
 
 	battle_manager.backpack_ui = backpack_ui
+	_clear_backpack_item_visuals()
 	if not battle_manager.battle_finish_requested.is_connected(_on_battle_finish_requested):
 		battle_manager.battle_finish_requested.connect(_on_battle_finish_requested)
 
@@ -534,6 +531,23 @@ func _return_to_scene_with_embedded_support(target_scene: int, push_to_history: 
 			return
 	# Standalone fallback.
 	GlobalScene.transition_to(target_scene, push_to_history)
+
+func _reset_battle_session_state() -> void:
+	_is_battle_ended = false
+	_draw_locked = false
+	_selected_tool_id = ""
+	_dragged_tool_id = ""
+	_tool_drag_start = Vector2.ZERO
+
+func _clear_backpack_item_visuals() -> void:
+	if backpack_ui == null:
+		return
+	if backpack_ui.has_method("clear_item_visuals"):
+		backpack_ui.clear_item_visuals()
+	elif backpack_ui.get("item_ui_map") is Dictionary:
+		backpack_ui.set("item_ui_map", {})
+	if battle_manager != null:
+		battle_manager.managed_item_uis.clear()
 
 func _connect_backpack_ui_signals() -> void:
 	if backpack_ui == null or battle_manager == null:
@@ -1337,7 +1351,7 @@ func _on_score_changed(new_val):
 	_try_request_boss_finish_on_target_reached(new_val)
 
 func _try_request_boss_finish_on_target_reached(score: int, run_manager = null) -> void:
-	if _is_backpack_overlay_mode() or _is_battle_ended or battle_manager == null:
+	if _is_battle_ended or battle_manager == null:
 		return
 	if battle_manager.battle_state == BattleManager.BattleState.FINISHING or battle_manager.battle_state == BattleManager.BattleState.FINISHED:
 		return

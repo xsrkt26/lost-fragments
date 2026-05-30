@@ -9,6 +9,8 @@ const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
 const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
+const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
+const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 const RARITY_WEIGHT := {
 	"普通": 1,
 	"进阶": 2,
@@ -30,14 +32,14 @@ static func generate_options(run_manager: Node, item_db: Node, ornament_db: Node
 	if not ornament.is_empty():
 		options.append(ornament)
 
-	var item = _pick_item(item_db, is_boss, build_tags, weight_modifiers, rng)
+	var item = _pick_item(item_db, act, is_boss, build_tags, weight_modifiers, rng)
 	if not item.is_empty() and options.size() < count:
 		options.append(item)
 
 	if options.size() < count:
 		options.append(_make_shards_reward(act, is_boss))
 
-	var tool = _pick_tool(tool_db, weight_modifiers, rng)
+	var tool = _pick_tool(run_manager, tool_db, weight_modifiers, rng)
 	if not tool.is_empty() and options.size() < count:
 		options.append(tool)
 
@@ -53,11 +55,12 @@ static func generate_options(run_manager: Node, item_db: Node, ornament_db: Node
 
 	return options.slice(0, count)
 
-static func _pick_item(item_db: Node, prefer_high_value: bool, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
+static func _pick_item(item_db: Node, act: int, prefer_high_value: bool, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
 	if item_db == null or not item_db.has_method("get_all_items"):
 		return {}
+	var allowed_item_ids := _get_unlocked_item_ids(item_db, act)
 	var items = item_db.get_all_items()
-	items = items.filter(func(item): return item != null and item.can_draw)
+	items = items.filter(func(item): return item != null and item.can_draw and allowed_item_ids.has(str(item.id)))
 	if rng == null:
 		items.sort_custom(func(a, b): return int(a.price) > int(b.price) if prefer_high_value else int(a.price) < int(b.price))
 		if items.is_empty():
@@ -75,6 +78,15 @@ static func _pick_item(item_db: Node, prefer_high_value: bool, build_tags: Dicti
 		return {}
 	return _make_item_reward(picked.get("item"))
 
+static func _get_unlocked_item_ids(item_db: Node, act: int) -> Dictionary:
+	var result := {}
+	var by_category := ItemDrawPool.get_unlocked_items_by_category(item_db, act)
+	for entries in by_category.values():
+		for entry in Array(entries):
+			if entry is Dictionary:
+				result[str(entry.get("id", ""))] = true
+	return result
+
 static func _make_item_reward(item) -> Dictionary:
 	if item == null:
 		return {}
@@ -88,10 +100,10 @@ static func _make_item_reward(item) -> Dictionary:
 		"amount": 1,
 	}
 
-static func _pick_tool(tool_db: Node, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
+static func _pick_tool(run_manager: Node, tool_db: Node, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Dictionary:
 	if tool_db == null or not tool_db.has_method("get_available_tools"):
 		return {}
-	var tools = tool_db.get_available_tools()
+	var tools = ToolDrawPool.get_available_tools(run_manager, tool_db)
 	if tools.is_empty():
 		return {}
 	if rng == null:
@@ -283,4 +295,7 @@ static func _make_shards_reward(act: int, is_boss: bool) -> Dictionary:
 static func _get_tool_db(run_manager: Node):
 	if run_manager != null and run_manager.is_inside_tree():
 		return run_manager.get_node_or_null("/root/ToolDatabase")
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null:
+		return tree.root.get_node_or_null("ToolDatabase")
 	return null

@@ -6,6 +6,7 @@ extends Node
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 const RewardGenerator = preload("res://src/core/rewards/reward_generator.gd")
 const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
+const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
 const StageConfig = preload("res://src/core/stage/stage_config.gd")
 const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 const RunPersistenceCodec = preload("res://src/core/run/run_persistence_codec.gd")
@@ -211,14 +212,14 @@ func apply_reward(reward: Dictionary, item_db: Node = null, save_after: bool = t
 		save_current_state()
 	return true
 
-func generate_current_shop_offers(item_db: Node, ornament_db: Node, count: int = 4) -> Array[Dictionary]:
+func generate_current_shop_offers(item_db: Node, ornament_db: Node, count: int = ShopGenerator.DEFAULT_OFFER_COUNT) -> Array[Dictionary]:
 	var state = _get_current_shop_state()
 	var cached = _to_dictionary_array(state.get("offers", []))
 	if not cached.is_empty():
 		return cached
 	return _generate_and_cache_current_shop_offers(item_db, ornament_db, count, state)
 
-func refresh_current_shop_offers(item_db: Node, ornament_db: Node, count: int = 4) -> Array[Dictionary]:
+func refresh_current_shop_offers(item_db: Node, ornament_db: Node, count: int = ShopGenerator.DEFAULT_OFFER_COUNT) -> Array[Dictionary]:
 	var state = _get_current_shop_state()
 	var cost = get_current_shop_refresh_cost()
 	if current_shards < cost:
@@ -272,6 +273,28 @@ func buy_shop_offer(offer: Dictionary, item_db: Node = null) -> bool:
 	_record_shop_purchase(offer)
 	save_current_state()
 	return true
+
+func sell_backpack_item(runtime_id: int, item_db: Node = null) -> int:
+	if runtime_id == -1:
+		return 0
+	if item_db == null and is_inside_tree():
+		item_db = get_node_or_null("/root/ItemDatabase")
+	for index in range(current_backpack_items.size() - 1, -1, -1):
+		var entry: Dictionary = current_backpack_items[index]
+		if not (entry is Dictionary) or int(entry.get("runtime_id", 0)) != runtime_id:
+			continue
+		var item_id: String = str(entry.get("id", ""))
+		if item_id == ROOT_DREAM_ID or item_id == "":
+			return 0
+		var item_data = item_db.get_item_by_id(item_id) if item_db != null and item_db.has_method("get_item_by_id") else null
+		var base_price: int = int(item_data.price) if item_data != null else max(1, int(entry.get("price", 1)))
+		var sell_value: int = EconomyConfig.shop_item_sell_value(base_price, current_act)
+		current_backpack_items.remove_at(index)
+		current_shards += sell_value
+		shards_changed.emit(current_shards)
+		save_current_state()
+		return sell_value
+	return 0
 
 func grant_tool(tool_id: String, amount: int = 1, tool_db: Node = null, source: String = "", save_after: bool = true) -> bool:
 	if tool_id == "" or amount <= 0:
