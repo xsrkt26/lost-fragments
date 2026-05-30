@@ -2,8 +2,6 @@ extends Control
 
 ## 商店场景：允许玩家购买物品和饰品
 
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 

@@ -3,15 +3,6 @@ extends Node
 ## 运行管理器：单局游戏的数据源 (Source of Truth)
 ## 负责跨场景保存金钱、卡组、深度等核心数据。
 
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const RewardGenerator = preload("res://src/core/rewards/reward_generator.gd")
-const ShopGenerator = preload("res://src/core/rewards/shop_generator.gd")
-const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
-const StageConfig = preload("res://src/core/stage/stage_config.gd")
-const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
-const RunPersistenceCodec = preload("res://src/core/run/run_persistence_codec.gd")
-const RunRouteProgress = preload("res://src/core/run/run_route_progress.gd")
-const RunRngService = preload("res://src/core/run/run_rng_service.gd")
 
 # --- 核心信号 ---
 signal run_started
@@ -101,7 +92,6 @@ func start_new_run():
 	
 	current_shards = INITIAL_SHARDS
 	current_deck = INITIAL_DECK.duplicate()
-	current_backpack_items = _get_initial_backpack_items()
 	pending_item_rewards = []
 	next_pending_item_uid = 1
 	current_tools = {}
@@ -111,6 +101,7 @@ func start_new_run():
 	current_ornaments = []
 	backpack_usable_width = INITIAL_BACKPACK_USABLE_WIDTH
 	backpack_usable_height = INITIAL_BACKPACK_USABLE_HEIGHT
+	current_backpack_items = _get_initial_backpack_items(_get_item_database())
 	shop_purchase_state.clear()
 	event_node_state.clear()
 	seen_event_ids = []
@@ -296,7 +287,7 @@ func sell_backpack_item(runtime_id: int, item_db: Node = null) -> int:
 		return sell_value
 	return 0
 
-func grant_tool(tool_id: String, amount: int = 1, tool_db: Node = null, source: String = "", save_after: bool = true) -> bool:
+func grant_tool(tool_id: String, amount: int = 1, tool_db: Node = null, _source: String = "", save_after: bool = true) -> bool:
 	if tool_id == "" or amount <= 0:
 		return false
 	if tool_db == null and is_inside_tree():
@@ -824,7 +815,7 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 			continue
 		var runtime_data: ItemData = item_data.duplicate(true)
 		runtime_data.runtime_id = int(entry.get("runtime_id", randi()))
-		runtime_data.direction = int(entry.get("direction", runtime_data.direction))
+		runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
 		runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
 		var root_pos = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
 		if not backpack.place_item(runtime_data, root_pos, true):
@@ -856,8 +847,27 @@ func _deserialize_shape(value: Array, fallback: Array[Vector2i]) -> Array[Vector
 		return fallback
 	return result
 
-func _get_initial_backpack_items() -> Array[Dictionary]:
-	return _to_dictionary_array(INITIAL_BACKPACK_ITEMS).duplicate(true)
+func _get_initial_backpack_items(item_db: Node = null) -> Array[Dictionary]:
+	if item_db == null:
+		item_db = _get_item_database()
+	var result: Array[Dictionary] = []
+	var backpack := BackpackManager.new()
+	backpack.setup_grid(BACKPACK_GRID_WIDTH, BACKPACK_GRID_HEIGHT, backpack_usable_width, backpack_usable_height)
+	backpack.set_blocked_cells(_to_vector2i_cells(_get_all_blocked_backpack_cells()))
+	for raw_entry in INITIAL_BACKPACK_ITEMS:
+		var entry := Dictionary(raw_entry).duplicate(true)
+		var runtime_data := _make_runtime_backpack_item_data(entry, item_db)
+		if runtime_data != null:
+			var first_pos := backpack.find_available_pos(runtime_data)
+			if first_pos != Vector2i(-1, -1):
+				entry["x"] = first_pos.x
+				entry["y"] = first_pos.y
+				entry["direction"] = int(runtime_data.direction)
+				entry["shape"] = _serialize_shape(runtime_data.shape)
+				backpack.place_item(runtime_data, first_pos)
+		result.append(entry)
+	backpack.free()
+	return result
 
 func _ensure_required_backpack_items(backpack: BackpackManager, item_db: Node) -> void:
 	if _backpack_has_item(backpack, ROOT_DREAM_ID):
@@ -876,23 +886,32 @@ func _backpack_has_item(backpack: BackpackManager, item_id: String) -> bool:
 	return false
 
 func _place_required_backpack_item(backpack: BackpackManager, item_db: Node, entry: Dictionary) -> bool:
-	var item_id = str(entry.get("id", ""))
-	var item_data = item_db.get_item_by_id(item_id) if item_db != null and item_db.has_method("get_item_by_id") else null
-	if item_data == null:
+	var runtime_data := _make_runtime_backpack_item_data(entry, item_db)
+	if runtime_data == null:
 		return false
 
-	var runtime_data: ItemData = item_data.duplicate(true)
-	runtime_data.direction = int(entry.get("direction", runtime_data.direction))
-	runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
-
-	var root_pos = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
-	if backpack.can_place_item(runtime_data, root_pos):
-		return backpack.place_item(runtime_data, root_pos)
-
-	var fallback_pos = backpack.find_available_pos(runtime_data)
-	if fallback_pos != Vector2i(-1, -1):
-		return backpack.place_item(runtime_data, fallback_pos)
+	var first_pos := backpack.find_available_pos(runtime_data)
+	if first_pos != Vector2i(-1, -1):
+		return backpack.place_item(runtime_data, first_pos)
 	return false
+
+func _make_runtime_backpack_item_data(entry: Dictionary, item_db: Node) -> ItemData:
+	var item_id = str(entry.get("id", ""))
+	if item_id == "":
+		return null
+	var item_data = item_db.get_item_by_id(item_id) if item_db != null and item_db.has_method("get_item_by_id") else null
+	var runtime_data: ItemData = item_data.duplicate(true) if item_data != null else ItemData.new()
+	runtime_data.id = item_id
+	runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
+	runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
+	runtime_data.runtime_id = int(entry.get("runtime_id", runtime_data.runtime_id))
+	return runtime_data
+
+func _get_item_database() -> Node:
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree == null or tree.root == null:
+		return null
+	return tree.root.get_node_or_null("ItemDatabase")
 
 func _is_derived_item(instance: BackpackManager.ItemInstance) -> bool:
 	return instance != null and instance.data != null and instance.data.tags.has("衍生物品")

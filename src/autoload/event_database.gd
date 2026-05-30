@@ -2,7 +2,6 @@ extends Node
 
 const EVENT_DATA_PATH := "res://data/events/events.json"
 const EventDataScript = preload("res://src/core/events/event_data.gd")
-const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
 
 var events: Dictionary = {}
 

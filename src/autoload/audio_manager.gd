@@ -5,7 +5,6 @@ extends Node
 
 enum Bus { MASTER, MUSIC, SFX }
 
-const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BGM_PATHS := AssetPaths.BGM_PATHS
 const SFX_PATHS := AssetPaths.SFX_PATHS
 const REQUIRED_AUDIO_BUSES := [

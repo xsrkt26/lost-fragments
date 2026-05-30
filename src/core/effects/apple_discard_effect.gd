@@ -18,5 +18,5 @@ func on_discard_instance(instance: BackpackManager.ItemInstance, context: GameCo
 	action.value = {"type": "sanity", "amount": sanity_amount}
 	return action
 
-func on_discard(_item_data: ItemData, context: GameContext) -> GameAction:
+func on_discard(_item_data: ItemData, _context: GameContext) -> GameAction:
 	return null

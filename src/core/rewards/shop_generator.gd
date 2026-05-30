@@ -4,11 +4,6 @@ extends RefCounted
 const TYPE_ITEM := "item"
 const TYPE_ORNAMENT := "ornament"
 const TYPE_TOOL := "tool"
-const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
-const StageConfig = preload("res://src/core/stage/stage_config.gd")
-const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
-const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
-const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
 
 const TAG_WEIGHT_STEP := 2.0
 const DEFAULT_OFFER_COUNT := 8

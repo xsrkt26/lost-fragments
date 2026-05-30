@@ -1,6 +1,7 @@
-[gd_scene load_steps=2 format=3 uid="uid://backpack_ui_01"]
+[gd_scene load_steps=3 format=3 uid="uid://backpack_ui_01"]
 
 [ext_resource type="Script" path="res://src/ui/backpack/backpack_ui.gd" id="1_script"]
+[ext_resource type="Texture2D" path="res://assets/ui/backpack/locked_cell_pin.png" id="2_locked_pin"]
 
 [node name="BackpackUI" type="Control"]
 custom_minimum_size = Vector2(340, 340)
@@ -30,11 +31,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_1_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_2_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -42,11 +69,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_3_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_4_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -54,11 +107,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_5_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_6_0" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -66,11 +145,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_0"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_0_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_1_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -78,11 +183,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_2_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_3_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -90,11 +221,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_4_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_5_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -102,11 +259,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_6_1" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_1"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_0_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -114,11 +297,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_1_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_2_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -126,11 +335,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_3_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_4_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -138,11 +373,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_5_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_6_2" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -150,11 +411,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_2"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_0_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_1_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -162,11 +449,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_2_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_3_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -174,11 +487,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_4_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_5_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -186,11 +525,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_6_3" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_3"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_0_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -198,11 +563,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_1_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_2_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -210,11 +601,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_3_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_4_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -222,11 +639,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_5_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_6_4" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -234,11 +677,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_4"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_0_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_1_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -246,11 +715,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_2_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_3_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -258,11 +753,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_4_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_5_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -270,11 +791,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_6_5" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_5"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_0_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -282,11 +829,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_0_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_1_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_1_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_2_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -294,11 +867,37 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_2_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_3_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_3_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="Slot_4_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
@@ -306,14 +905,53 @@ layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_4_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_5_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
 
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_5_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5
+
 [node name="Slot_6_6" type="ColorRect" parent="GridContainer"]
 custom_minimum_size = Vector2(48.5714, 48.5714)
 layout_mode = 2
 mouse_filter = 2
 color = Color(1, 1, 1, 0.12)
+
+[node name="LockedCellPin" type="TextureRect" parent="GridContainer/Slot_6_6"]
+visible = false
+layout_mode = 1
+anchors_preset = 15
+anchor_right = 1.0
+anchor_bottom = 1.0
+grow_horizontal = 2
+grow_vertical = 2
+mouse_filter = 2
+texture = ExtResource("2_locked_pin")
+expand_mode = 1
+stretch_mode = 5

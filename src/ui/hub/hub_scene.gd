@@ -1,9 +1,6 @@
 @tool
 extends Node2D
 
-const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
 const PAGE_MAIN_MENU := BookPageNavigator.PAGE_MAIN_MENU
@@ -828,12 +825,12 @@ func _get_sprite_global_rect(sprite: Sprite2D) -> Rect2:
 	if sprite == null or sprite.texture == null:
 		return Rect2()
 	var local_rect := sprite.get_rect()
-	var transform := sprite.get_global_transform()
+	var sprite_transform := sprite.get_global_transform()
 	return _get_aabb_from_points([
-		transform * local_rect.position,
-		transform * Vector2(local_rect.end.x, local_rect.position.y),
-		transform * local_rect.end,
-		transform * Vector2(local_rect.position.x, local_rect.end.y),
+		sprite_transform * local_rect.position,
+		sprite_transform * Vector2(local_rect.end.x, local_rect.position.y),
+		sprite_transform * local_rect.end,
+		sprite_transform * Vector2(local_rect.position.x, local_rect.end.y),
 	])
 
 
@@ -969,7 +966,7 @@ func _enter_route_node(index: int) -> void:
 		await _play_hub_to_battle_focus(dreamcatcher_uv, end_focus)
 		if not is_inside_tree():
 			return
-		await _open_hub_battle_session()
+		_open_hub_battle_session()
 	else:
 		print("[Hub] Non-battle node: fallback to SceneManager transition.")
 		GlobalScene.transition_with_zoom(target_scene, dreamcatcher_uv, end_focus)
@@ -1044,18 +1041,18 @@ func _remove_hub_battle_runtime_children() -> void:
 			child.queue_free()
 
 
-func _set_hub_chrome_visible_for_battle(is_visible: bool) -> void:
+func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 	if canvas_design_root != null:
-		canvas_design_root.visible = is_visible
+		canvas_design_root.visible = chrome_visible
 	if player != null:
-		player.visible = is_visible
-		if not is_visible and player.has_method("clear_move_target"):
+		player.visible = chrome_visible
+		if not chrome_visible and player.has_method("clear_move_target"):
 			player.clear_move_target()
 	if floor_body != null:
-		floor_body.visible = is_visible
+		floor_body.visible = chrome_visible
 	if merchant_button != null:
-		merchant_button.visible = is_visible and _should_show_merchant()
-	if is_visible:
+		merchant_button.visible = chrome_visible and _should_show_merchant()
+	if chrome_visible:
 		_restore_hub_focus_layer_base_transforms()
 		_layout_scene()
 		_update_merchant_state()

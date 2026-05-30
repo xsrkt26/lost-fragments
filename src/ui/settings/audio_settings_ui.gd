@@ -1,7 +1,6 @@
 extends Control
 
 ## 设置界面：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SPEED_IDS := [
 	"slow",

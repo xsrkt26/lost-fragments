@@ -3,7 +3,6 @@ extends Control
 
 signal close_requested
 
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE

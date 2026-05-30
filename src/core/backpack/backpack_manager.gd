@@ -98,7 +98,7 @@ func is_pos_usable(pos: Vector2i) -> bool:
 	return is_usable
 
 ## 检查指定位置是否可以放置该物品
-func can_place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: bool = false) -> bool:
+func can_place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: bool = false, log_rejections: bool = true) -> bool:
 	if item_data == null or item_data.shape.is_empty():
 		return false
 	for offset in item_data.shape:
@@ -106,19 +106,22 @@ func can_place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cell
 		
 		# 边界检查
 		if target_pos.x < 0 or target_pos.x >= grid_width or target_pos.y < 0 or target_pos.y >= grid_height:
-			print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 超出物理边界 (", grid_width, "x", grid_height, ")")
+			if log_rejections:
+				print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 超出物理边界 (", grid_width, "x", grid_height, ")")
 			return false
 			
 		# 可用区域检查
 		if (not ignore_blocked_cells and is_pos_blocked(target_pos)) or not _is_pos_inside_usable_rect(target_pos):
-			print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 处于未解锁区域")
+			if log_rejections:
+				print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 处于未解锁区域")
 			return false
 
 		# 重叠检查
 		if grid.has(target_pos):
 			if item_data.runtime_id != -1 and grid[target_pos].data.runtime_id == item_data.runtime_id:
 				continue
-			print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 已有物品: ", grid[target_pos].data.item_name, " (拖拽ID: ", item_data.runtime_id, ", 网格ID: ", grid[target_pos].data.runtime_id, ")")
+			if log_rejections:
+				print("[BackpackManager] 放置拒绝: 坐标 ", target_pos, " 已有物品: ", grid[target_pos].data.item_name, " (拖拽ID: ", item_data.runtime_id, ", 网格ID: ", grid[target_pos].data.runtime_id, ")")
 			return false
 			
 	return true
@@ -220,7 +223,7 @@ func find_available_pos(item_data: ItemData) -> Vector2i:
 	for y in range(grid_height):
 		for x in range(grid_width):
 			var pos = Vector2i(x, y)
-			if can_place_item(item_data, pos):
+			if can_place_item(item_data, pos, false, false):
 				return pos
 	return Vector2i(-1, -1)
 

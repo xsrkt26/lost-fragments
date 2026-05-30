@@ -1,8 +1,6 @@
 extends Control
 
 ## 图鉴场景：以相册页素材拼装物品图鉴，右侧为绳网索引，左侧为选中物体和记忆纸片。
-const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SLOT_STYLE_NORMAL := Color(0.78, 0.72, 0.61, 0.82)
 const SLOT_STYLE_HOVER := Color(0.86, 0.78, 0.62, 0.92)

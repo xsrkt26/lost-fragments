@@ -23,7 +23,7 @@ func after_battle_started(context: GameContext, state: Dictionary) -> void:
 				var ornament = runtime.get("data")
 				if ornament != null and ornament.category != "":
 					categories[ornament.category] = true
-			var score = int(categories.size() / 3) * 4
+			var score = floori(float(categories.size()) / 3.0) * 4
 			if categories.size() >= 5:
 				score += 8
 			_add_score(context, score)

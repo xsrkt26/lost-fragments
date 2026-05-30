@@ -8,7 +8,7 @@
 [ext_resource type="Texture2D" uid="uid://c13ro2n1arkox" path="res://assets/ui/book/tab_back.png" id="12_tab_back"]
 [ext_resource type="Texture2D" uid="uid://c7knc0ircvw8b" path="res://assets/ui/hub/dialog_bubble.png" id="13_speech_bubble"]
 [ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="14_photo_corner"]
-[ext_resource type="Script" uid="uid://c8yy4f7hmtf5s" path="res://src/ui/book/book_page_navigator.gd" id="15_book_nav"]
+[ext_resource type="Script" uid="uid://dnwsba0ko2mjr" path="res://src/ui/book/book_page_navigator.gd" id="15_book_nav"]
 [ext_resource type="Texture2D" uid="uid://c17ulsa3cl4db" path="res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png" id="16_dc_net"]
 [ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="17_book_background"]
 [ext_resource type="Script" uid="uid://baspnbepy8nv" path="res://src/ui/book/book_page_turn_effect.gd" id="18_page_turn"]

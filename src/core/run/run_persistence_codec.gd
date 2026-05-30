@@ -1,7 +1,6 @@
 class_name RunPersistenceCodec
 extends RefCounted
 
-const RouteConfig = preload("res://src/core/route/route_config.gd")
 
 static func serialize(manager) -> Dictionary:
 	return {

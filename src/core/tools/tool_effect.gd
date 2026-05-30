@@ -8,7 +8,7 @@ const DREAM_SEED_TAG := "梦境之种"
 const FOOD_IDS := ["apple", "roast_chicken"]
 const PAPER_BALL_ID := "paper_ball"
 
-static func apply_tool(tool, target: Dictionary, battle, run_manager: Node, item_db: Node, ornament_db: Node = null) -> Dictionary:
+static func apply_tool(tool, target: Dictionary, battle, _run_manager: Node, item_db: Node, _ornament_db: Node = null) -> Dictionary:
 	var result := {
 		"success": false,
 		"reason": "",

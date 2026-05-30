@@ -2,7 +2,6 @@
 class_name BookBackground
 extends Control
 
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 # Ordered from the top sheet to the bottom sheet.
 const PAGE_SHEET_NAMES := [
@@ -58,8 +57,8 @@ func set_suppressed_tab_page_ids(page_ids: Array) -> void:
 	_refresh_book_background()
 
 
-func set_transition_tabs_hidden(hidden: bool) -> void:
-	_transition_tabs_hidden = hidden
+func set_transition_tabs_hidden(tabs_hidden: bool) -> void:
+	_transition_tabs_hidden = tabs_hidden
 	_refresh_book_background()
 
 

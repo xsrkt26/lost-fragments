@@ -7,6 +7,15 @@ func after_each():
 	GlobalTooltip.hide()
 	await get_tree().process_frame
 
+func _get_locked_cell_pin(grid: GridContainer, pos: Vector2i) -> TextureRect:
+	var slot := grid.get_node_or_null("Slot_%d_%d" % [pos.x, pos.y]) as Control
+	assert_not_null(slot)
+	if slot == null:
+		return null
+	var pin := slot.get_node_or_null("LockedCellPin") as TextureRect
+	assert_not_null(pin)
+	return pin
+
 func test_item_ui_updates_pollution_badge_when_instance_changes():
 	var item = _make_item_data()
 	var ui = add_child_autofree(ItemUIScene.instantiate())
@@ -104,6 +113,29 @@ func test_backpack_grid_slots_are_serialized_in_scene():
 	assert_not_null(grid.get_node_or_null("Slot_6_6"))
 	for child in grid.get_children():
 		assert_true(child is ColorRect)
+		var pin := (child as Control).get_node_or_null("LockedCellPin") as TextureRect
+		assert_not_null(pin)
+		assert_false(pin.visible)
+		assert_not_null(pin.texture)
+		assert_eq(pin.texture.resource_path, "res://assets/ui/backpack/locked_cell_pin.png")
+
+
+func test_backpack_locked_cell_pins_track_unusable_and_blocked_slots():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	await get_tree().process_frame
+	var grid := backpack.get_node_or_null("GridContainer") as GridContainer
+	assert_not_null(grid)
+
+	var manager = autofree(BackpackManager.new())
+	manager.setup_grid(7, 7, 5, 5)
+	var blocked_cells: Array[Vector2i] = [Vector2i(3, 3)]
+	manager.set_blocked_cells(blocked_cells)
+	backpack.manager = manager
+	backpack._refresh_grid()
+
+	assert_true(_get_locked_cell_pin(grid, Vector2i(0, 0)).visible)
+	assert_false(_get_locked_cell_pin(grid, Vector2i(1, 1)).visible)
+	assert_true(_get_locked_cell_pin(grid, Vector2i(3, 3)).visible)
 
 
 func test_backpack_refresh_uses_existing_static_grid_slots():

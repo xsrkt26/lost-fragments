@@ -5,12 +5,6 @@ const TYPE_SHARDS := "shards"
 const TYPE_ITEM := "item"
 const TYPE_ORNAMENT := "ornament"
 const TYPE_TOOL := "tool"
-const EconomyConfig = preload("res://src/core/rewards/economy_config.gd")
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const StageConfig = preload("res://src/core/stage/stage_config.gd")
-const WeightedRandom = preload("res://src/core/random/weighted_random.gd")
-const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
-const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 const RARITY_WEIGHT := {
 	"普通": 1,
 	"进阶": 2,

@@ -2,8 +2,6 @@ class_name BattleManager
 extends Node
 
 const ToolEffectScript = preload("res://src/core/tools/tool_effect.gd")
-const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
-const ToolDrawPool = preload("res://src/core/tools/tool_draw_pool.gd")
 
 ## 战斗管理器：游戏的逻辑中枢 (Controller)
 ## 负责协调 backpack 数据、碰撞解析、序列播放和音频触发
@@ -865,7 +863,7 @@ func _apply_ornament_item_discarded(item_data: ItemData, old_instance: BackpackM
 		if ornament != null and ornament.effect != null:
 			ornament.effect.after_item_discarded(item_data, old_instance, from_backpack, context, state)
 
-func _apply_tool_item_discarded(item_data: ItemData, old_instance: BackpackManager.ItemInstance, from_backpack: bool) -> void:
+func _apply_tool_item_discarded(item_data: ItemData, old_instance: BackpackManager.ItemInstance, _from_backpack: bool) -> void:
 	if old_instance != null and old_instance.data != null and old_instance.data.has_meta("tool_apple_wax"):
 		if context != null:
 			context.change_sanity(2)

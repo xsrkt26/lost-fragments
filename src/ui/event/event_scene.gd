@@ -1,6 +1,5 @@
 extends Control
 
-const RouteConfig = preload("res://src/core/route/route_config.gd")
 
 @onready var title_label = $MarginContainer/VBoxContainer/TitleLabel
 @onready var desc_label = $MarginContainer/VBoxContainer/DescLabel

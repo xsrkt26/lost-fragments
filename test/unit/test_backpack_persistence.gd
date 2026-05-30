@@ -81,7 +81,7 @@ func test_new_run_starts_with_root_dream():
 	assert_eq(run_manager.current_backpack_items.size(), 1)
 	assert_eq(run_manager.current_backpack_items[0].id, "root_dream")
 	assert_eq(run_manager.current_backpack_items[0].x, 1)
-	assert_eq(run_manager.current_backpack_items[0].y, 3)
+	assert_eq(run_manager.current_backpack_items[0].y, 1)
 
 func test_restore_backpack_adds_root_dream_for_old_saves():
 	run_manager.current_backpack_items.clear()
@@ -92,8 +92,28 @@ func test_restore_backpack_adds_root_dream_for_old_saves():
 
 	var root = _find_instance(backpack, "root_dream")
 	assert_not_null(root)
-	assert_eq(root.root_pos, Vector2i(1, 3))
+	assert_eq(root.root_pos, Vector2i(1, 1))
 	assert_eq(root.data.direction, ItemData.Direction.RIGHT)
+
+func test_restore_backpack_adds_root_dream_at_first_available_slot():
+	run_manager.current_backpack_items.clear()
+	run_manager.current_backpack_items.append({
+		"id": "paper_ball",
+		"x": 1,
+		"y": 1,
+		"direction": ItemData.Direction.RIGHT,
+		"shape": [{"x": 0, "y": 0}],
+		"runtime_id": 4321
+	})
+	var backpack = autofree(BackpackManager.new())
+	backpack.setup_grid(7, 7, 5, 5)
+
+	run_manager.restore_backpack_state(backpack, item_db)
+
+	var root = _find_instance(backpack, "root_dream")
+	assert_not_null(root)
+	assert_eq(root.root_pos, Vector2i(2, 1))
+	assert_true(backpack.can_place_item(item_db.get_item_by_id("root_dream"), Vector2i(3, 1)))
 
 func test_restore_required_item_does_not_mutate_database_resource():
 	var root_resource: ItemData = item_db.get_item_by_id("root_dream")

@@ -1,7 +1,6 @@
 class_name GiftBoxEffect
 extends ItemEffect
 
-const ItemDrawPool = preload("res://src/core/items/item_draw_pool.gd")
 
 @export var score_amount: int = 5
 

@@ -1,8 +1,6 @@
 class_name RunRouteProgress
 extends RefCounted
 
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const StageConfig = preload("res://src/core/stage/stage_config.gd")
 
 func reset_route_progress(manager, route_id: String = RouteConfig.DEFAULT_ROUTE_ID) -> void:
 	manager.current_route_id = RouteConfig.normalize_route_id(route_id)

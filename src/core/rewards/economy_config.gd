@@ -4,8 +4,6 @@ extends RefCounted
 const MIN_ACT := 1
 const MAX_ACT := 6
 const ECONOMY_CONFIG_PATH := "res://data/economy/economy.json"
-const RouteConfig = preload("res://src/core/route/route_config.gd")
-const StageConfig = preload("res://src/core/stage/stage_config.gd")
 
 const NORMAL_BATTLE_SHARDS_BASE := 6
 const NORMAL_BATTLE_SHARDS_PER_ACT := 1

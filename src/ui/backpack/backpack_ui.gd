@@ -14,6 +14,7 @@ const COLOR_EMPTY = Color(1, 1, 1, 0)
 const EDITOR_SLOT_COLOR = Color(1, 1, 1, 0.12)
 const STATIC_GRID_WIDTH := 7
 const STATIC_GRID_HEIGHT := 7
+const LOCKED_CELL_PIN_NODE := "LockedCellPin"
 const COLOR_OCCUPIED = Color(0.2, 0.5, 0.8, 0.2) # 蓝色表示已有物品
 const COLOR_VALID = Color(0.2, 0.8, 0.2, 0.4)   # 绿色表示可放置
 const COLOR_INVALID = Color(0.8, 0.2, 0.2, 0.4) # 红色表示不可用
@@ -100,9 +101,12 @@ func _sync_static_grid_slots() -> void:
 			continue
 		slot.visible = i < active_slot_count
 		slot.custom_minimum_size = grid_step
-		if manager == null:
+		if not slot.visible:
+			_set_locked_cell_pin_visible(slot, false)
+		elif manager == null:
 			slot.color = EDITOR_SLOT_COLOR
 			slot.tooltip_text = "Grid slot"
+			_set_locked_cell_pin_visible(slot, false)
 
 func get_grid_cell_size() -> Vector2:
 	_sync_grid_geometry()
@@ -148,9 +152,11 @@ func update_slot_visuals(ignore_item_data: ItemData = null):
 		if manager.has_method("is_pos_blocked") and manager.is_pos_blocked(pos):
 			slot.color = COLOR_LOCKED
 			slot.tooltip_text = "锁定格"
+			_set_locked_cell_pin_visible(slot, true)
 		elif not manager.is_pos_usable(pos):
 			slot.color = COLOR_LOCKED
 			slot.tooltip_text = "锁定格"
+			_set_locked_cell_pin_visible(slot, true)
 		elif manager.grid.has(pos):
 			var occupied_item = manager.grid[pos].data
 			if ignore_item_data and ignore_item_data.runtime_id != -1 and occupied_item.runtime_id == ignore_item_data.runtime_id:
@@ -159,13 +165,23 @@ func update_slot_visuals(ignore_item_data: ItemData = null):
 			else:
 				slot.color = COLOR_EMPTY
 				slot.tooltip_text = occupied_item.item_name
+			_set_locked_cell_pin_visible(slot, false)
 		else:
 			slot.color = COLOR_EMPTY
 			slot.tooltip_text = "可用格"
+			_set_locked_cell_pin_visible(slot, false)
 	for i in range(active_slot_count, grid_container.get_child_count()):
 		var inactive_slot := grid_container.get_child(i) as ColorRect
 		if inactive_slot != null:
 			inactive_slot.visible = false
+			_set_locked_cell_pin_visible(inactive_slot, false)
+
+func _set_locked_cell_pin_visible(slot: Control, pin_visible: bool) -> void:
+	if slot == null:
+		return
+	var pin := slot.get_node_or_null(LOCKED_CELL_PIN_NODE) as TextureRect
+	if pin != null:
+		pin.visible = pin_visible
 
 ## 高亮显示预测的放置结果 (由外部在 Drag 过程中调用)
 func highlight_placement(root_pos: Vector2i, item_data: ItemData):

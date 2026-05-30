@@ -198,4 +198,8 @@ func _can_control_window() -> bool:
 func _center_window(resolution: Vector2i) -> void:
 	var screen := DisplayServer.window_get_current_screen()
 	var screen_rect := DisplayServer.screen_get_usable_rect(screen)
-	DisplayServer.window_set_position(screen_rect.position + (screen_rect.size - resolution) / 2)
+	var centered_offset := Vector2i(
+		floori(float(screen_rect.size.x - resolution.x) / 2.0),
+		floori(float(screen_rect.size.y - resolution.y) / 2.0)
+	)
+	DisplayServer.window_set_position(screen_rect.position + centered_offset)

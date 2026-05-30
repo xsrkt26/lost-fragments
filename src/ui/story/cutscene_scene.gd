@@ -37,6 +37,8 @@ func _finish_cutscene() -> void:
 		var target = scene_mgr.SceneType.MAIN_MENU
 		if seq == "beginning":
 			target = scene_mgr.SceneType.HUB
+		elif not seq.begins_with("end"):
+			target = scene_mgr.SceneType.HUB
 		scene_mgr.transition_to(target)
 
 func _get_scene_manager() -> Node:

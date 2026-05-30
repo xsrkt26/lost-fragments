@@ -2,11 +2,6 @@ extends Node
 
 const ORNAMENT_DATA_PATH := "res://data/ornaments/ornaments.json"
 const OrnamentDataScript = preload("res://src/core/ornaments/ornament_data.gd")
-const OldPocketWatchEffect = preload("res://src/core/ornaments/effects/old_pocket_watch_effect.gd")
-const DreamcatcherFilterEffect = preload("res://src/core/ornaments/effects/dreamcatcher_filter_effect.gd")
-const EchoEarringEffect = preload("res://src/core/ornaments/effects/echo_earring_effect.gd")
-const GuidingCompassEffect = preload("res://src/core/ornaments/effects/guiding_compass_effect.gd")
-const SafetyPinEffect = preload("res://src/core/ornaments/effects/safety_pin_effect.gd")
 const GenericOrnamentEffect = preload("res://src/core/ornaments/effects/generic_ornament_effect.gd")
 
 var ornaments: Dictionary = {}

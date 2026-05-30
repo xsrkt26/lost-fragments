@@ -186,11 +186,11 @@ func _request_rotation():
 	_is_dragging = false
 	var local_mouse = get_local_mouse_position()
 	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
-	var pivot_offset = Vector2i(
+	var item_pivot_offset = Vector2i(
 		floori(local_mouse.x / safe_cell_size.x),
 		floori(local_mouse.y / safe_cell_size.y)
 	)
-	rotation_requested.emit(self, get_global_mouse_position(), pivot_offset)
+	rotation_requested.emit(self, get_global_mouse_position(), item_pivot_offset)
 
 func _process(_delta):
 	if _is_dragging:

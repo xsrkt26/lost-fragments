@@ -1,8 +1,5 @@
 extends Control
 
-signal close_requested
-
-const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
 const STATS_FONT_SIZE_SANITY := 32
@@ -353,10 +350,10 @@ func _get_control_visual_rect_in_parent(control: Control) -> Rect2:
 	return _get_control_visual_rect_at_position(control, control.position)
 
 
-func _get_control_visual_rect_at_position(control: Control, position: Vector2) -> Rect2:
+func _get_control_visual_rect_at_position(control: Control, control_position: Vector2) -> Rect2:
 	if control == null:
 		return Rect2()
-	return Rect2(position, control.size * control.scale)
+	return Rect2(control_position, control.size * control.scale)
 
 
 func _animate_intro_bag_drop(bag_rect: TextureRect) -> void:
@@ -828,7 +825,7 @@ func _show_result_popup(is_victory: bool):
 
 	# 获取组件
 	var title = popup.get_node("%TitleLabel")
-	var score_label = popup.get_node("%ScoreLabel")
+	var popup_score_label = popup.get_node("%ScoreLabel")
 	var btn = popup.get_node("%ConfirmButton")
 
 	# 设置文本
@@ -840,7 +837,7 @@ func _show_result_popup(is_victory: bool):
 	if is_victory:
 		title.text = "梦境圆满"
 		title.add_theme_color_override("font_color", Color("#ec3073")) # 暖粉/金色
-		score_label.text = "最终得分: %d / %s" % [gs.current_score, target_text]
+		popup_score_label.text = "最终得分: %d / %s" % [gs.current_score, target_text]
 		var reward_options = _get_reward_options(rm)
 		if reward_options.is_empty():
 			btn.text = "继续梦境"
@@ -851,7 +848,7 @@ func _show_result_popup(is_victory: bool):
 	else:
 		title.text = "梦境惊醒"
 		title.add_theme_color_override("font_color", Color("#555555")) # 灰色
-		score_label.text = "遗憾离场 (得分: %d / %s)" % [gs.current_score, target_text]
+		popup_score_label.text = "遗憾离场 (得分: %d / %s)" % [gs.current_score, target_text]
 		btn.text = "回到现实"
 		btn.pressed.connect(func():
 			if rm:
@@ -1163,21 +1160,21 @@ func _connect_item_ui_signals(card: Control):
 	card.drag_moved.connect(func(_item_ui, _mouse_pos, _pivot): _handle_item_dragged(_item_ui, _mouse_pos, _pivot))
 	card.rotation_requested.connect(_handle_item_rotation_requested)
 
-func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i):
+func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
 	var over_trash := _is_point_in_trash_drop_area(mouse_pos)
 	_set_trash_bin_drag_hover(over_trash)
 	if over_trash:
 		_update_backpack_slot_visuals()
 		return
 	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
-	var root_grid_pos = mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
+	var root_grid_pos = mouse_grid_pos - item_pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
 	_highlight_backpack_placement(root_grid_pos, item_ui.item_data)
 
-func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i):
+func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, item_pivot_offset: Vector2i):
 	if battle_manager and battle_manager.has_method("request_rotate_item"):
-		battle_manager.request_rotate_item(item_ui, mouse_global_pos, pivot_offset)
+		battle_manager.request_rotate_item(item_ui, mouse_global_pos, item_pivot_offset)
 
-func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i):
+func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
 	_update_backpack_slot_visuals() # 清除高亮
 
 	# 1. 检查是否掉落在垃圾桶
@@ -1196,7 +1193,7 @@ func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Ve
 
 	# 3. 计算 root_pos 并交给管理器
 	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
-	var root_grid_pos = mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
+	var root_grid_pos = mouse_grid_pos - item_pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
 
 	battle_manager.request_place_item(item_ui, root_grid_pos)
 	_consume_pending_item_if_placed(item_ui)

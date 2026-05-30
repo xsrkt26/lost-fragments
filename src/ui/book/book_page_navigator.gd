@@ -2,7 +2,6 @@ extends Control
 
 signal page_changed(page_id: String)
 
-const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 const PAGE_HUB := BookBackgroundConfig.PAGE_HUB
 const PAGE_BACKPACK := BookBackgroundConfig.PAGE_BACKPACK
@@ -279,10 +278,10 @@ func request_page(page_id: String) -> void:
 	go_to_page(page_id)
 
 
-func activate_tab_at_position(global_position: Vector2) -> bool:
+func activate_tab_at_position(pointer_global_position: Vector2) -> bool:
 	if not visible or current_page_id == PAGE_HUB or _is_turning:
 		return false
-	var target_page := _get_tab_button_page_at_position(global_position)
+	var target_page := _get_tab_button_page_at_position(pointer_global_position)
 	if target_page == "":
 		return false
 	go_to_page(target_page)
@@ -448,7 +447,7 @@ func _sync_tab_buttons() -> void:
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 
 
-func _get_tab_button_page_at_position(global_position: Vector2) -> String:
+func _get_tab_button_page_at_position(pointer_global_position: Vector2) -> String:
 	var viewport_size := get_viewport_rect().size
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
@@ -456,10 +455,10 @@ func _get_tab_button_page_at_position(global_position: Vector2) -> String:
 		if current_page_id == PAGE_HUB or str(page_id) == current_page_id or _is_turning:
 			continue
 		var visual_rect := _get_tab_hotspot_global_rect(str(page_id), viewport_size)
-		if visual_rect.has_point(global_position):
+		if visual_rect.has_point(pointer_global_position):
 			return str(page_id)
 		var button := _tab_buttons[page_id] as Button
-		if button != null and button.visible and not button.disabled and button.get_global_rect().has_point(global_position):
+		if button != null and button.visible and not button.disabled and button.get_global_rect().has_point(pointer_global_position):
 			return str(page_id)
 	return ""
 
@@ -569,9 +568,9 @@ func _get_transition_viewport_size() -> Vector2:
 func _get_node_global_scale(node: CanvasItem) -> Vector2:
 	if node == null:
 		return Vector2.ONE
-	var transform := node.get_global_transform()
-	var scale := transform.get_scale()
-	return Vector2(maxf(1e-6, abs(scale.x)), maxf(1e-6, abs(scale.y)))
+	var node_transform := node.get_global_transform()
+	var node_scale := node_transform.get_scale()
+	return Vector2(maxf(1e-6, abs(node_scale.x)), maxf(1e-6, abs(node_scale.y)))
 
 
 func _get_book_background_for_page(page_id: String) -> Node:
@@ -683,11 +682,11 @@ func _prepare_transition_page_stack(previous_page_id: String, target_page_id: St
 	_add_transition_back_tab(root)
 
 
-func _create_transition_global_layer_root(parent: Control, layer_name: String, z_index: int) -> Control:
+func _create_transition_global_layer_root(parent: Control, layer_name: String, layer_z_index: int) -> Control:
 	var root := Control.new()
 	root.name = "Transition%sRoot" % layer_name
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.z_index = z_index
+	root.z_index = layer_z_index
 	root.z_as_relative = true
 	root.clip_contents = false
 	_apply_top_left_rect(root, _get_transition_viewport_size())
@@ -1693,11 +1692,11 @@ func _get_transition_tab_z_index(page_id: String, active_page_id: String) -> int
 	return BookBackgroundConfig.get_tab_z_index(page_id, active_page_id)
 
 
-func _should_draw_transition_back_tab(previous_page_id: String) -> bool:
+func _should_draw_transition_back_tab(_previous_page_id: String) -> bool:
 	return true
 
 
-func _should_draw_transition_tab(_page_id: String, previous_page_id: String, _target_page_id: String) -> bool:
+func _should_draw_transition_tab(_page_id: String, _previous_page_id: String, _target_page_id: String) -> bool:
 	return true
 
 
@@ -1729,13 +1728,13 @@ func _hide_transition_tab_overlay() -> void:
 	_transition_tab_overlay.visible = false
 
 
-func _set_transition_tabs_hidden_for_page(page_id: String, hidden: bool) -> void:
+func _set_transition_tabs_hidden_for_page(page_id: String, tabs_hidden: bool) -> void:
 	var background := _get_book_background_for_page(page_id)
 	if background == null or not background.has_method("set_transition_tabs_hidden"):
 		return
-	if hidden and not _transition_hidden_backgrounds.has(background):
+	if tabs_hidden and not _transition_hidden_backgrounds.has(background):
 		_transition_hidden_backgrounds.append(background)
-	background.call("set_transition_tabs_hidden", hidden)
+	background.call("set_transition_tabs_hidden", tabs_hidden)
 
 
 func _restore_transition_hidden_backgrounds() -> void:
