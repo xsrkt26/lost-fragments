@@ -1,9 +1,9 @@
 extends Control
 
 ## 图鉴场景：以相册页素材拼装物品图鉴，右侧为绳网索引，左侧为选中物体和记忆纸片。
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
-const PHOTO_CORNER_TEXTURE := preload("res://assets/ui/gallery/photo_corner.png")
 const SLOT_STYLE_NORMAL := Color(0.78, 0.72, 0.61, 0.82)
 const SLOT_STYLE_HOVER := Color(0.86, 0.78, 0.62, 0.92)
 const SLOT_STYLE_SELECTED := Color(0.93, 0.82, 0.58, 0.98)
@@ -17,6 +17,7 @@ const MEMORY_TEXT_LIMIT := 124
 var _selected_item_id := ""
 var _slot_buttons: Array[Button] = []
 var _book_page_navigator: Node = null
+var _photo_corner_texture: Texture2D = null
 
 @onready var design_root: Control = $DesignRoot
 @onready var item_grid: GridContainer = $DesignRoot/UiLayer/ItemScroll/ItemGrid
@@ -29,6 +30,7 @@ var _book_page_navigator: Node = null
 @onready var ui_layer: Control = $DesignRoot/UiLayer
 
 func _ready() -> void:
+	_photo_corner_texture = AssetPaths.load_texture(AssetPaths.PHOTO_CORNER)
 	print("[Gallery] 进入物品图鉴")
 	GlobalInput.set_context(GlobalInput.Context.UI)
 	resized.connect(_layout_design_root)
@@ -93,7 +95,7 @@ func _create_item_slot(item: ItemData) -> Button:
 	var corner := TextureRect.new()
 	corner.name = "PhotoCorner"
 	corner.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	corner.texture = PHOTO_CORNER_TEXTURE
+	corner.texture = _photo_corner_texture
 	corner.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
 	corner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	button.add_child(corner)
@@ -251,4 +253,4 @@ func _on_back_pressed() -> void:
 	if _book_page_navigator != null and is_instance_valid(_book_page_navigator) and _book_page_navigator.has_method("return_to_main_menu"):
 		_book_page_navigator.return_to_main_menu()
 	else:
-		GlobalScene.go_back()
+		GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)

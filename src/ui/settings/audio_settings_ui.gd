@@ -224,7 +224,7 @@ func _on_close_pressed() -> void:
 	if _book_page_navigator != null and is_instance_valid(_book_page_navigator) and _book_page_navigator.has_method("return_to_main_menu"):
 		_book_page_navigator.return_to_main_menu()
 	else:
-		GlobalScene.go_back()
+		GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)
 
 func _resolution_index(resolution: Vector2i) -> int:
 	for i in range(SettingsManager.RESOLUTION_OPTIONS.size()):

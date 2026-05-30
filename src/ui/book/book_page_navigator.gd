@@ -619,8 +619,10 @@ func _layout_transition_stack_root(viewport_size: Vector2) -> void:
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
 	_transition_stack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_transition_stack_root.position = Vector2.ZERO
-	_transition_stack_root.size = viewport_size
+	_transition_stack_root.offset_left = 0.0
+	_transition_stack_root.offset_top = 0.0
+	_transition_stack_root.offset_right = 0.0
+	_transition_stack_root.offset_bottom = 0.0
 
 
 func _prepare_transition_page_stack(previous_page_id: String, target_page_id: String) -> void:
@@ -1100,8 +1102,10 @@ func _layout_compressed_stack_root(viewport_size: Vector2) -> void:
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
 	_compressed_stack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_compressed_stack_root.position = Vector2.ZERO
-	_compressed_stack_root.size = viewport_size
+	_compressed_stack_root.offset_left = 0.0
+	_compressed_stack_root.offset_top = 0.0
+	_compressed_stack_root.offset_right = 0.0
+	_compressed_stack_root.offset_bottom = 0.0
 
 
 func _sync_compressed_page_stack() -> void:
@@ -1356,8 +1360,10 @@ func _layout_hub_transition_body(viewport_size: Vector2) -> void:
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
 	_hub_transition_body.set_anchors_preset(Control.PRESET_FULL_RECT, true)
-	_hub_transition_body.position = Vector2.ZERO
-	_hub_transition_body.size = viewport_size
+	_hub_transition_body.offset_left = 0.0
+	_hub_transition_body.offset_top = 0.0
+	_hub_transition_body.offset_right = 0.0
+	_hub_transition_body.offset_bottom = 0.0
 	_hub_transition_body.pivot_offset = Vector2(viewport_size.x, 0.0)
 
 

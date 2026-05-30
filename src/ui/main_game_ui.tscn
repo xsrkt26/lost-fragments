@@ -14,9 +14,6 @@
 [ext_resource type="Texture2D" uid="uid://6vv7bo0dguyq" path="res://assets/ui/book/tab_backpack.png" id="16_tab_backpack"]
 [ext_resource type="Texture2D" uid="uid://rtvad6tauuut" path="res://assets/ui/book/tab_gallery.png" id="17_tab_gallery"]
 [ext_resource type="Texture2D" uid="uid://bp55p0g5btpsf" path="res://assets/ui/book/tab_settings.png" id="18_tab_settings"]
-[ext_resource type="Texture2D" uid="uid://b3h5et8toys77" path="res://assets/ui/backpack/bag_base.png" id="19_bag_base"]
-[ext_resource type="Texture2D" uid="uid://b1oipoabbvudc" path="res://assets/ui/backpack/bag_patch.png" id="20_bag_patch"]
-[ext_resource type="Texture2D" uid="uid://dng0hj676ssu8" path="res://assets/ui/backpack/ornament_bar.png" id="21_ornament_bar"]
 [ext_resource type="Texture2D" uid="uid://c3gtn5fsmfrnd" path="res://assets/ui/backpack/stats_paper.png" id="22_stats_paper"]
 [ext_resource type="Texture2D" uid="uid://401y561jeyi7" path="res://assets/ui/backpack/trash_icon.png" id="23_trash_icon"]
 [ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="24_photo_corner"]
@@ -25,7 +22,8 @@
 [ext_resource type="Texture2D" uid="uid://b1tsy8m4c2rja" path="res://assets/ui/battle/syringe.png" id="27_syringe"]
 [ext_resource type="Texture2D" uid="uid://b1tkn5eaq4xul" path="res://assets/ui/battle/knife.png" id="28_knife"]
 [ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
-[ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="30_book_background"]
+[ext_resource type="Texture2D" path="res://assets/ui/battle/intro_bag_reveal/bag_reveal_01.png" id="31_intro_bag"]
+[ext_resource type="Texture2D" uid="uid://bag0n3llbn4ch" path="res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png" id="32_playable_bag"]
 
 [node name="MainGameUI" type="Control" unique_id=471982305]
 layout_mode = 3
@@ -262,125 +260,6 @@ mouse_filter = 2
 texture = ExtResource("13_ring")
 expand_mode = 1
 
-[node name="BackpackOverlayArt" parent="ContentLayer" unique_id=98539710 instance=ExtResource("30_book_background")]
-visible = false
-layout_mode = 1
-anchors_preset = 15
-anchor_right = 1.0
-anchor_bottom = 1.0
-grow_horizontal = 2
-grow_vertical = 2
-mouse_filter = 2
-active_page_id = "backpack"
-
-[node name="BagBase" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=693281059]
-z_index = 14
-layout_mode = 0
-offset_left = 186.0
-offset_top = 154.0
-offset_right = 1011.0
-offset_bottom = 1061.0
-mouse_filter = 2
-texture = ExtResource("19_bag_base")
-expand_mode = 1
-
-[node name="BagPatch" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=2089339303]
-z_index = 15
-layout_mode = 0
-offset_left = 242.0
-offset_top = 389.0
-offset_right = 927.0
-offset_bottom = 1010.0
-mouse_filter = 2
-texture = ExtResource("20_bag_patch")
-expand_mode = 1
-
-[node name="OrnamentBar" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1154944374]
-z_index = 15
-layout_mode = 0
-offset_left = 1054.0
-offset_top = 221.0
-offset_right = 1374.0
-offset_bottom = 353.0
-mouse_filter = 2
-texture = ExtResource("21_ornament_bar")
-expand_mode = 1
-
-[node name="StatsPaper" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=138346253]
-z_index = 15
-layout_mode = 0
-offset_left = 1147.0
-offset_top = 628.0
-offset_right = 1795.0
-offset_bottom = 1044.0
-mouse_filter = 2
-texture = ExtResource("22_stats_paper")
-expand_mode = 1
-
-[node name="TrashIcon" type="TextureRect" parent="ContentLayer/BackpackOverlayArt" unique_id=1384338210]
-z_index = 16
-layout_mode = 0
-offset_left = 1515.0
-offset_top = 717.0
-offset_right = 1678.0
-offset_bottom = 860.0
-mouse_filter = 2
-texture = ExtResource("23_trash_icon")
-expand_mode = 1
-
-[node name="BackpackOverlayGridPanel" type="Control" parent="ContentLayer"]
-visible = false
-z_index = 100
-layout_mode = 0
-offset_left = 230.0
-offset_top = 190.0
-offset_right = 945.0
-offset_bottom = 1036.0
-mouse_filter = 2
-
-[node name="BackpackUI" parent="ContentLayer/BackpackOverlayGridPanel" instance=ExtResource("7_backpack")]
-layout_mode = 0
-offset_left = 76.0
-offset_top = 222.0
-offset_right = 633.0
-offset_bottom = 756.0
-
-[node name="CloseBackpackButton" type="Button" parent="ContentLayer"]
-visible = false
-z_index = 110
-layout_mode = 0
-offset_top = 70.0
-offset_right = 92.0
-offset_bottom = 182.0
-tooltip_text = "关闭整理背包"
-focus_mode = 0
-mouse_default_cursor_shape = 2
-text = ""
-
-[node name="OverlayEffectsList" type="VBoxContainer" parent="ContentLayer"]
-visible = false
-z_index = 110
-layout_mode = 0
-offset_left = 1060.0
-offset_top = 220.0
-offset_right = 1515.0
-offset_bottom = 640.0
-mouse_filter = 2
-theme_override_constants/separation = 8
-
-[node name="OverlayStatsLabel" type="Label" parent="ContentLayer"]
-visible = false
-z_index = 110
-layout_mode = 0
-offset_left = 1040.0
-offset_top = 720.0
-offset_right = 1575.0
-offset_bottom = 1000.0
-mouse_filter = 2
-theme_override_colors/font_color = Color(0.04, 0.025, 0.012, 1)
-theme_override_font_sizes/font_size = 28
-autowrap_mode = 3
-
 [node name="DreamcatcherPanel" type="TextureRect" parent="ContentLayer" unique_id=422682609]
 layout_mode = 0
 offset_left = 246.0
@@ -429,6 +308,30 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
+[node name="PlayableBagArt" type="TextureRect" parent="ContentLayer"]
+layout_mode = 0
+offset_left = 921.0
+offset_top = -22.0
+offset_right = 1727.6115
+offset_bottom = 996.74243
+mouse_filter = 2
+texture = ExtResource("32_playable_bag")
+expand_mode = 1
+stretch_mode = 0
+
+[node name="IntroBagReveal" type="TextureRect" parent="ContentLayer"]
+visible = false
+z_index = 120
+layout_mode = 0
+offset_left = 921.0
+offset_top = -22.0
+offset_right = 1727.6115
+offset_bottom = 996.74243
+mouse_filter = 2
+texture = ExtResource("31_intro_bag")
+expand_mode = 1
+stretch_mode = 0
+
 [node name="GridPanel" type="TextureRect" parent="ContentLayer" unique_id=85973878]
 layout_mode = 0
 offset_left = 940.0
@@ -437,17 +340,16 @@ offset_right = 1765.0
 offset_bottom = 986.0
 scale = Vector2(0.9546806, 1.0118439)
 mouse_filter = 2
-texture = ExtResource("19_bag_base")
 expand_mode = 1
 
 [node name="GridBackground" type="TextureRect" parent="ContentLayer/GridPanel" unique_id=1001]
+visible = false
 layout_mode = 0
 offset_left = 26.186733
 offset_top = 189.7526
 offset_right = 775.1867
 offset_bottom = 873.75256
 mouse_filter = 2
-texture = ExtResource("20_bag_patch")
 expand_mode = 1
 
 [node name="BackpackUI" parent="ContentLayer/GridPanel" unique_id=175570317 instance=ExtResource("7_backpack")]
@@ -484,9 +386,9 @@ expand_mode = 1
 [node name="StatsPanel" type="TextureRect" parent="ContentLayer" unique_id=1143342326]
 layout_mode = 0
 offset_left = 267.0
-offset_top = 564.0
+offset_top = 588.0
 offset_right = 915.0
-offset_bottom = 980.0
+offset_bottom = 1004.0
 mouse_filter = 2
 texture = ExtResource("22_stats_paper")
 expand_mode = 1
@@ -600,7 +502,6 @@ offset_top = -22.0
 offset_right = 1688.0
 offset_bottom = 292.0
 mouse_filter = 2
-texture = ExtResource("21_ornament_bar")
 expand_mode = 1
 
 [node name="Slots" type="HBoxContainer" parent="ContentLayer/OrnamentsPanel" unique_id=1640960764]
