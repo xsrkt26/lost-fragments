@@ -543,6 +543,8 @@ func test_hub_uses_preplaced_battle_layer_instead_of_overlay_battle_ui():
 	assert_eq(battle_layer.scene_file_path, "res://src/ui/hub/hub_battle_layer.tscn")
 	assert_true(battle_layer.is_inside_tree())
 	assert_false(battle_layer.visible)
+	assert_false(bool(battle_layer.get("auto_initialize")))
+	assert_true(bool(battle_layer.get("play_battle_intro")))
 	assert_eq(overlay_root.get_child_count(), 0)
 	assert_null(overlay_root.get_node_or_null("EmbeddedBattleUI"))
 
