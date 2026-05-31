@@ -8,6 +8,14 @@ const HubMerchantController = preload("res://src/ui/hub/hub_merchant_controller.
 const HubPlayerController = preload("res://src/ui/hub/hub_player_controller.gd")
 const HubInteractionFlowController = preload("res://src/ui/hub/hub_interaction_flow_controller.gd")
 const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
+const HubDialogueBubbleControllerScript = preload("res://src/ui/hub/hub_dialogue_bubble_controller.gd")
+const XIAOMI_PART_TEXTURE_PATHS := [
+	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_1.png",
+	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_2.png",
+	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_3.png",
+	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_4.png",
+	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_5.png",
+]
 const HUB_PLUSH_TRANSITION_FRAME_PATHS := [
 	"res://assets/ui/hub/plush_transition/plush_transition_01.png",
 	"res://assets/ui/hub/plush_transition/plush_transition_02.png",
@@ -69,6 +77,15 @@ const HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME := 0.34
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const SHOP_INTRO_FRAME_RATE := 60.0
+const XIAOMI_ANCHOR_SOURCE_POSITION := Vector2(760.0, 1010.0)
+const XIAOMI_PART_OFFSETS := [
+	Vector2(-87.0, -261.0),
+	Vector2(-21.0, -209.0),
+	Vector2(-49.0, -178.0),
+	Vector2(-57.0, -127.0),
+	Vector2(-3.0, -77.0),
+]
+const XIAOMI_PART_SCALE := Vector2(0.9, 0.9)
 func _first_existing_node(paths: Array[String]) -> Node:
 	for path in paths:
 		var node := get_node_or_null(path)
@@ -137,6 +154,8 @@ var _is_shop_visual_state_active := false
 var _is_shop_intro_sequence_running := false
 var _pending_merchant_shop_open := false
 var _merchant_shop_sequence_running := false
+var _xiaomi_anchor: Node2D = null
+var _story_bubble_controller: Control = null
 var _battle_controller = HubBattleController.new()
 var _merchant_controller = HubMerchantController.new()
 var _player_controller = HubPlayerController.new()
@@ -200,6 +219,7 @@ func _ready() -> void:
 		book_background.call("set_active_page_id", BookBackgroundConfig.PAGE_HUB)
 	if book_page_navigator != null and book_page_navigator.has_method("configure"):
 		book_page_navigator.configure(self)
+	_ensure_xiaomi_anchor()
 	_try_play_pending_hub_story_on_ready()
 	_update_merchant_state()
 	_update_dreamcatcher_state()
@@ -1565,6 +1585,88 @@ func play_story_book_page(sequence_id: String) -> bool:
 	if book_page_navigator == null or not book_page_navigator.has_method("play_story_sequence"):
 		return false
 	return bool(book_page_navigator.call("play_story_sequence", sequence_id))
+
+
+func play_story_bubble_dialogue(sequence_id: String) -> bool:
+	var controller := _ensure_story_bubble_controller()
+	if controller == null:
+		return false
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("get_sequence_frames"):
+		return false
+	var raw_frames: Variant = story_manager.call("get_sequence_frames", sequence_id)
+	if not (raw_frames is Array):
+		return false
+	var frames: Array = Array(raw_frames)
+	if frames.is_empty():
+		return false
+	_ensure_xiaomi_anchor()
+	controller.call("start_dialogue", sequence_id, frames, player, _xiaomi_anchor)
+	return true
+
+
+func _ensure_xiaomi_anchor() -> Node2D:
+	if _xiaomi_anchor != null and is_instance_valid(_xiaomi_anchor):
+		return _xiaomi_anchor
+	_xiaomi_anchor = Node2D.new()
+	_xiaomi_anchor.name = "XiaomiDialogueAnchor"
+	_xiaomi_anchor.position = XIAOMI_ANCHOR_SOURCE_POSITION
+	for index in range(XIAOMI_PART_TEXTURE_PATHS.size()):
+		var texture := _load_xiaomi_part_texture(str(XIAOMI_PART_TEXTURE_PATHS[index]))
+		if texture == null:
+			continue
+		var sprite := Sprite2D.new()
+		sprite.name = "XiaomiPart%d" % (index + 1)
+		sprite.texture = texture
+		sprite.centered = false
+		sprite.position = XIAOMI_PART_OFFSETS[index]
+		sprite.scale = XIAOMI_PART_SCALE
+		sprite.z_index = 16 + index
+		_xiaomi_anchor.add_child(sprite)
+	if hub_art != null:
+		hub_art.add_child(_xiaomi_anchor)
+	else:
+		add_child(_xiaomi_anchor)
+	return _xiaomi_anchor
+
+
+func _load_xiaomi_part_texture(path: String) -> Texture2D:
+	var loaded := load(path) as Texture2D
+	if loaded != null:
+		return loaded
+	var image := Image.new()
+	var error := image.load(ProjectSettings.globalize_path(path))
+	if error != OK:
+		push_warning("[Hub] Failed to load Xiaomi part texture: %s" % path)
+		return null
+	return ImageTexture.create_from_image(image)
+
+
+func _ensure_story_bubble_controller() -> Control:
+	if _story_bubble_controller != null and is_instance_valid(_story_bubble_controller):
+		return _story_bubble_controller
+	var controller := HubDialogueBubbleControllerScript.new() as Control
+	controller.name = "HubDialogueBubbleController"
+	controller.z_index = 3000
+	var canvas := get_node_or_null("CanvasLayer") as CanvasLayer
+	if canvas != null:
+		canvas.add_child(controller)
+	else:
+		add_child(controller)
+	var callback := Callable(self, "_on_story_bubble_dialogue_finished")
+	if controller.has_signal("dialogue_finished") and not controller.is_connected("dialogue_finished", callback):
+		controller.connect("dialogue_finished", callback)
+	_story_bubble_controller = controller
+	return _story_bubble_controller
+
+
+func _on_story_bubble_dialogue_finished(sequence_id: String) -> void:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("finish_current_sequence"):
+		return
+	var active_sequence: Variant = story_manager.get("current_playing_sequence")
+	if sequence_id == "" or str(active_sequence) == sequence_id:
+		story_manager.call("finish_current_sequence")
 
 
 func _try_play_pending_hub_story_on_ready() -> void:

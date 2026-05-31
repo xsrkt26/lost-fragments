@@ -4,7 +4,7 @@
 [ext_resource type="Script" uid="uid://dgnfdwrhpleu2" path="res://src/ui/hub/hub_player.gd" id="2_player"]
 [ext_resource type="SpriteFrames" uid="uid://ca8jgiomvihcl" path="res://assets/characters/player/player_sprite_frames.tres" id="3_player_frames"]
 [ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="6_room"]
-[ext_resource type="Shader" path="res://src/ui/transitions/page_turn.gdshader" id="11_2dwo7"]
+[ext_resource type="Shader" uid="uid://besvrbi2fvf2w" path="res://src/ui/transitions/page_turn.gdshader" id="11_2dwo7"]
 [ext_resource type="Texture2D" uid="uid://c13ro2n1arkox" path="res://assets/ui/book/tab_back.png" id="12_tab_back"]
 [ext_resource type="Texture2D" uid="uid://c7knc0ircvw8b" path="res://assets/ui/hub/dialog_bubble.png" id="13_speech_bubble"]
 [ext_resource type="Texture2D" uid="uid://bk4gakp7k6s1o" path="res://assets/ui/gallery/photo_corner.png" id="14_photo_corner"]
@@ -25,7 +25,7 @@ size = Vector2(100, 200)
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_hotspot_transparent"]
 bg_color = Color(1, 1, 1, 0)
 
-[sub_resource type="ShaderMaterial" id="ShaderMaterial_2dwo7"]
+[sub_resource type="ShaderMaterial" id="ShaderMaterial_ymwtu"]
 shader = ExtResource("11_2dwo7")
 shader_parameter/progress = 0.0
 shader_parameter/turn_direction = 1.0
@@ -45,7 +45,6 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
-scale = Vector2(0.6666667, 0.6666667)
 mouse_filter = 2
 
 [node name="BookBackground" parent="BookCanvasLayer/BookDesignRoot" unique_id=1655500968 instance=ExtResource("17_book_background")]
@@ -58,20 +57,20 @@ offset_bottom = 1080.0
 metadata/_edit_use_anchors_ = true
 
 [node name="HubArt" type="Node2D" parent="." unique_id=1340072637]
-position = Vector2(0, 9.333334)
-scale = Vector2(0.6666667, 0.6666667)
+position = Vector2(0, 14)
 
-[node name="BoardViewport" type="Control" parent="HubArt"]
+[node name="BoardViewport" type="Control" parent="HubArt" unique_id=979254428]
 clip_contents = true
-layout_mode = 0
+layout_mode = 3
+anchors_preset = 0
 offset_left = 197.99998
 offset_top = 105.99999
-offset_right = 1802.9999
+offset_right = 1803.0
 offset_bottom = 1009.2924
 mouse_filter = 2
 
-[node name="BoardContent" type="Control" parent="HubArt/BoardViewport"]
-layout_mode = 0
+[node name="BoardContent" type="Control" parent="HubArt/BoardViewport" unique_id=448374587]
+anchors_preset = 0
 offset_left = -197.99998
 offset_top = -105.99999
 offset_right = 1722.0
@@ -107,9 +106,31 @@ centered = false
 [node name="MerchantSprite" type="AnimatedSprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1419421131]
 visible = false
 z_index = 14
-position = Vector2(196, 128)
+position = Vector2(197.99998, 105.99999)
 scale = Vector2(0.9599282, 0.9599282)
 centered = false
+
+[node name="SpeechBubble" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1463798210]
+visible = false
+z_index = 16
+position = Vector2(675, 564)
+scale = Vector2(0.361, 0.229)
+texture = ExtResource("13_speech_bubble")
+centered = false
+
+[node name="SpeechText" type="Label" parent="HubArt/BoardViewport/BoardContent" unique_id=75023564]
+visible = false
+z_index = 17
+layout_mode = 0
+offset_left = 771.0
+offset_top = 623.0
+offset_right = 1113.0
+offset_bottom = 699.0
+theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
+theme_override_font_sizes/font_size = 36
+text = "你终于醒了！"
+horizontal_alignment = 1
+vertical_alignment = 1
 
 [node name="CornerTopLeft" type="Sprite2D" parent="HubArt" unique_id=1548526289]
 z_index = 14
@@ -133,41 +154,20 @@ centered = false
 
 [node name="CornerBottomRight" type="Sprite2D" parent="HubArt" unique_id=1577423503]
 z_index = 14
-position = Vector2(1858.4999, 1060)
+position = Vector2(1858, 1060)
 scale = Vector2(-1, -1)
 texture = ExtResource("14_photo_corner")
 centered = false
 
-[node name="SpeechBubble" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=1463798210]
-visible = false
-z_index = 16
-position = Vector2(675, 564)
-scale = Vector2(0.361, 0.229)
-texture = ExtResource("13_speech_bubble")
-centered = false
-
-[node name="SpeechText" type="Label" parent="HubArt/BoardViewport/BoardContent" unique_id=75023564]
-visible = false
-z_index = 17
-offset_left = 771.0
-offset_top = 623.0
-offset_right = 1113.0
-offset_bottom = 699.0
-theme_override_colors/font_color = Color(0.04, 0.035, 0.03, 1)
-theme_override_font_sizes/font_size = 36
-text = "你终于醒了！"
-horizontal_alignment = 1
-vertical_alignment = 1
-
 [node name="Floor" type="StaticBody2D" parent="." unique_id=17586698]
-position = Vector2(640, 676)
+position = Vector2(960, 1014)
 
 [node name="CollisionShape2D" type="CollisionShape2D" parent="Floor" unique_id=1895702397]
 shape = SubResource("WorldWorldBoundaryShape2D_floor")
 
 [node name="Player" type="CharacterBody2D" parent="." unique_id=1654908618]
 z_index = 15
-position = Vector2(365.33334, 612)
+position = Vector2(548, 950)
 script = ExtResource("2_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player" unique_id=1414334915]
@@ -238,7 +238,6 @@ layout_mode = 3
 anchors_preset = 0
 offset_right = 1920.0
 offset_bottom = 1080.0
-scale = Vector2(0.6666667, 0.6666667)
 mouse_filter = 2
 
 [node name="RouteButton" type="Button" parent="CanvasLayer/DesignRoot" unique_id=1808680365]
@@ -300,10 +299,10 @@ theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 [node name="DreamcatcherButton" type="Button" parent="CanvasLayer/DesignRoot" unique_id=1217061382]
 z_index = 21
 layout_mode = 0
-offset_left = 830.0
-offset_top = 170.0
-offset_right = 1195.0
-offset_bottom = 760.0
+offset_left = 801.0
+offset_top = 417.0
+offset_right = 1035.0
+offset_bottom = 723.0
 tooltip_text = "Start dream"
 focus_mode = 0
 mouse_default_cursor_shape = 2
@@ -344,10 +343,10 @@ stretch_mode = 5
 visible = false
 z_index = 21
 layout_mode = 0
-offset_left = 1069.4713
-offset_top = 576.2865
-offset_right = 1350.7302
-offset_bottom = 928.58014
+offset_left = 1369.1124
+offset_top = 551.00775
+offset_right = 1681.0891
+offset_bottom = 937.8588
 tooltip_text = "商店"
 focus_mode = 0
 mouse_default_cursor_shape = 2
@@ -371,7 +370,7 @@ script = ExtResource("15_book_nav")
 [node name="PageTurnEffect" type="Control" parent="CanvasLayer/BookPageNavigator" unique_id=131438471]
 visible = false
 z_index = 3000
-material = SubResource("ShaderMaterial_2dwo7")
+material = SubResource("ShaderMaterial_ymwtu")
 layout_mode = 1
 anchors_preset = 15
 anchor_right = 1.0
@@ -380,7 +379,7 @@ grow_horizontal = 2
 grow_vertical = 2
 script = ExtResource("18_page_turn")
 
-[node name="HubTabButton" type="Button" parent="CanvasLayer/BookPageNavigator"]
+[node name="HubTabButton" type="Button" parent="CanvasLayer/BookPageNavigator" unique_id=1276205763]
 visible = false
 z_index = 3002
 layout_mode = 0
@@ -392,7 +391,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 
-[node name="BackpackTabButton" type="Button" parent="CanvasLayer/BookPageNavigator"]
+[node name="BackpackTabButton" type="Button" parent="CanvasLayer/BookPageNavigator" unique_id=923550828]
 visible = false
 z_index = 3002
 layout_mode = 0
@@ -404,7 +403,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 
-[node name="GalleryTabButton" type="Button" parent="CanvasLayer/BookPageNavigator"]
+[node name="GalleryTabButton" type="Button" parent="CanvasLayer/BookPageNavigator" unique_id=1324299267]
 visible = false
 z_index = 3002
 layout_mode = 0
@@ -416,7 +415,7 @@ theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
 
-[node name="SettingsTabButton" type="Button" parent="CanvasLayer/BookPageNavigator"]
+[node name="SettingsTabButton" type="Button" parent="CanvasLayer/BookPageNavigator" unique_id=435800809]
 visible = false
 z_index = 3002
 layout_mode = 0
@@ -441,10 +440,9 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="BattleLayer" parent="CanvasLayer" instance=ExtResource("30_hub_battle_layer")]
+[node name="BattleLayer" parent="CanvasLayer" unique_id=1793047489 instance=ExtResource("30_hub_battle_layer")]
 visible = false
 z_index = 40
-auto_initialize = false
 
 [connection signal="body_entered" from="Interactions/BattleTrigger" to="." method="_on_battle_trigger_body_entered"]
 [connection signal="body_exited" from="Interactions/BattleTrigger" to="." method="_on_zone_body_exited"]

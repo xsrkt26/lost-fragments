@@ -214,6 +214,8 @@ func _start_sequence(sequence_id: String) -> void:
 			return
 		scene_mgr.call("transition_to", GlobalScene.SceneType.CUTSCENE)
 	else:
+		if _try_show_hub_bubble_dialogue(sequence_id):
+			return
 		_show_dialogue_overlay()
 
 
@@ -224,6 +226,15 @@ func _try_show_story_book_page(sequence_id: String) -> bool:
 	if current_scene == null or not current_scene.has_method("play_story_book_page"):
 		return false
 	return bool(current_scene.call("play_story_book_page", sequence_id))
+
+
+func _try_show_hub_bubble_dialogue(sequence_id: String) -> bool:
+	if not _is_hub_scene_active():
+		return false
+	var current_scene := get_tree().current_scene
+	if current_scene == null or not current_scene.has_method("play_story_bubble_dialogue"):
+		return false
+	return bool(current_scene.call("play_story_bubble_dialogue", sequence_id))
 
 
 func _show_dialogue_overlay() -> void:
