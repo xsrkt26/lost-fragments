@@ -163,9 +163,10 @@ func _is_disabled_button(control: Control) -> bool:
 func _on_new_game_button_pressed() -> void:
 	print("[MainMenu] New game pressed.")
 	if _start_new_run():
+		GlobalScene.transition_to(GlobalScene.SceneType.HUB)
 		var sm = get_node_or_null("/root/StoryManager")
-		if not sm or not sm.play_sequence("beginning"):
-			GlobalScene.transition_to(GlobalScene.SceneType.HUB)
+		if sm != null and sm.has_method("play_sequence"):
+			sm.play_sequence("beginning")
 
 func _on_continue_button_pressed() -> void:
 	print("[MainMenu] Continue pressed.")

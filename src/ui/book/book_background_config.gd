@@ -2,11 +2,13 @@ class_name BookBackgroundConfig
 extends RefCounted
 
 const PAGE_HUB := "hub"
+const PAGE_STORY := "story"
 const PAGE_GALLERY := "gallery"
 const PAGE_BACKPACK := "backpack"
 const PAGE_SETTINGS := "settings"
 
 const PAGE_ORDER := [
+	PAGE_STORY,
 	PAGE_HUB,
 	PAGE_GALLERY,
 	PAGE_BACKPACK,
@@ -16,6 +18,7 @@ const PAGE_ORDER := [
 const DESIGN_SIZE := Vector2(1920.0, 1080.0)
 
 const PAGE_STACK_Z := {
+	PAGE_STORY: 1,
 	PAGE_HUB: 0,
 	PAGE_GALLERY: -1,
 	PAGE_BACKPACK: -2,
@@ -51,6 +54,7 @@ const PAGE_TURN_EFFECT_Z_INDEX := 3000
 const NAV_TAB_BUTTON_Z_INDEX := 3002
 
 const PAGE_Z_RANGES := {
+	PAGE_STORY: PAGE_LOCAL_Z_RANGE,
 	PAGE_HUB: PAGE_LOCAL_Z_RANGE,
 	PAGE_GALLERY: PAGE_LOCAL_Z_RANGE,
 	PAGE_BACKPACK: PAGE_LOCAL_Z_RANGE,
@@ -59,6 +63,7 @@ const PAGE_Z_RANGES := {
 
 # Visible sheets include the current page and the pages behind it.
 const PAGE_SHEET_COUNT := {
+	PAGE_STORY: 5,
 	PAGE_HUB: 4,
 	PAGE_GALLERY: 3,
 	PAGE_BACKPACK: 2,
@@ -93,7 +98,7 @@ static func get_tab_z_index(page_id: String, active_page_id: String = "") -> int
 	var target_page := normalize_page_id(page_id)
 	if active_page_id != "" and target_page == normalize_page_id(active_page_id):
 		return ACTIVE_LEFT_TAB_Z_INDEX
-	return int(TAB_Z_INDEX[target_page])
+	return int(TAB_Z_INDEX.get(target_page, ACTIVE_LEFT_TAB_Z_INDEX))
 
 
 static func get_right_tab_z_index() -> int:
@@ -124,6 +129,8 @@ static func should_place_tab_on_right(page_id: String, active_page_id: String) -
 
 static func get_tab_rect(page_id: String, active_page_id: String) -> Rect2:
 	var target_page := normalize_page_id(page_id)
+	if not TAB_SOURCE_RECTS.has(target_page):
+		return Rect2()
 	var rect: Rect2 = TAB_SOURCE_RECTS[target_page]
 	if should_place_tab_on_right(target_page, active_page_id):
 		rect.position.x = float(RIGHT_TAB_X.get(target_page, DESIGN_SIZE.x - rect.size.x))

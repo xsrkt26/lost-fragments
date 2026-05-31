@@ -7,6 +7,7 @@ signal page_changed(page_id: String)
 
 
 const PAGE_HUB := BookBackgroundConfig.PAGE_HUB
+const PAGE_STORY := BookBackgroundConfig.PAGE_STORY
 const PAGE_BACKPACK := BookBackgroundConfig.PAGE_BACKPACK
 const PAGE_GALLERY := BookBackgroundConfig.PAGE_GALLERY
 const PAGE_SETTINGS := BookBackgroundConfig.PAGE_SETTINGS
@@ -27,6 +28,7 @@ const PAGE_TAB_TEXTURE_PATHS := {
 	PAGE_SETTINGS: "res://assets/ui/book/tab_settings.png",
 }
 const PAGE_SHEET_NODE_NAMES := {
+	PAGE_STORY: "StoryPage",
 	PAGE_HUB: "AlbumPage",
 	PAGE_GALLERY: "PageMiddle",
 	PAGE_BACKPACK: "PageBackpackCover",
@@ -276,6 +278,29 @@ func request_page(page_id: String) -> void:
 	go_to_page(page_id)
 
 
+func play_story_sequence(sequence_id: String) -> bool:
+	if sequence_id == "":
+		return false
+	var page := _ensure_page(PAGE_STORY)
+	if page == null:
+		return false
+	if page.has_method("start_story_sequence"):
+		page.call("start_story_sequence", sequence_id)
+	go_to_page(PAGE_STORY)
+	return true
+
+
+func finish_story_sequence(sequence_id: String) -> void:
+	if current_page_id == PAGE_STORY:
+		await go_to_page(PAGE_HUB)
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("finish_current_sequence"):
+		return
+	var active_sequence: Variant = story_manager.get("current_playing_sequence")
+	if sequence_id == "" or str(active_sequence) == sequence_id:
+		story_manager.call("finish_current_sequence")
+
+
 func activate_tab_at_position(pointer_global_position: Vector2) -> bool:
 	if not visible or current_page_id == PAGE_HUB or _is_turning:
 		return false
@@ -411,6 +436,8 @@ func _setup_turn_visuals() -> void:
 
 func _setup_tab_hotspots() -> void:
 	for page_id in BookBackgroundConfig.PAGE_ORDER:
+		if not PAGE_TAB_NODE_NAMES.has(str(page_id)):
+			continue
 		var button := get_node_or_null("%sTabButton" % str(page_id).capitalize()) as Button
 		if button == null:
 			push_warning("[BookPageNavigator] %sTabButton missing from hub_scene.tscn." % str(page_id).capitalize())
@@ -1673,8 +1700,8 @@ func _should_draw_transition_back_tab(_previous_page_id: String) -> bool:
 	return true
 
 
-func _should_draw_transition_tab(_page_id: String, _previous_page_id: String, _target_page_id: String) -> bool:
-	return true
+func _should_draw_transition_tab(page_id: String, _previous_page_id: String, _target_page_id: String) -> bool:
+	return PAGE_TAB_TEXTURE_PATHS.has(BookBackgroundConfig.normalize_page_id(page_id))
 
 
 func _get_tab_texture(page_id: String) -> Texture2D:

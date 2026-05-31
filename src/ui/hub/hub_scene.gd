@@ -180,6 +180,7 @@ func _ready() -> void:
 		book_background.call("set_active_page_id", BookBackgroundConfig.PAGE_HUB)
 	if book_page_navigator != null and book_page_navigator.has_method("configure"):
 		book_page_navigator.configure(self)
+	_try_play_pending_hub_story_on_ready()
 	_update_merchant_state()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
@@ -1394,6 +1395,19 @@ func _on_backpack_button_pressed() -> void:
 func _open_book_page(page_id: String) -> void:
 	if book_page_navigator != null and book_page_navigator.has_method("go_to_page"):
 		book_page_navigator.go_to_page(page_id)
+
+
+func play_story_book_page(sequence_id: String) -> bool:
+	if book_page_navigator == null or not book_page_navigator.has_method("play_story_sequence"):
+		return false
+	return bool(book_page_navigator.call("play_story_sequence", sequence_id))
+
+
+func _try_play_pending_hub_story_on_ready() -> void:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("play_pending_hub_sequences_if_ready"):
+		return
+	story_manager.call("play_pending_hub_sequences_if_ready")
 
 
 func _is_book_hub_current() -> bool:

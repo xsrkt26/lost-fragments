@@ -5,6 +5,7 @@ extends Control
 
 # Ordered from the top sheet to the bottom sheet.
 const PAGE_SHEET_NAMES := [
+	"StoryPage",
 	"AlbumPage",
 	"PageMiddle",
 	"PageBackpackCover",
@@ -18,7 +19,7 @@ const TAB_NODE_NAMES := {
 	BookBackgroundConfig.PAGE_SETTINGS: "SettingsTab",
 }
 
-@export_enum("hub", "gallery", "backpack", "settings") var active_page_id: String = BookBackgroundConfig.PAGE_HUB:
+@export_enum("story", "hub", "gallery", "backpack", "settings") var active_page_id: String = BookBackgroundConfig.PAGE_HUB:
 	set(value):
 		active_page_id = BookBackgroundConfig.normalize_page_id(value)
 		_refresh_book_background()
@@ -103,6 +104,15 @@ func _refresh_page_sheets() -> void:
 
 
 func _refresh_tabs() -> void:
+	if active_page_id == BookBackgroundConfig.PAGE_STORY:
+		for story_hidden_page_id in TAB_NODE_NAMES.keys():
+			var story_left_tab := get_node_or_null(str(TAB_NODE_NAMES[story_hidden_page_id])) as Control
+			var story_right_tab := get_node_or_null("%sRight" % str(TAB_NODE_NAMES[story_hidden_page_id])) as Control
+			if story_left_tab != null:
+				story_left_tab.visible = false
+			if story_right_tab != null:
+				story_right_tab.visible = false
+		return
 	for page_id in TAB_NODE_NAMES.keys():
 		var left_tab := get_node_or_null(str(TAB_NODE_NAMES[page_id])) as Control
 		var right_tab := get_node_or_null("%sRight" % str(TAB_NODE_NAMES[page_id])) as Control
@@ -157,4 +167,4 @@ func _refresh_back_tab() -> void:
 	if back_tab != null:
 		_apply_tab_rect(back_tab, BookBackgroundConfig.get_back_tab_rect())
 		back_tab.z_index = BookBackgroundConfig.get_back_tab_z_index()
-		back_tab.visible = not _transition_tabs_hidden and (show_back_tab_on_hub or active_page_id != BookBackgroundConfig.PAGE_HUB)
+		back_tab.visible = not _transition_tabs_hidden and active_page_id != BookBackgroundConfig.PAGE_STORY and (show_back_tab_on_hub or active_page_id != BookBackgroundConfig.PAGE_HUB)

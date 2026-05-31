@@ -206,6 +206,18 @@ texture = ExtResource("10_tab_settings")
 expand_mode = 1
 stretch_mode = 0
 
+[node name="StoryPage" type="TextureRect" parent="."]
+z_index = 12
+layout_mode = 0
+offset_left = 144.0
+offset_top = 18.0
+offset_right = 1814.0
+offset_bottom = 1098.0
+mouse_filter = 2
+texture = ExtResource("4_page")
+expand_mode = 1
+stretch_mode = 0
+
 [node name="AlbumRingRight" type="TextureRect" parent="."]
 z_index = 13
 layout_mode = 0

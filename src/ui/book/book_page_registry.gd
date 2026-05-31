@@ -1,6 +1,7 @@
 extends RefCounted
 
 const PAGE_SCENE_PATHS := {
+	BookBackgroundConfig.PAGE_STORY: "res://src/ui/story/story_book_page.tscn",
 	BookBackgroundConfig.PAGE_BACKPACK: "res://src/ui/backpack/backpack_page.tscn",
 	BookBackgroundConfig.PAGE_GALLERY: "res://src/ui/gallery/gallery_scene.tscn",
 	BookBackgroundConfig.PAGE_SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",

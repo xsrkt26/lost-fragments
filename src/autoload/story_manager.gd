@@ -103,7 +103,11 @@ func play_sequence(sequence_id: String) -> bool:
 	if current_playing_sequence != "":
 		_queue_sequence(sequence_id)
 		return true
-	if _is_cutscene_sequence(sequence_id) or _can_show_dialogue_overlay_now():
+	var is_cutscene_sequence := _is_cutscene_sequence(sequence_id)
+	if is_cutscene_sequence and sequence_id == "beginning" and not _is_hub_scene_active():
+		_queue_hub_sequence(sequence_id, true)
+		return true
+	if is_cutscene_sequence or _can_show_dialogue_overlay_now():
 		_start_sequence(sequence_id)
 		return true
 	_queue_hub_sequence(sequence_id)
@@ -199,6 +203,8 @@ func _start_sequence(sequence_id: String) -> void:
 	_lock_input_for_story()
 	sequence_started.emit(sequence_id)
 	if _is_cutscene_sequence(sequence_id):
+		if _try_show_story_book_page(sequence_id):
+			return
 		var scene_mgr: Node = _get_scene_manager()
 		if scene_mgr == null or not scene_mgr.has_method("transition_to"):
 			push_warning("[StoryManager] Scene manager not found; skip cutscene: %s" % sequence_id)
@@ -209,6 +215,15 @@ func _start_sequence(sequence_id: String) -> void:
 		scene_mgr.call("transition_to", GlobalScene.SceneType.CUTSCENE)
 	else:
 		_show_dialogue_overlay()
+
+
+func _try_show_story_book_page(sequence_id: String) -> bool:
+	if not _is_hub_scene_active():
+		return false
+	var current_scene := get_tree().current_scene
+	if current_scene == null or not current_scene.has_method("play_story_book_page"):
+		return false
+	return bool(current_scene.call("play_story_book_page", sequence_id))
 
 
 func _show_dialogue_overlay() -> void:
@@ -238,13 +253,21 @@ func _queue_sequence(sequence_id: String) -> void:
 	_sequence_queue.append(sequence_id)
 
 
-func _queue_hub_sequence(sequence_id: String) -> void:
+func play_pending_hub_sequences_if_ready() -> void:
+	_play_pending_hub_sequences_if_ready()
+
+
+func _queue_hub_sequence(sequence_id: String, front: bool = false) -> void:
 	if not _can_accept_sequence(sequence_id):
 		return
 	if _is_hub_scene_active() and current_playing_sequence == "":
 		_start_sequence(sequence_id)
 		return
-	if not _pending_hub_sequences.has(sequence_id):
+	if _pending_hub_sequences.has(sequence_id):
+		_pending_hub_sequences.erase(sequence_id)
+	if front:
+		_pending_hub_sequences.push_front(sequence_id)
+	else:
 		_pending_hub_sequences.append(sequence_id)
 
 
@@ -286,7 +309,10 @@ func _can_show_dialogue_overlay_now() -> bool:
 
 
 func _is_hub_scene_active() -> bool:
-	return _get_current_scene_type() == GlobalScene.SceneType.HUB
+	if _get_current_scene_type() == GlobalScene.SceneType.HUB:
+		return true
+	var current_scene := get_tree().current_scene
+	return current_scene != null and current_scene.has_method("play_story_book_page")
 
 
 func _on_scene_transition_finished(_new_scene: Node) -> void:
