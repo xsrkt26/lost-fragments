@@ -2,6 +2,8 @@ extends SceneTree
 
 const DEFAULT_CONFIG_PATH := "res://scripts/scene_smoke_scenes.json"
 const SETTLE_SECONDS := 0.15
+const CUTSCENE_SCENE_PATH := "res://src/ui/story/cutscene_scene.tscn"
+const CUTSCENE_SMOKE_SEQUENCE := "beginning"
 
 
 func _initialize() -> void:
@@ -82,9 +84,11 @@ func _check_scene(scene_path: String) -> bool:
 		push_error("SCENE_SMOKE_FAIL: not a PackedScene %s" % scene_path)
 		return false
 
+	var restore_state := _prepare_scene_smoke_state(scene_path)
 	var instance := (resource as PackedScene).instantiate()
 	if instance == null:
 		push_error("SCENE_SMOKE_FAIL: instantiate returned null %s" % scene_path)
+		_restore_scene_smoke_state(restore_state)
 		return false
 
 	_apply_scene_smoke_overrides(instance)
@@ -95,7 +99,32 @@ func _check_scene(scene_path: String) -> bool:
 	instance.queue_free()
 	await process_frame
 	await process_frame
+	_restore_scene_smoke_state(restore_state)
 	return true
+
+
+func _prepare_scene_smoke_state(scene_path: String) -> Dictionary:
+	var state := {
+		"story_manager": null,
+		"previous_story_sequence": "",
+	}
+	if scene_path != CUTSCENE_SCENE_PATH:
+		return state
+	var story_manager := get_root().get_node_or_null("StoryManager")
+	if story_manager == null:
+		return state
+	state["story_manager"] = story_manager
+	state["previous_story_sequence"] = str(story_manager.get("current_playing_sequence"))
+	if story_manager.has_method("has_sequence") and story_manager.call("has_sequence", CUTSCENE_SMOKE_SEQUENCE):
+		story_manager.set("current_playing_sequence", CUTSCENE_SMOKE_SEQUENCE)
+	return state
+
+
+func _restore_scene_smoke_state(state: Dictionary) -> void:
+	var story_manager := state.get("story_manager") as Node
+	if story_manager == null or not is_instance_valid(story_manager):
+		return
+	story_manager.set("current_playing_sequence", str(state.get("previous_story_sequence", "")))
 
 
 func _apply_scene_smoke_overrides(root: Node) -> void:

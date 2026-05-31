@@ -135,7 +135,16 @@ function Invoke-RepoCommand {
     $previousErrorActionPreference = $ErrorActionPreference
     $ErrorActionPreference = "Continue"
     try {
-        & $Command 2>&1 | ForEach-Object { Write-Host $_ }
+        & $Command 2>&1 | ForEach-Object {
+            $line = if ($_ -is [System.Management.Automation.ErrorRecord]) {
+                $_.Exception.Message
+            } else {
+                [string]$_
+            }
+            if (-not [string]::IsNullOrEmpty($line)) {
+                Write-Host $line
+            }
+        }
     } finally {
         $ErrorActionPreference = $previousErrorActionPreference
     }
@@ -190,12 +199,25 @@ if (-not $SkipPrecheck) {
     $results += Invoke-RepoCommand `
         -Name "gut" `
         -CommandText ".\tools\run_tests_silent.ps1" `
-        -Command { & (Join-Path $repoRoot "tools\run_tests_silent.ps1") }
+        -Command {
+            $previousGodotBin = $env:GODOT_BIN
+            try {
+                $env:GODOT_BIN = $GodotBin
+                & (Join-Path $repoRoot "tools\run_tests_silent.ps1")
+            } finally {
+                $env:GODOT_BIN = $previousGodotBin
+            }
+        }
+
+    $results += Invoke-RepoCommand `
+        -Name "python_tool_tests" `
+        -CommandText "$PythonBin -m unittest discover -s test/tools -p test_*.py" `
+        -Command { & $PythonBin -m unittest discover -s (Join-Path $repoRoot "test/tools") -p "test_*.py" }
 
     $results += Invoke-RepoCommand `
         -Name "strict_scene_smoke" `
-        -CommandText "$PythonBin -B scripts\run_scene_smoke_tests.py --fail-on-engine-error" `
-        -Command { & $PythonBin -B (Join-Path $repoRoot "scripts\run_scene_smoke_tests.py") --fail-on-engine-error }
+        -CommandText "$PythonBin -B scripts\run_scene_smoke_tests.py --godot-bin $GodotBin --fail-on-engine-error --fail-on-engine-warning" `
+        -Command { & $PythonBin -B (Join-Path $repoRoot "scripts\run_scene_smoke_tests.py") --godot-bin $GodotBin --fail-on-engine-error --fail-on-engine-warning }
 } else {
     $results += [ordered]@{
         name = "external_precheck"

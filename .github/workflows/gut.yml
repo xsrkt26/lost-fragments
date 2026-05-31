@@ -9,7 +9,7 @@ on:
 jobs:
   gut:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 20
     env:
       GODOT_VERSION: 4.6.2
       GODOT_STATUS: stable
@@ -23,15 +23,27 @@ jobs:
         id: cache-godot
         uses: actions/cache@v4
         with:
-          path: /tmp/godot
-          key: godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_STATUS }}-linux-x86_64
+          path: |
+            /tmp/godot
+            ~/.local/share/godot/export_templates/${{ env.GODOT_VERSION }}.${{ env.GODOT_STATUS }}
+          key: godot-${{ env.GODOT_VERSION }}-${{ env.GODOT_STATUS }}-linux-x86_64-with-templates
 
-      - name: Install Godot
+      - name: Install Godot and export templates
         if: steps.cache-godot.outputs.cache-hit != 'true'
         run: |
+          set -euo pipefail
           mkdir -p /tmp/godot
           curl -L -o /tmp/godot/godot.zip "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_linux.x86_64.zip"
           unzip -q /tmp/godot/godot.zip -d /tmp/godot
+
+          curl -L -o /tmp/godot/export_templates.tpz "https://github.com/godotengine/godot/releases/download/${GODOT_VERSION}-${GODOT_STATUS}/Godot_v${GODOT_VERSION}-${GODOT_STATUS}_export_templates.tpz"
+          mkdir -p /tmp/godot/export_templates
+          unzip -q /tmp/godot/export_templates.tpz -d /tmp/godot/export_templates
+
+          template_dir="$HOME/.local/share/godot/export_templates/${GODOT_VERSION}.${GODOT_STATUS}"
+          mkdir -p "$template_dir"
+          template_source="$(find /tmp/godot/export_templates -type d -name templates | head -n 1)"
+          cp "$template_source"/* "$template_dir"/
 
       - name: Prepare Godot executable
         run: |
@@ -41,6 +53,18 @@ jobs:
         shell: pwsh
         run: .\tools\run_tests_silent.ps1
 
+      - name: Run Python tool tests
+        run: python3 -m unittest discover -s test/tools -p "test_*.py"
+
       - name: Run strict scene smoke
         run: |
-          python3 -B scripts/run_scene_smoke_tests.py --fail-on-engine-error
+          python3 -B scripts/run_scene_smoke_tests.py --fail-on-engine-error --fail-on-engine-warning
+
+      - name: Export Windows smoke
+        shell: pwsh
+        run: |
+          .\tools\export_windows_release.ps1 `
+            -GodotBin "${{ env.GODOT_BIN }}" `
+            -PythonBin "python3" `
+            -Version "ci-${{ github.sha }}" `
+            -SkipPrecheck

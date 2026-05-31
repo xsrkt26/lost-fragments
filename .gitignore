@@ -23,6 +23,7 @@ spec/.obsidian/workspace.json
 .ai-state/
 .queue/
 .codex_tmp/
+.tmp/
 transition_reference.gif
 transition_result.gif
 

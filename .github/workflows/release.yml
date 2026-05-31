@@ -56,9 +56,13 @@ jobs:
         shell: pwsh
         run: .\tools\run_tests_silent.ps1
 
+      - name: Run Python tool tests
+        shell: bash
+        run: python3 -m unittest discover -s test/tools -p "test_*.py"
+
       - name: Run strict scene smoke
         shell: bash
-        run: python3 -B scripts/run_scene_smoke_tests.py --fail-on-engine-error
+        run: python3 -B scripts/run_scene_smoke_tests.py --fail-on-engine-error --fail-on-engine-warning
 
       - name: Export Windows release
         shell: pwsh

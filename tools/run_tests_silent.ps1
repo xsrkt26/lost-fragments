@@ -1,5 +1,9 @@
 # Silent GUT Test Runner for AI Agents
-# Usage: .\tools\run_tests_silent.ps1
+# Usage: .\tools\run_tests_silent.ps1 [-TimeoutSeconds 180]
+
+param(
+    [int]$TimeoutSeconds = 0
+)
 
 $repoRoot = Resolve-Path (Join-Path $PSScriptRoot "..")
 function Resolve-GodotBin {
@@ -29,7 +33,13 @@ function Resolve-GodotBin {
 
 $godotPath = Resolve-GodotBin
 $gutScript = "addons/gut/gut_cmdln.gd"
-$timeoutSeconds = 60
+if ($TimeoutSeconds -gt 0) {
+    $timeoutSeconds = $TimeoutSeconds
+} elseif ($env:GODOT_TEST_TIMEOUT_SECONDS -and $env:GODOT_TEST_TIMEOUT_SECONDS -match '^\d+$') {
+    $timeoutSeconds = [int]$env:GODOT_TEST_TIMEOUT_SECONDS
+} else {
+    $timeoutSeconds = 180
+}
 
 function Test-IsWindowsHost {
     if (Get-Variable -Name IsWindows -Scope Global -ErrorAction SilentlyContinue) {

@@ -6,7 +6,7 @@ Godot 4.6.2 项目，面向 MiniGame 2026 的背包式卡牌连锁游戏原型�
 
 - 背包网格、道具连锁、饰品、事件、商店和路线系统已拆成可测试模块。
 - 使用 GUT 覆盖核心玩法逻辑，并用 headless scene smoke 覆盖关键场景加载。
-- 接入 GitHub Actions：push/PR 自动跑测试，`v*` tag 自动导出 Windows release。
+- 接入 GitHub Actions：push/PR 自动跑测试和 Windows 导出烟测，`v*` tag 自动导出 Windows release。
 - 策划配置可用 Python 工具校验和导出，便于迭代数值与卡牌内容。
 
 ## 当前入口
@@ -67,7 +67,7 @@ res://
 严格场景冒烟测试：
 
 ```powershell
-python -B scripts\run_scene_smoke_tests.py --fail-on-engine-error
+python -B scripts\run_scene_smoke_tests.py --fail-on-engine-error --fail-on-engine-warning
 ```
 
 该脚本会先执行一次 Godot headless editor 导入，用于生成 `.godot/global_script_class_cache.cfg` 和 `.godot/imported` 资源缓存；隔离副本或 CI 不需要提交 `.godot/`。
@@ -110,7 +110,7 @@ python -B scripts\design_config\export_design_config.py --clean
 
 ## 发布导出
 
-发布前置检查会强制运行全量 GUT 和严格场景冒烟，并在 `package/` 写入构建 manifest：
+发布前置检查会强制运行全量 GUT、Python 工具测试和严格场景冒烟，并在 `package/` 写入构建 manifest：
 
 ```powershell
 .\tools\export_windows_release.ps1 -PrecheckOnly

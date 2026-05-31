@@ -90,7 +90,7 @@ def run_command(
     )
 
 
-def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int, env: dict[str, str]) -> int:
+def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int, env: dict[str, str]) -> tuple[int, str]:
     command = [
         godot_bin,
         "--headless",
@@ -109,14 +109,14 @@ def run_import_pass(godot_bin: str, repo: Path, timeout_seconds: int, env: dict[
         if output:
             print(output, end="" if output.endswith("\n") else "\n")
         print(f"SCENE_SMOKE_RESULTS: FAIL (import timeout after {timeout_seconds}s)")
-        return 124
+        return 124, output
 
     if completed.returncode != 0:
         if completed.stdout:
             print(completed.stdout, end="" if completed.stdout.endswith("\n") else "\n")
         print(f"SCENE_SMOKE_RESULTS: FAIL (import exit code {completed.returncode})")
-        return completed.returncode
-    return 0
+        return completed.returncode, completed.stdout or ""
+    return 0, completed.stdout or ""
 
 
 def run_smoke(args: argparse.Namespace) -> int:
@@ -125,8 +125,9 @@ def run_smoke(args: argparse.Namespace) -> int:
     godot_bin = find_godot_bin(args.godot_bin)
     godot_env = make_isolated_godot_env()
 
+    import_output = ""
     if not args.skip_import:
-        import_code = run_import_pass(godot_bin, repo, args.import_timeout_seconds, godot_env)
+        import_code, import_output = run_import_pass(godot_bin, repo, args.import_timeout_seconds, godot_env)
         if import_code != 0:
             return import_code
 
@@ -165,7 +166,7 @@ def run_smoke(args: argparse.Namespace) -> int:
         }
         Path(args.report_json).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
-    lines = output.splitlines()
+    lines = (import_output + "\n" + output).splitlines()
     known_headless_texture_leak = any("RendererDummy" in line and "DummyTexture" in line for line in lines)
     engine_errors = [
         line
@@ -173,8 +174,19 @@ def run_smoke(args: argparse.Namespace) -> int:
         if (line.startswith("SCRIPT ERROR:") or line.startswith("ERROR:"))
         and not _is_known_headless_cleanup_error(line, known_headless_texture_leak)
     ]
+    engine_warnings = [
+        line
+        for line in lines
+        if line.startswith("WARNING:")
+        and not _is_known_headless_cleanup_warning(line)
+    ]
     if args.fail_on_engine_error and engine_errors:
         print(f"SCENE_SMOKE_RESULTS: FAIL ({len(engine_errors)} engine errors detected)")
+        _print_output_sample("ENGINE_ERROR_SAMPLE", engine_errors)
+        return 1
+    if args.fail_on_engine_warning and engine_warnings:
+        print(f"SCENE_SMOKE_RESULTS: FAIL ({len(engine_warnings)} engine warnings detected)")
+        _print_output_sample("ENGINE_WARNING_SAMPLE", engine_warnings)
         return 1
 
     return completed.returncode
@@ -187,6 +199,12 @@ def _timeout_output(exc: subprocess.TimeoutExpired) -> str:
     return output
 
 
+def _print_output_sample(label: str, lines: list[str], limit: int = 8) -> None:
+    print(f"{label}:")
+    for line in lines[:limit]:
+        print(f"  {line}")
+
+
 def _is_known_headless_cleanup_error(line: str, known_headless_texture_leak: bool) -> bool:
     if not known_headless_texture_leak:
         return False
@@ -195,6 +213,10 @@ def _is_known_headless_cleanup_error(line: str, known_headless_texture_leak: boo
         and "DummyTexture" in line
         or "resources still in use at exit" in line
     )
+
+
+def _is_known_headless_cleanup_warning(line: str) -> bool:
+    return "ObjectDB instances leaked at exit" in line
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:
@@ -207,6 +229,7 @@ def parse_args(argv: list[str]) -> argparse.Namespace:
     parser.add_argument("--skip-import", action="store_true", help="Skip the headless editor import pass.")
     parser.add_argument("--report-json", default="", help="Optional path for a JSON runner report.")
     parser.add_argument("--fail-on-engine-error", action="store_true", help="Fail when Godot prints ERROR or SCRIPT ERROR lines.")
+    parser.add_argument("--fail-on-engine-warning", action="store_true", help="Fail when Godot prints non-whitelisted WARNING lines.")
     return parser.parse_args(argv)
 
 
