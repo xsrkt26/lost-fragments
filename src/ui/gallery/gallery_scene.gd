@@ -5,15 +5,15 @@ const SelectedNameFont = preload("res://assets/fonts/chill_huosong_f_ex_bold.otf
 
 ## 图鉴场景：以相册页素材拼装物品图鉴，右侧为绳网索引，左侧为选中物体和记忆纸片。
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
-const SLOT_STYLE_NORMAL := Color(0.78, 0.72, 0.61, 0.82)
-const SLOT_STYLE_HOVER := Color(0.86, 0.78, 0.62, 0.92)
-const SLOT_STYLE_SELECTED := Color(0.93, 0.82, 0.58, 0.98)
+const SLOT_FILL_NORMAL := Color(0.78, 0.72, 0.61, 0.30)
+const SLOT_FILL_SELECTED := Color(0.93, 0.82, 0.58, 0.42)
 const SLOT_TEXT_COLOR := Color(0.10, 0.065, 0.035, 0.94)
 const SLOT_SELECTED_TEXT_COLOR := Color(0.05, 0.03, 0.018, 1.0)
 
 const ITEM_CELL_SIZE := Vector2(99.14, 125.6)
 const ITEM_COLUMNS := 7
 const MEMORY_TEXT_LIMIT := 124
+const SLOT_FILL_INSET := Vector2(12.0, 15.0)
 const SLOT_ICON_POSITION := Vector2(13.0, 15.0)
 const SLOT_ICON_SIZE := Vector2(73.0, 68.0)
 const SLOT_NAME_POSITION_WITH_ICON := Vector2(8.0, 86.0)
@@ -41,6 +41,8 @@ func _ready() -> void:
 	_photo_corner_texture = AssetPaths.load_texture(AssetPaths.PHOTO_CORNER)
 	print("[Gallery] 进入物品图鉴")
 	GlobalInput.set_context(GlobalInput.Context.UI)
+	item_scroll.vertical_scroll_mode = ScrollContainer.SCROLL_MODE_SHOW_NEVER
+	item_scroll.gui_input.connect(_on_item_scroll_gui_input)
 	resized.connect(_layout_design_root)
 	_configure_book_background()
 	_configure_static_text()
@@ -95,10 +97,17 @@ func _create_item_slot(item: ItemData) -> Button:
 	button.tooltip_text = _plain_text(item.get_tooltip_text())
 	button.clip_text = true
 	button.set_meta("item_id", item.id)
-	button.add_theme_stylebox_override("normal", _make_slot_style(SLOT_STYLE_NORMAL, Color(0.20, 0.12, 0.06, 0.22), 1))
-	button.add_theme_stylebox_override("hover", _make_slot_style(SLOT_STYLE_HOVER, Color(0.35, 0.19, 0.08, 0.36), 1))
-	button.add_theme_stylebox_override("pressed", _make_slot_style(SLOT_STYLE_SELECTED, Color(0.42, 0.24, 0.08, 0.54), 2))
+	button.add_theme_stylebox_override("normal", _make_slot_style(Color.TRANSPARENT, Color.TRANSPARENT, 0))
+	button.add_theme_stylebox_override("hover", _make_slot_style(Color.TRANSPARENT, Color.TRANSPARENT, 0))
+	button.add_theme_stylebox_override("pressed", _make_slot_style(Color.TRANSPARENT, Color.TRANSPARENT, 0))
 	button.pressed.connect(func(): _select_item(item))
+	button.gui_input.connect(_on_item_scroll_gui_input)
+
+	var fill := ColorRect.new()
+	fill.name = "CellFill"
+	fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	fill.color = SLOT_FILL_NORMAL
+	button.add_child(fill)
 
 	var corner := TextureRect.new()
 	corner.name = "PhotoCorner"
@@ -226,23 +235,64 @@ func _update_slot_selection() -> void:
 		var selected := str(button.get_meta("item_id", "")) == _selected_item_id
 		var label := button.get_node_or_null("NameLabel") as Label
 		var pin := button.get_node_or_null("SelectionPin") as ColorRect
+		var fill := button.get_node_or_null("CellFill") as ColorRect
 		if selected:
-			button.add_theme_stylebox_override("normal", _make_slot_style(SLOT_STYLE_SELECTED, Color(0.42, 0.24, 0.08, 0.54), 2))
 			button.z_index = 2
 			if label != null:
 				label.add_theme_color_override("font_color", SLOT_SELECTED_TEXT_COLOR)
+			if fill != null:
+				fill.color = SLOT_FILL_SELECTED
 			if pin != null:
 				pin.color = Color(0.62, 0.16, 0.10, 0.85)
 		else:
-			button.add_theme_stylebox_override("normal", _make_slot_style(SLOT_STYLE_NORMAL, Color(0.20, 0.12, 0.06, 0.22), 1))
 			button.z_index = 0
 			if label != null:
 				label.add_theme_color_override("font_color", SLOT_TEXT_COLOR)
+			if fill != null:
+				fill.color = SLOT_FILL_NORMAL
 			if pin != null:
 				pin.color = Color(0.50, 0.15, 0.10, 0.0)
 
 func _layout_design_root() -> void:
 	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
+
+func _on_item_scroll_gui_input(event: InputEvent) -> void:
+	if event is not InputEventMouseButton:
+		return
+	var mouse_event := event as InputEventMouseButton
+	if not mouse_event.pressed:
+		return
+
+	if mouse_event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
+		_scroll_gallery_rows(1)
+	elif mouse_event.button_index == MOUSE_BUTTON_WHEEL_UP:
+		_scroll_gallery_rows(-1)
+	else:
+		return
+
+	accept_event()
+	item_scroll.accept_event()
+	get_viewport().set_input_as_handled()
+
+func _scroll_gallery_rows(direction: int) -> void:
+	if direction == 0:
+		return
+	var current_row := _gallery_scroll_row(item_scroll.scroll_vertical)
+	var next_row := clampi(current_row + direction, 0, _gallery_max_scroll_row())
+	item_scroll.scroll_vertical = _gallery_scroll_value_for_row(next_row)
+
+func _gallery_scroll_row(scroll_value: int) -> int:
+	return maxi(0, int(round(float(scroll_value) / ITEM_CELL_SIZE.y)))
+
+func _gallery_scroll_value_for_row(row: int) -> int:
+	return int(round(float(maxi(row, 0)) * ITEM_CELL_SIZE.y))
+
+func _gallery_max_scroll_row() -> int:
+	var content_height := item_grid.custom_minimum_size.y
+	if content_height <= 0.0:
+		content_height = item_grid.size.y
+	var max_scroll := maxf(0.0, content_height - item_scroll.size.y)
+	return maxi(0, int(round(max_scroll / ITEM_CELL_SIZE.y)))
 
 func _layout_item_slots() -> void:
 	var cell_size := ITEM_CELL_SIZE
@@ -253,6 +303,10 @@ func _layout_item_slots() -> void:
 
 	for button in _slot_buttons:
 		button.custom_minimum_size = cell_size
+		var fill := button.get_node_or_null("CellFill") as ColorRect
+		if fill != null:
+			fill.position = SLOT_FILL_INSET
+			fill.size = ITEM_CELL_SIZE - SLOT_FILL_INSET * 2.0
 		var corner := button.get_node_or_null("PhotoCorner") as TextureRect
 		if corner != null:
 			corner.position = Vector2(4.0, 3.0)

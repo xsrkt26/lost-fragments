@@ -95,6 +95,7 @@ offset_top = 182.0
 offset_right = 1516.0
 offset_bottom = 810.0
 horizontal_scroll_mode = 0
+vertical_scroll_mode = 3
 
 [node name="ItemGrid" type="GridContainer" parent="DesignRoot/UiLayer/ItemScroll" unique_id=1468326502]
 layout_mode = 2

@@ -45,6 +45,10 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_not_null(back_button)
 	assert_true(back_button.size.x > 0.0)
 
+	var item_scroll := gallery.get_node_or_null("DesignRoot/UiLayer/ItemScroll") as ScrollContainer
+	assert_not_null(item_scroll)
+	assert_eq(item_scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_SHOW_NEVER)
+
 	var item_grid := gallery.get_node_or_null("DesignRoot/UiLayer/ItemScroll/ItemGrid") as GridContainer
 	assert_not_null(item_grid)
 	assert_eq(item_grid.columns, 7)
@@ -54,12 +58,23 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_not_null(first_button)
 	assert_true(first_button.has_meta("item_id"))
 	assert_true(first_button.tooltip_text.length() > 0)
+	var cell_fill := first_button.get_node_or_null("CellFill") as ColorRect
+	assert_not_null(cell_fill)
+	assert_true(cell_fill.position.x > 0.0)
+	assert_true(cell_fill.position.y > 0.0)
+	assert_true(cell_fill.size.x < first_button.size.x)
+	assert_true(cell_fill.size.y < first_button.size.y)
 	assert_not_null(first_button.get_node_or_null("PhotoCorner"))
 	var item_icon := first_button.get_node_or_null("ItemIcon") as TextureRect
 	assert_not_null(item_icon)
 	assert_not_null(item_icon.texture)
 	assert_eq(item_icon.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
 	assert_not_null(first_button.get_node_or_null("SelectionPin"))
+	item_scroll.scroll_vertical = 0
+	gallery.call("_scroll_gallery_rows", 1)
+	assert_eq(item_scroll.scroll_vertical, int(round(first_button.custom_minimum_size.y)))
+	gallery.call("_scroll_gallery_rows", -1)
+	assert_eq(item_scroll.scroll_vertical, 0)
 
 	var selected_paper := gallery.get_node_or_null("DesignRoot/UiLayer/SelectedPaper") as Control
 	var memory_paper := gallery.get_node_or_null("DesignRoot/UiLayer/MemoryPaper") as Control

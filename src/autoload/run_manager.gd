@@ -37,7 +37,7 @@ const INITIAL_BACKPACK_ITEMS: Array[Dictionary] = [
 	{
 		"id": ROOT_DREAM_ID,
 		"x": 1,
-		"y": 3,
+		"y": 1,
 		"direction": ItemData.Direction.RIGHT,
 		"shape": [{"x": 0, "y": 0}],
 		"runtime_id": -1,
@@ -882,7 +882,8 @@ func _get_initial_backpack_items(item_db: Node = null) -> Array[Dictionary]:
 	for raw_entry in INITIAL_BACKPACK_ITEMS:
 		var entry := Dictionary(raw_entry).duplicate(true)
 		var runtime_data := _make_runtime_backpack_item_data(entry, item_db)
-		if runtime_data != null:
+		if runtime_data == null:
+			continue
 		var desired_pos := Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
 		var place_pos := desired_pos
 		if not backpack.can_place_item(runtime_data, place_pos):
