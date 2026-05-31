@@ -17,6 +17,8 @@ var _sfx_pool: Array[AudioStreamPlayer] = []
 var _pool_size: int = 12
 var _fade_tween: Tween = null
 var _audio_disabled: bool = false
+var _sfx_streams: Dictionary = {}
+var _bgm_streams: Dictionary = {}
 
 func _ready():
 	_ensure_audio_buses()
@@ -26,6 +28,7 @@ func _ready():
 		print("[GlobalAudio] 音频管理器已就绪。")
 		return
 	_setup_audio_nodes()
+	_cache_sfx_streams()
 	print("[GlobalAudio] 音频管理器已就绪。")
 
 func _setup_audio_nodes():
@@ -51,17 +54,17 @@ func _exit_tree():
 		if is_instance_valid(player):
 			player.stop()
 			player.stream = null
+	_sfx_streams.clear()
+	_bgm_streams.clear()
 	print("[GlobalAudio] 音频资源已安全卸载。")
 
 ## 播放 BGM，修复了淡入淡出冲突
 func play_bgm(bgm_key: String, fade_time: float = 1.0):
 	if _audio_disabled:
 		return
-	if not BGM_PATHS.has(bgm_key): return
-	var path = BGM_PATHS[bgm_key]
-	if not FileAccess.file_exists(path): return
-
-	var stream = load(path)
+	var stream := _get_bgm_stream(bgm_key)
+	if stream == null:
+		return
 	if _bgm_player.stream == stream and _bgm_player.playing: return
 
 	# 杀掉之前的淡入淡出，防止音量争夺
@@ -98,11 +101,9 @@ func stop_bgm(fade_time: float = 1.0):
 func play_sfx(sfx_key: String, pitch_range: float = 0.1):
 	if _audio_disabled:
 		return
-	if not SFX_PATHS.has(sfx_key): return
-	var path = SFX_PATHS[sfx_key]
-	if not FileAccess.file_exists(path): return
-
-	var stream = load(path)
+	var stream := _get_sfx_stream(sfx_key)
+	if stream == null:
+		return
 	_play_stream_from_pool(stream, pitch_range)
 
 func _play_stream_from_pool(stream: AudioStream, pitch_range: float):
@@ -114,6 +115,42 @@ func _play_stream_from_pool(stream: AudioStream, pitch_range: float):
 			return
 	_sfx_pool[0].stream = stream
 	_sfx_pool[0].play()
+
+func _cache_sfx_streams() -> void:
+	_sfx_streams.clear()
+	for key in SFX_PATHS.keys():
+		var stream := _load_audio_stream(str(SFX_PATHS[key]))
+		if stream != null:
+			_sfx_streams[str(key)] = stream
+		else:
+			push_warning("[GlobalAudio] Missing SFX stream: %s" % str(SFX_PATHS[key]))
+
+func _get_sfx_stream(sfx_key: String) -> AudioStream:
+	if _sfx_streams.has(sfx_key):
+		return _sfx_streams[sfx_key] as AudioStream
+	if not SFX_PATHS.has(sfx_key):
+		return null
+	var stream := _load_audio_stream(str(SFX_PATHS[sfx_key]))
+	if stream != null:
+		_sfx_streams[sfx_key] = stream
+	return stream
+
+func _get_bgm_stream(bgm_key: String) -> AudioStream:
+	if _bgm_streams.has(bgm_key):
+		return _bgm_streams[bgm_key] as AudioStream
+	if not BGM_PATHS.has(bgm_key):
+		return null
+	var stream := _load_audio_stream(str(BGM_PATHS[bgm_key]))
+	if stream != null:
+		_bgm_streams[bgm_key] = stream
+	else:
+		push_warning("[GlobalAudio] Missing BGM stream: %s" % str(BGM_PATHS[bgm_key]))
+	return stream
+
+func _load_audio_stream(path: String) -> AudioStream:
+	if path == "" or not ResourceLoader.exists(path):
+		return null
+	return ResourceLoader.load(path) as AudioStream
 
 func set_volume(bus_type: Bus, volume: float):
 	_ensure_audio_buses()
