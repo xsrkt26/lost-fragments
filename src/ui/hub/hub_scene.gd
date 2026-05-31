@@ -8,6 +8,12 @@ const HubMerchantController = preload("res://src/ui/hub/hub_merchant_controller.
 const HubPlayerController = preload("res://src/ui/hub/hub_player_controller.gd")
 const HubInteractionFlowController = preload("res://src/ui/hub/hub_interaction_flow_controller.gd")
 const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
+const HUB_PLUSH_TRANSITION_FRAME_PATHS := [
+	"res://assets/ui/hub/plush_transition/plush_transition_01.png",
+	"res://assets/ui/hub/plush_transition/plush_transition_02.png",
+	"res://assets/ui/hub/plush_transition/plush_transition_03.png",
+	"res://assets/ui/hub/plush_transition/plush_transition_04.png",
+]
 
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
@@ -51,6 +57,15 @@ const HUB_TO_BATTLE_FOCUS_DURATION := 0.72
 const HUB_TO_BATTLE_MIN_FOCUS_ZOOM := 1.05
 const HUB_TO_BATTLE_BOARD_TARGET_UV := Vector2(0.24, 0.35)
 const HUB_TO_BATTLE_BOARD_BOTTOM_LOCK_OFFSET := 0.0
+const HUB_PLUSH_TRANSITION_TARGET_WIDTH_RATIO := 1.16
+const HUB_PLUSH_TRANSITION_MIN_WIDTH := 180.0
+const HUB_PLUSH_TRANSITION_MAX_WIDTH := 290.0
+const HUB_PLUSH_TRANSITION_SCALE_MULTIPLIER := 1.8
+const HUB_PLUSH_TRANSITION_UPWARD_BODY_RATIO := 0.75
+const HUB_PLUSH_TRANSITION_BODY_BOTTOM_RATIO := 0.58
+const HUB_PLUSH_TRANSITION_VERTICAL_GAP := 6.0
+const HUB_PLUSH_TRANSITION_FALLBACK_DROP_DURATION := 0.62
+const HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME := 0.34
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const SHOP_INTRO_FRAME_RATE := 60.0
@@ -84,6 +99,7 @@ func _first_existing_node(paths: Array[String]) -> Node:
 @onready var speech_bubble: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/SpeechBubble", "HubArt/SpeechBubble"]) as Sprite2D
 @onready var speech_text: Label = _first_existing_node(["HubArt/BoardViewport/BoardContent/SpeechText", "HubArt/SpeechText"]) as Label
 @onready var dreamcatcher_net: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/DreamcatcherNet", "HubArt/DreamcatcherNet"]) as Sprite2D
+@onready var dreamcatcher_plush_transition: Sprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/DreamcatcherPlushTransition", "HubArt/DreamcatcherPlushTransition"]) as Sprite2D
 @onready var merchant_sprite: AnimatedSprite2D = _first_existing_node(["HubArt/BoardViewport/BoardContent/MerchantSprite", "HubArt/MerchantSprite"]) as AnimatedSprite2D
 @onready var merchant_button: Button = $CanvasLayer/DesignRoot/MerchantButton
 @onready var dreamcatcher_button: Button = $CanvasLayer/DesignRoot/DreamcatcherButton
@@ -111,6 +127,8 @@ var _dreamcatcher_net_base_position := Vector2.ZERO
 var _dreamcatcher_net_base_rotation := 0.0
 var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _dreamcatcher_idle_tween: Tween = null
+var _hub_plush_transition_textures: Array[Texture2D] = []
+var _hub_plush_transition_play_token := 0
 var _hub_battle_manager: BattleManager = null
 var _is_hub_battle_session_active := false
 var _hub_focus_layer_base_transforms: Dictionary = {}
@@ -166,6 +184,8 @@ func _ready() -> void:
 	_apply_hub_dreamcatcher_stage_visual()
 	_configure_hub_dreamcatcher_swing_pivot()
 	_capture_hub_dreamcatcher_pose()
+	_sync_hub_plush_transition_pose()
+	_reset_hub_plush_transition()
 
 	if rm and rm.is_run_complete:
 		GlobalScene.transition_to(GlobalScene.SceneType.MAIN_MENU, false)
@@ -230,6 +250,7 @@ func _on_route_changed(_current_act: int, _route_index: int, _current_node: Dict
 	_apply_hub_dreamcatcher_stage_visual()
 	_configure_hub_dreamcatcher_swing_pivot()
 	_capture_hub_dreamcatcher_pose()
+	_reset_hub_plush_transition()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
 	_update_merchant_state()
@@ -536,6 +557,146 @@ func _play_hub_dreamcatcher_start_swing() -> void:
 	dreamcatcher_net.position = _dreamcatcher_net_base_position
 	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
 	dreamcatcher_net.offset = _dreamcatcher_net_base_offset
+
+
+func _ensure_hub_plush_transition_sprite() -> Sprite2D:
+	if dreamcatcher_plush_transition != null and is_instance_valid(dreamcatcher_plush_transition):
+		return dreamcatcher_plush_transition
+	if hub_board_content == null:
+		return null
+	dreamcatcher_plush_transition = Sprite2D.new()
+	dreamcatcher_plush_transition.name = "DreamcatcherPlushTransition"
+	dreamcatcher_plush_transition.centered = true
+	dreamcatcher_plush_transition.visible = false
+	if dreamcatcher_net != null:
+		dreamcatcher_plush_transition.z_index = dreamcatcher_net.z_index - 1
+	hub_board_content.add_child(dreamcatcher_plush_transition)
+	return dreamcatcher_plush_transition
+
+
+func _get_hub_plush_transition_textures() -> Array[Texture2D]:
+	if not _hub_plush_transition_textures.is_empty():
+		return _hub_plush_transition_textures
+	for path in HUB_PLUSH_TRANSITION_FRAME_PATHS:
+		var texture := AssetPaths.load_texture(path)
+		if texture != null:
+			_hub_plush_transition_textures.append(texture)
+	return _hub_plush_transition_textures
+
+
+func _sync_hub_plush_transition_pose() -> void:
+	var plush_sprite := _ensure_hub_plush_transition_sprite()
+	if plush_sprite == null or dreamcatcher_net == null or dreamcatcher_net.texture == null:
+		return
+	var net_rect := _get_hub_dreamcatcher_visual_parent_rect()
+	if net_rect.size.x <= 0.0 or net_rect.size.y <= 0.0:
+		return
+	var max_frame_width := 0.0
+	var max_frame_height := 0.0
+	for texture in _get_hub_plush_transition_textures():
+		var texture_size := texture.get_size()
+		max_frame_width = maxf(max_frame_width, texture_size.x)
+		max_frame_height = maxf(max_frame_height, texture_size.y)
+	if max_frame_width <= 0.0 or max_frame_height <= 0.0:
+		return
+	var base_target_width := clampf(
+		net_rect.size.x * HUB_PLUSH_TRANSITION_TARGET_WIDTH_RATIO,
+		HUB_PLUSH_TRANSITION_MIN_WIDTH,
+		HUB_PLUSH_TRANSITION_MAX_WIDTH
+	)
+	var target_width := base_target_width * HUB_PLUSH_TRANSITION_SCALE_MULTIPLIER
+	var plush_scale := target_width / max_frame_width
+	var base_plush_display_height := max_frame_height * (base_target_width / max_frame_width)
+	var plush_display_height := max_frame_height * plush_scale
+	var plush_top_y := net_rect.position.y + net_rect.size.y * HUB_PLUSH_TRANSITION_BODY_BOTTOM_RATIO + HUB_PLUSH_TRANSITION_VERTICAL_GAP
+	plush_sprite.centered = true
+	plush_sprite.position = Vector2(
+		net_rect.position.x + net_rect.size.x * 0.5,
+		plush_top_y + plush_display_height * 0.5 - base_plush_display_height * HUB_PLUSH_TRANSITION_UPWARD_BODY_RATIO
+	)
+	plush_sprite.scale = Vector2(plush_scale, plush_scale)
+	plush_sprite.rotation = 0.0
+	plush_sprite.z_index = dreamcatcher_net.z_index - 1
+
+
+func _get_hub_dreamcatcher_visual_parent_rect() -> Rect2:
+	if dreamcatcher_net == null or dreamcatcher_net.texture == null:
+		return Rect2()
+	var texture_size := dreamcatcher_net.texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return Rect2()
+	var visual_center := _get_hub_dreamcatcher_visual_center()
+	var half_size := texture_size * 0.5
+	var corners: Array[Vector2] = [
+		Vector2(-half_size.x, -half_size.y),
+		Vector2(half_size.x, -half_size.y),
+		half_size,
+		Vector2(-half_size.x, half_size.y),
+	]
+	var first_point := visual_center + Vector2(
+		corners[0].x * dreamcatcher_net.scale.x,
+		corners[0].y * dreamcatcher_net.scale.y
+	).rotated(dreamcatcher_net.rotation)
+	var rect := Rect2(first_point, Vector2.ZERO)
+	for index in range(1, corners.size()):
+		var corner: Vector2 = corners[index]
+		var point := visual_center + Vector2(corner.x * dreamcatcher_net.scale.x, corner.y * dreamcatcher_net.scale.y).rotated(dreamcatcher_net.rotation)
+		rect = rect.expand(point)
+	return rect
+
+
+func _reset_hub_plush_transition() -> void:
+	_hub_plush_transition_play_token += 1
+	var plush_sprite := _ensure_hub_plush_transition_sprite()
+	if plush_sprite == null:
+		return
+	_sync_hub_plush_transition_pose()
+	plush_sprite.texture = null
+	plush_sprite.modulate = Color.WHITE
+	plush_sprite.visible = false
+
+
+func _play_hub_plush_transition_with_battle_intro() -> void:
+	var plush_sprite := _ensure_hub_plush_transition_sprite()
+	var frames := _get_hub_plush_transition_textures()
+	if plush_sprite == null or frames.is_empty():
+		return
+	_hub_plush_transition_play_token += 1
+	var play_token := _hub_plush_transition_play_token
+	_sync_hub_plush_transition_pose()
+	plush_sprite.texture = frames[0]
+	plush_sprite.visible = true
+
+	var drop_duration := _get_hub_battle_intro_float("intro_bag_drop_duration", HUB_PLUSH_TRANSITION_FALLBACK_DROP_DURATION)
+	if drop_duration > 0.0:
+		await get_tree().create_timer(drop_duration).timeout
+
+	for index in range(1, frames.size()):
+		if not _should_continue_hub_plush_transition(play_token):
+			return
+		var frame_time := _get_hub_battle_intro_float("intro_bag_frame_time", HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME)
+		if frame_time > 0.0:
+			await get_tree().create_timer(frame_time).timeout
+		if not _should_continue_hub_plush_transition(play_token):
+			return
+		_sync_hub_plush_transition_pose()
+		plush_sprite.texture = frames[index]
+		plush_sprite.visible = true
+
+
+func _should_continue_hub_plush_transition(play_token: int) -> bool:
+	return (
+		play_token == _hub_plush_transition_play_token
+		and is_inside_tree()
+		and dreamcatcher_plush_transition != null
+		and is_instance_valid(dreamcatcher_plush_transition)
+	)
+
+
+func _get_hub_battle_intro_float(property_name: String, fallback: float) -> float:
+	if battle_layer != null and _has_node_property(battle_layer, property_name):
+		return maxf(0.0, float(battle_layer.get(property_name)))
+	return fallback
 
 
 func _update_dreamcatcher_state() -> void:
@@ -956,6 +1117,8 @@ func _enter_route_node(index: int, use_scene_transition: bool = true) -> void:
 		if not is_inside_tree():
 			return
 		_open_hub_battle_session()
+		if _is_hub_battle_session_active:
+			call_deferred("_play_hub_plush_transition_with_battle_intro")
 	else:
 		print("[Hub] Non-battle node: fallback to SceneManager transition.")
 		if use_scene_transition:
@@ -1093,6 +1256,7 @@ func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 		merchant_button.visible = chrome_visible and _should_show_merchant()
 	if chrome_visible:
 		_restore_hub_focus_layer_base_transforms()
+		_reset_hub_plush_transition()
 		_layout_scene()
 		_update_merchant_state()
 		_update_dreamcatcher_state()
@@ -1529,6 +1693,7 @@ func _layout_scene() -> void:
 		_has_positioned_player = false
 	_layout_hub_page_visual_root(viewport_size)
 	_layout_hub_art(viewport_size)
+	_sync_hub_plush_transition_pose()
 	_layout_book_design_root()
 	_layout_canvas_design_root()
 	if _shop_visual_controller != null:

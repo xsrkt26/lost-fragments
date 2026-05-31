@@ -85,6 +85,11 @@ scale = Vector2(0.9599282, 0.9599282)
 texture = ExtResource("6_room")
 centered = false
 
+[node name="DreamcatcherPlushTransition" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent"]
+visible = false
+z_index = 12
+centered = true
+
 [node name="DreamcatcherNet" type="Sprite2D" parent="HubArt/BoardViewport/BoardContent" unique_id=2066522267]
 z_index = 13
 position = Vector2(918, 556)
