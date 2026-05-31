@@ -45,13 +45,13 @@ grow_vertical = 2
 
 [node name="NewGameButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1216600379]
 layout_mode = 0
-offset_left = 1311.0
-offset_top = 103.999985
-offset_right = 1701.0
-offset_bottom = 228.99998
-rotation = 0.2617994
-scale = Vector2(1.0825087, 1.2635165)
-tooltip_text = "开始游戏"
+offset_left = 1404.0001
+offset_top = 176.0
+offset_right = 1589.0001
+offset_bottom = 662.0
+rotation = 0.16122448
+scale = Vector2(1.1014361, 1.0462354)
+tooltip_text = "进入梦境"
 focus_mode = 0
 mouse_default_cursor_shape = 2
 theme_type_variation = &"DisplayButton"
@@ -61,14 +61,18 @@ theme_override_colors/font_pressed_color = Color(0.42, 0.015, 0.01, 1)
 theme_override_colors/font_hover_color = Color(0.92, 0.58, 0.16, 1)
 theme_override_colors/font_disabled_color = Color(0.08, 0.06, 0.045, 0.34)
 theme_override_fonts/font = ExtResource("5_menu_font")
-theme_override_font_sizes/font_size = 62
+theme_override_font_sizes/font_size = 70
 theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
-text = "开始"
+text = "进
+入
+梦
+境"
 
 [node name="ContinueButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=740638814]
+visible = false
 layout_mode = 0
 offset_left = 1297.0001
 offset_top = 226.0
@@ -78,6 +82,7 @@ rotation = 0.2617994
 scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "继续游戏"
 focus_mode = 0
+mouse_filter = 2
 mouse_default_cursor_shape = 2
 theme_type_variation = &"DisplayButton"
 theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
@@ -91,9 +96,11 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+disabled = true
 text = "继续"
 
 [node name="GalleryButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1937975851]
+visible = false
 layout_mode = 0
 offset_left = 1276.0
 offset_top = 351.0
@@ -103,6 +110,7 @@ rotation = 0.2617994
 scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "图鉴"
 focus_mode = 0
+mouse_filter = 2
 mouse_default_cursor_shape = 2
 theme_type_variation = &"DisplayButton"
 theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
@@ -116,9 +124,11 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+disabled = true
 text = "图鉴"
 
 [node name="SettingsButton" type="Button" parent="DesignRoot/MenuHotspots" unique_id=1082685952]
+visible = false
 layout_mode = 0
 offset_left = 1252.0
 offset_top = 475.0
@@ -128,6 +138,7 @@ rotation = 0.2617994
 scale = Vector2(1.0825087, 1.2635165)
 tooltip_text = "设置"
 focus_mode = 0
+mouse_filter = 2
 mouse_default_cursor_shape = 2
 theme_type_variation = &"DisplayButton"
 theme_override_colors/font_color = Color(0.015, 0.01, 0.006, 0.96)
@@ -141,6 +152,7 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_hotspot_transparent")
 theme_override_styles/disabled = SubResource("StyleBoxFlat_hotspot_transparent")
+disabled = true
 text = "设置"
 
 [node name="QuitButton" type="TextureButton" parent="DesignRoot/MenuHotspots" unique_id=89147434]

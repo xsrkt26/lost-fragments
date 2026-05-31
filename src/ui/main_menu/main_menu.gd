@@ -20,6 +20,12 @@ const RESPONSIVE_CONTROL_NAMES := [
 	"QuitButton",
 	"ContinueDisabledOverlay",
 ]
+const REMOVED_MENU_ENTRY_NAMES := [
+	"ContinueButton",
+	"GalleryButton",
+	"SettingsButton",
+	"ContinueDisabledOverlay",
+]
 
 @onready var design_root: Control = $DesignRoot
 @onready var continue_button: Button = $DesignRoot/MenuHotspots/ContinueButton
@@ -42,12 +48,35 @@ func _ready() -> void:
 	call_deferred("_layout_design_root")
 	_configure_interactive_feedback()
 	_refresh_continue_state()
+	_hide_removed_menu_entries()
 
 func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F1:
-		GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
-	if event is InputEventKey and event.pressed and event.keycode == KEY_F2:
-		_debug_enter_hub_after_first_dreamcatcher()
+	if not _is_debug_shortcut_enabled():
+		return
+	if not (event is InputEventKey):
+		return
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return
+	match key_event.keycode:
+		KEY_F1:
+			get_viewport().set_input_as_handled()
+			GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
+		KEY_F2:
+			get_viewport().set_input_as_handled()
+			_debug_enter_hub_after_first_dreamcatcher()
+		KEY_F3:
+			get_viewport().set_input_as_handled()
+			_on_continue_button_pressed()
+		KEY_F4:
+			get_viewport().set_input_as_handled()
+			_on_gallery_button_pressed()
+		KEY_F5:
+			get_viewport().set_input_as_handled()
+			_on_settings_button_pressed()
+
+func _is_debug_shortcut_enabled() -> bool:
+	return OS.is_debug_build()
 
 func _configure_interactive_feedback() -> void:
 	for node_name in RESPONSIVE_CONTROL_NAMES:
@@ -75,6 +104,21 @@ func _refresh_continue_state() -> void:
 		_menu_control_hovered[continue_key] = false
 		_menu_control_pressed[continue_key] = false
 		_apply_menu_control_state(continue_button, false)
+	_hide_removed_menu_entries()
+
+func _hide_removed_menu_entries() -> void:
+	for node_name in REMOVED_MENU_ENTRY_NAMES:
+		var control := get_node_or_null("DesignRoot/MenuHotspots/%s" % node_name) as Control
+		if control == null:
+			continue
+		control.visible = false
+		control.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		if control is BaseButton:
+			var button := control as BaseButton
+			button.disabled = true
+		_menu_control_hovered[node_name] = false
+		_menu_control_pressed[node_name] = false
+		_clear_menu_control_tween(control)
 
 func _cache_menu_control_poses() -> void:
 	_menu_control_base_positions.clear()

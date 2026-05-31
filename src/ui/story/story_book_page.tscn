@@ -38,7 +38,7 @@ grow_horizontal = 2
 grow_vertical = 2
 mouse_filter = 2
 
-[node name="TextPanel" type="Panel" parent="DesignRoot/UiLayer"]
+[node name="TextPanel" type="Control" parent="DesignRoot/UiLayer"]
 layout_mode = 0
 offset_left = 720.0
 offset_top = 210.0

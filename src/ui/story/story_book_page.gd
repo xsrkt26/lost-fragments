@@ -7,7 +7,7 @@ const TEXT_PANEL_DESIGN_RECT := Rect2(720.0, 210.0, 760.0, 360.0)
 const TYPE_SPEED := 0.035
 
 @onready var design_root: Control = $DesignRoot
-@onready var text_panel: Panel = $DesignRoot/UiLayer/TextPanel
+@onready var text_panel: Control = $DesignRoot/UiLayer/TextPanel
 @onready var content_label: Label = $DesignRoot/UiLayer/TextPanel/MarginContainer/ContentLabel
 
 var _book_page_navigator: Node = null
