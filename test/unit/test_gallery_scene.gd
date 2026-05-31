@@ -40,6 +40,7 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	var rope_grid := gallery.get_node_or_null("DesignRoot/ArtLayer/GridBackdrop") as Control
 	assert_not_null(rope_grid)
 	assert_not_null(rope_grid.get_script())
+	assert_false(rope_grid.visible)
 
 	var back_button := gallery.get_node_or_null("DesignRoot/UiLayer/BackButton") as Button
 	assert_not_null(back_button)
@@ -48,10 +49,24 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	var item_scroll := gallery.get_node_or_null("DesignRoot/UiLayer/ItemScroll") as ScrollContainer
 	assert_not_null(item_scroll)
 	assert_eq(item_scroll.vertical_scroll_mode, ScrollContainer.SCROLL_MODE_SHOW_NEVER)
+	var grid_image_backdrop := gallery.get_node_or_null("DesignRoot/UiLayer/GridImageBackdrop") as Control
+	assert_not_null(grid_image_backdrop)
+	assert_not_null(grid_image_backdrop.get_script())
+	assert_false(grid_image_backdrop.clip_contents)
+	assert_eq(grid_image_backdrop.position, item_scroll.position)
+	assert_eq(grid_image_backdrop.size, item_scroll.size)
+	assert_true(grid_image_backdrop.get_index() < item_scroll.get_index())
+	var frame_texture := load("res://assets/ui/gallery/gallery_grid_background.png") as Texture2D
+	assert_not_null(frame_texture)
+	assert_false(frame_texture.resource_path.contains("sourceImage"))
+	var frame_image := frame_texture.get_image()
+	assert_not_null(frame_image)
+	assert_true(frame_image.get_pixel(10, 10).a < 0.1)
+	assert_true(frame_image.get_pixel(94, 114).a > 0.5)
 
 	var item_grid := gallery.get_node_or_null("DesignRoot/UiLayer/ItemScroll/ItemGrid") as GridContainer
 	assert_not_null(item_grid)
-	assert_eq(item_grid.columns, 7)
+	assert_eq(item_grid.columns, 6)
 	assert_true(item_grid.get_child_count() > 0)
 
 	var first_button := item_grid.get_child(0) as Button

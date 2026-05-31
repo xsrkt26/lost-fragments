@@ -6,6 +6,7 @@
 [ext_resource type="Script" uid="uid://b3mnqyl3mmp5f" path="res://src/ui/gallery/rope_grid.gd" id="13_rope_grid"]
 [ext_resource type="Script" uid="uid://chmcnyth1cbxy" path="res://src/ui/gallery/torn_paper.gd" id="14_torn_paper"]
 [ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="15_book_background"]
+[ext_resource type="Script" uid="uid://cktsl0jqpm2t7" path="res://src/ui/gallery/gallery_grid_frame.gd" id="16_grid_frame"]
 
 [sub_resource type="StyleBoxFlat" id="StyleBoxFlat_transparent"]
 bg_color = Color(1, 1, 1, 0)
@@ -34,6 +35,7 @@ offset_bottom = 1080.0
 active_page_id = "gallery"
 
 [node name="GridBackdrop" type="Control" parent="DesignRoot/ArtLayer" unique_id=55748236]
+visible = false
 z_index = 14
 anchors_preset = 0
 offset_left = 780.0
@@ -88,12 +90,21 @@ theme_override_styles/normal = SubResource("StyleBoxFlat_transparent")
 theme_override_styles/pressed = SubResource("StyleBoxFlat_transparent")
 theme_override_styles/hover = SubResource("StyleBoxFlat_transparent")
 
+[node name="GridImageBackdrop" type="Control" parent="DesignRoot/UiLayer"]
+layout_mode = 0
+offset_left = 862.0
+offset_top = 157.0
+offset_right = 1558.965
+offset_bottom = 757.0
+mouse_filter = 2
+script = ExtResource("16_grid_frame")
+
 [node name="ItemScroll" type="ScrollContainer" parent="DesignRoot/UiLayer" unique_id=2084994614]
 layout_mode = 0
-offset_left = 822.0
-offset_top = 182.0
-offset_right = 1516.0
-offset_bottom = 810.0
+offset_left = 862.0
+offset_top = 157.0
+offset_right = 1558.965
+offset_bottom = 757.0
 horizontal_scroll_mode = 0
 vertical_scroll_mode = 3
 
@@ -101,7 +112,7 @@ vertical_scroll_mode = 3
 layout_mode = 2
 theme_override_constants/h_separation = 0
 theme_override_constants/v_separation = 0
-columns = 7
+columns = 6
 
 [node name="SelectedPaper" type="Control" parent="DesignRoot/UiLayer" unique_id=865686860]
 anchors_preset = 0

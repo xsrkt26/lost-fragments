@@ -10,14 +10,21 @@ const SLOT_FILL_SELECTED := Color(0.93, 0.82, 0.58, 0.42)
 const SLOT_TEXT_COLOR := Color(0.10, 0.065, 0.035, 0.94)
 const SLOT_SELECTED_TEXT_COLOR := Color(0.05, 0.03, 0.018, 1.0)
 
-const ITEM_CELL_SIZE := Vector2(99.14, 125.6)
-const ITEM_COLUMNS := 7
+const ITEM_COLUMNS := 6
+const VISIBLE_GRID_ROWS := 6
+const ITEM_CELL_HEIGHT := 100.0
+const GRID_BACKGROUND_LEFT_LINE_X := 94.0
+const GRID_BACKGROUND_RIGHT_LINE_X := 1173.0
+const GRID_BACKGROUND_TOP_VISIBLE_LINE_Y := 114.0
+const GRID_BACKGROUND_BOTTOM_VISIBLE_LINE_Y := 1043.0
+const GRID_BACKGROUND_SCALE := (ITEM_CELL_HEIGHT * VISIBLE_GRID_ROWS) / (GRID_BACKGROUND_BOTTOM_VISIBLE_LINE_Y - GRID_BACKGROUND_TOP_VISIBLE_LINE_Y)
+const ITEM_CELL_SIZE := Vector2(((GRID_BACKGROUND_RIGHT_LINE_X - GRID_BACKGROUND_LEFT_LINE_X) / ITEM_COLUMNS) * GRID_BACKGROUND_SCALE, ITEM_CELL_HEIGHT)
 const MEMORY_TEXT_LIMIT := 124
-const SLOT_FILL_INSET := Vector2(12.0, 15.0)
-const SLOT_ICON_POSITION := Vector2(13.0, 15.0)
-const SLOT_ICON_SIZE := Vector2(73.0, 68.0)
-const SLOT_NAME_POSITION_WITH_ICON := Vector2(8.0, 86.0)
-const SLOT_NAME_SIZE_WITH_ICON := Vector2(83.0, 33.0)
+const SLOT_FILL_INSET := Vector2(10.0, 12.0)
+const SLOT_ICON_SIZE := Vector2(68.0, 62.0)
+const SLOT_ICON_TOP := 12.0
+const SLOT_NAME_TOP_WITH_ICON := 75.0
+const SLOT_NAME_HEIGHT_WITH_ICON := 22.0
 const SLOT_NAME_POSITION_FALLBACK := Vector2(12.0, 18.0)
 const SLOT_NAME_SIZE_FALLBACK := ITEM_CELL_SIZE - Vector2(24.0, 34.0)
 
@@ -27,6 +34,7 @@ var _book_page_navigator: Node = null
 var _photo_corner_texture: Texture2D = null
 
 @onready var design_root: Control = $DesignRoot
+@onready var grid_image_backdrop: Control = $DesignRoot/UiLayer/GridImageBackdrop
 @onready var item_grid: GridContainer = $DesignRoot/UiLayer/ItemScroll/ItemGrid
 @onready var item_scroll: ScrollContainer = $DesignRoot/UiLayer/ItemScroll
 @onready var detail_name: Label = get_node_or_null("DesignRoot/UiLayer/DetailName") as Label
@@ -297,9 +305,12 @@ func _gallery_max_scroll_row() -> int:
 func _layout_item_slots() -> void:
 	var cell_size := ITEM_CELL_SIZE
 	var rows := ceili(float(max(1, _slot_buttons.size())) / float(ITEM_COLUMNS))
+	item_grid.columns = ITEM_COLUMNS
+	item_scroll.size = Vector2(cell_size.x * ITEM_COLUMNS, cell_size.y * VISIBLE_GRID_ROWS)
 	item_grid.custom_minimum_size = Vector2(cell_size.x * ITEM_COLUMNS, cell_size.y * rows)
 	item_grid.add_theme_constant_override("h_separation", 0)
 	item_grid.add_theme_constant_override("v_separation", 0)
+	_layout_grid_background(cell_size)
 
 	for button in _slot_buttons:
 		button.custom_minimum_size = cell_size
@@ -314,18 +325,30 @@ func _layout_item_slots() -> void:
 		var icon_rect := button.get_node_or_null("ItemIcon") as TextureRect
 		var has_icon := icon_rect != null and icon_rect.texture != null
 		if icon_rect != null:
-			icon_rect.position = SLOT_ICON_POSITION
+			icon_rect.position = Vector2((cell_size.x - SLOT_ICON_SIZE.x) * 0.5, SLOT_ICON_TOP)
 			icon_rect.size = SLOT_ICON_SIZE
 			icon_rect.visible = has_icon
 		var label := button.get_node_or_null("NameLabel") as Label
 		if label != null:
-			label.position = SLOT_NAME_POSITION_WITH_ICON if has_icon else SLOT_NAME_POSITION_FALLBACK
-			label.size = SLOT_NAME_SIZE_WITH_ICON if has_icon else SLOT_NAME_SIZE_FALLBACK
-			label.add_theme_font_size_override("font_size", 13 if has_icon else 15)
+			label.position = Vector2(8.0, SLOT_NAME_TOP_WITH_ICON) if has_icon else SLOT_NAME_POSITION_FALLBACK
+			label.size = Vector2(cell_size.x - 16.0, SLOT_NAME_HEIGHT_WITH_ICON) if has_icon else SLOT_NAME_SIZE_FALLBACK
+			label.add_theme_font_size_override("font_size", 12 if has_icon else 15)
 		var pin := button.get_node_or_null("SelectionPin") as ColorRect
 		if pin != null:
-			pin.position = Vector2(30.0, 10.0)
+			pin.position = Vector2((cell_size.x - 38.0) * 0.5, 10.0)
 			pin.size = Vector2(38.0, 6.0)
+
+func _layout_grid_background(cell_size: Vector2) -> void:
+	if grid_image_backdrop == null:
+		return
+	var visible_grid_size := Vector2(cell_size.x * ITEM_COLUMNS, cell_size.y * VISIBLE_GRID_ROWS)
+	var source_visible_origin := Vector2(GRID_BACKGROUND_LEFT_LINE_X, GRID_BACKGROUND_TOP_VISIBLE_LINE_Y)
+	grid_image_backdrop.position = item_scroll.position
+	grid_image_backdrop.size = visible_grid_size
+	if grid_image_backdrop.has_method("set_grid_size"):
+		grid_image_backdrop.call("set_grid_size", ITEM_COLUMNS, VISIBLE_GRID_ROWS, cell_size)
+	if grid_image_backdrop.has_method("set_texture_layout"):
+		grid_image_backdrop.call("set_texture_layout", source_visible_origin, GRID_BACKGROUND_SCALE)
 
 func _configure_static_text() -> void:
 	if detail_name != null:
