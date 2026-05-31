@@ -10,9 +10,11 @@ const BUTTON_FEEDBACK_DISABLED_META := "_lost_fragments_button_feedback_disabled
 const BUTTON_BASE_SCALE_META := "_lost_fragments_button_feedback_base_scale"
 const BUTTON_HOVER_SCALE := Vector2(1.035, 1.035)
 const BUTTON_HOVER_DURATION := 0.08
+const FLOATING_TEXT_POOL_LIMIT := 24
 
 var _shake_tween: Tween = null
 var _button_tweens: Dictionary = {}
+var _floating_text_pool: Array[Label] = []
 
 func _ready():
 	print("[GlobalFeedback] 反馈管理器已就绪。")
@@ -128,27 +130,16 @@ func _get_active_camera() -> Camera2D:
 
 ## 在指定位置显示动画文字
 func show_text(text: String, global_pos: Vector2, type: TextType = TextType.INFO):
-	var label = Label.new()
-	label.text = text
-	label.z_index = 200 
-	
-	# 优化样式
-	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	
-	match type:
-		TextType.SCORE:
-			label.add_theme_color_override("font_color", Color.YELLOW)
-			label.add_theme_font_size_override("font_size", 24)
-		TextType.SANITY:
-			label.add_theme_color_override("font_color", Color.RED if "-" in text else Color.GREEN)
-			label.add_theme_font_size_override("font_size", 24)
-		TextType.INFO:
-			label.add_theme_color_override("font_color", Color.WHITE)
-			
-	get_tree().root.add_child(label)
-	
-	# 修正初始位置：将中心点对齐到 global_pos
+	var root := get_tree().root
+	if root == null:
+		return
+	var label := _acquire_floating_text_label()
+	_prepare_floating_text_label(label, text, type)
+	if label.get_parent() == null:
+		root.add_child(label)
+	elif label.get_parent() != root:
+		label.reparent(root)
+
 	label.global_position = global_pos - label.get_combined_minimum_size() / 2.0
 	
 	var tween = create_tween()
@@ -164,7 +155,59 @@ func show_text(text: String, global_pos: Vector2, type: TextType = TextType.INFO
 	tween.chain().tween_property(label, "scale", Vector2(1.0, 1.0), 0.1)
 	
 	tween.set_parallel(false)
-	tween.tween_callback(label.queue_free)
+	tween.tween_callback(func(): _release_floating_text_label(label))
+
+func _acquire_floating_text_label() -> Label:
+	while not _floating_text_pool.is_empty():
+		var label: Label = _floating_text_pool.pop_back() as Label
+		if label != null and is_instance_valid(label):
+			return label
+	var label := Label.new()
+	label.z_index = 200
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	return label
+
+func _prepare_floating_text_label(label: Label, text: String, type: TextType) -> void:
+	label.text = text
+	label.visible = true
+	label.modulate = Color.WHITE
+	label.scale = Vector2(0.5, 0.5)
+	label.rotation = 0.0
+	label.pivot_offset = Vector2.ZERO
+	label.remove_theme_color_override("font_color")
+	label.remove_theme_font_size_override("font_size")
+	match type:
+		TextType.SCORE:
+			label.add_theme_color_override("font_color", Color.YELLOW)
+			label.add_theme_font_size_override("font_size", 24)
+		TextType.SANITY:
+			label.add_theme_color_override("font_color", Color.RED if "-" in text else Color.GREEN)
+			label.add_theme_font_size_override("font_size", 24)
+		TextType.INFO:
+			label.add_theme_color_override("font_color", Color.WHITE)
+
+func _release_floating_text_label(label: Label) -> void:
+	if label == null or not is_instance_valid(label):
+		return
+	label.visible = false
+	label.text = ""
+	label.modulate = Color.WHITE
+	label.scale = Vector2.ONE
+	label.pivot_offset = Vector2.ZERO
+	label.remove_theme_color_override("font_color")
+	label.remove_theme_font_size_override("font_size")
+	if _floating_text_pool.size() < FLOATING_TEXT_POOL_LIMIT:
+		_floating_text_pool.append(label)
+	else:
+		label.queue_free()
+
+func clear_floating_text_pool() -> void:
+	for label in _floating_text_pool:
+		if label != null and is_instance_valid(label):
+			label.queue_free()
+	_floating_text_pool.clear()
 
 # --- 冻结帧 (Hit Stop) ---
 

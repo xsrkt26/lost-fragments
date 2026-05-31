@@ -1,6 +1,11 @@
 extends GutTest
 
 
+func after_each():
+	GlobalFeedback.clear_floating_text_pool()
+	await get_tree().process_frame
+
+
 func test_bind_button_marks_button_and_is_idempotent():
 	var button = autofree(Button.new())
 
@@ -42,3 +47,25 @@ func test_button_hover_feedback_restores_scale():
 	await get_tree().create_timer(0.12).timeout
 	assert_almost_eq(button.scale.x, 1.0, 0.01)
 	assert_almost_eq(button.scale.y, 1.0, 0.01)
+
+
+func test_floating_text_reuses_pooled_label():
+	GlobalFeedback.clear_floating_text_pool()
+
+	GlobalFeedback.show_text("+3", Vector2(100.0, 100.0), GlobalFeedback.TextType.SCORE)
+	await get_tree().create_timer(0.9).timeout
+
+	assert_eq(GlobalFeedback._floating_text_pool.size(), 1)
+	var pooled_label: Label = GlobalFeedback._floating_text_pool[0]
+	assert_false(pooled_label.visible)
+
+	GlobalFeedback.show_text("-1", Vector2(120.0, 100.0), GlobalFeedback.TextType.SANITY)
+	await get_tree().process_frame
+
+	assert_eq(GlobalFeedback._floating_text_pool.size(), 0)
+	assert_true(pooled_label.visible)
+
+	await get_tree().create_timer(0.9).timeout
+
+	assert_eq(GlobalFeedback._floating_text_pool.size(), 1)
+	assert_eq(GlobalFeedback._floating_text_pool[0], pooled_label)

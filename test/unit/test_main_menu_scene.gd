@@ -125,3 +125,24 @@ func test_new_game_action_starts_run_without_intermediate_scene() -> void:
 	assert_eq(fake_run_manager.start_new_run_call_count, 1)
 	assert_false(GlobalScene.SceneType.keys().has("NEW_GAME"))
 	assert_false(GlobalScene.SCENE_PATHS.values().has("res://src/ui/new_game/new_game_scene.tscn"))
+
+
+func test_scene_manager_caches_only_whitelisted_scenes() -> void:
+	var previous_cache: Dictionary = GlobalScene._preloaded_scenes.duplicate()
+	GlobalScene.clear_scene_cache(true)
+
+	var hub_scene := PackedScene.new()
+	var gallery_scene := PackedScene.new()
+	GlobalScene._cache_scene_if_allowed(GlobalScene.SceneType.HUB, hub_scene)
+	GlobalScene._cache_scene_if_allowed(GlobalScene.SceneType.GALLERY, gallery_scene)
+
+	var caches_hub := GlobalScene._preloaded_scenes.has(GlobalScene.SceneType.HUB)
+	var caches_gallery := GlobalScene._preloaded_scenes.has(GlobalScene.SceneType.GALLERY)
+	var caches_main_menu := GlobalScene._should_cache_scene(GlobalScene.SceneType.MAIN_MENU)
+	var caches_cutscene := GlobalScene._should_cache_scene(GlobalScene.SceneType.CUTSCENE)
+	GlobalScene._preloaded_scenes = previous_cache
+
+	assert_true(caches_hub)
+	assert_false(caches_gallery)
+	assert_true(caches_main_menu)
+	assert_false(caches_cutscene)

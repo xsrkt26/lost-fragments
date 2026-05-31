@@ -34,6 +34,12 @@ const SCENE_PATHS = {
 	SceneType.CUTSCENE: "res://src/ui/story/cutscene_scene.tscn"
 }
 
+const CACHEABLE_SCENES = {
+	SceneType.MAIN_MENU: true,
+	SceneType.HUB: true,
+	SceneType.BATTLE: true,
+}
+
 # 场景历史记录栈 (用于智能回退)
 var _history_stack: Array[SceneType] = []
 var current_scene_type: SceneType = SceneType.MAIN_MENU
@@ -124,19 +130,19 @@ func _preload_transition_targets() -> void:
 			preload_scene(target)
 
 func preload_scene(target: SceneType) -> void:
-	if not is_scene_available(target) or _preloaded_scenes.has(target):
+	if not is_scene_available(target) or not _should_cache_scene(target) or _preloaded_scenes.has(target):
 		return
 	var scene_path: String = SCENE_PATHS[target]
 	if ResourceLoader.has_cached(scene_path):
 		var cached_resource: Resource = load(scene_path)
 		if cached_resource is PackedScene:
-			_preloaded_scenes[target] = cached_resource
+			_cache_scene_if_allowed(target, cached_resource)
 		return
 	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
 	if status == ResourceLoader.THREAD_LOAD_LOADED:
 		var loaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
 		if loaded_resource is PackedScene:
-			_preloaded_scenes[target] = loaded_resource
+			_cache_scene_if_allowed(target, loaded_resource)
 		return
 	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
 		return
@@ -332,7 +338,7 @@ func _start_page_turn_tween() -> Tween:
 	return tween
 
 func _get_scene_for_transition(target: SceneType) -> PackedScene:
-	if _preloaded_scenes.has(target) and _preloaded_scenes[target] is PackedScene:
+	if _should_cache_scene(target) and _preloaded_scenes.has(target) and _preloaded_scenes[target] is PackedScene:
 		return _preloaded_scenes[target] as PackedScene
 	var scene_path: String = SCENE_PATHS[target]
 	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
@@ -342,13 +348,32 @@ func _get_scene_for_transition(target: SceneType) -> PackedScene:
 	if status == ResourceLoader.THREAD_LOAD_LOADED:
 		var threaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
 		if threaded_resource is PackedScene:
-			_preloaded_scenes[target] = threaded_resource
+			_cache_scene_if_allowed(target, threaded_resource)
 			return threaded_resource as PackedScene
 	var loaded_resource: Resource = load(scene_path)
 	if loaded_resource is PackedScene:
-		_preloaded_scenes[target] = loaded_resource
+		_cache_scene_if_allowed(target, loaded_resource)
 		return loaded_resource as PackedScene
 	return null
+
+func _should_cache_scene(target: SceneType) -> bool:
+	return CACHEABLE_SCENES.has(target)
+
+func _cache_scene_if_allowed(target: SceneType, packed_scene: PackedScene) -> void:
+	if packed_scene == null:
+		return
+	if _should_cache_scene(target):
+		_preloaded_scenes[target] = packed_scene
+	elif _preloaded_scenes.has(target):
+		_preloaded_scenes.erase(target)
+
+func clear_scene_cache(include_cacheable: bool = false) -> void:
+	if include_cacheable:
+		_preloaded_scenes.clear()
+		return
+	for target in _preloaded_scenes.keys():
+		if not _should_cache_scene(target):
+			_preloaded_scenes.erase(target)
 
 func _transition_with_fade(target: SceneType) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
