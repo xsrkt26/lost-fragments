@@ -1,7 +1,16 @@
 # Godot 4+ specific ignores
 .godot/
 /android/
-/package/
+/package/*
+!/package/.gdignore
+
+# Godot UID sidecars are project metadata when they sit next to source files.
+!src/**/*.gd.uid
+!src/**/*.gdshader.uid
+
+# Godot import metadata is not useful inside directories hidden with .gdignore.
+/archive/legacy_images/**/*.import
+/assets/sourceImage/**/*.import
 
 # Python helper script output
 __pycache__/
