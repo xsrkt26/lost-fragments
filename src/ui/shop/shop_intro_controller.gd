@@ -1,10 +1,11 @@
-extends RefCounted
+﻿extends RefCounted
 
 const DEFAULT_INTRO_ANIMATION := "intro"
 const LOCK_OVERLAY_NAME := "ShopIntroInputLock"
 const VISUAL_OVERLAY_NAME := "ShopIntroVisualOverlay"
 const INTRO_TEXTURE_NAME := "ShopIntroTexture"
-const DEFAULT_FRAME_TIME := 0.08
+const DEFAULT_FRAME_RATE := 60.0
+const DEFAULT_FRAME_TIME := 1.0 / DEFAULT_FRAME_RATE
 
 var root: Control = null
 var animation_player: AnimationPlayer = null
@@ -72,9 +73,8 @@ func unlock_ui() -> void:
 func play_shop_intro() -> void:
 	if root == null or not root.is_inside_tree():
 		return
-	var frames := _load_intro_frames()
-	if not frames.is_empty():
-		await _play_frame_intro(frames)
+	if not frame_paths.is_empty():
+		await _play_frame_intro()
 		return
 	if animation_player == null or animation_name == "" or not animation_player.has_animation(animation_name):
 		await root.get_tree().process_frame
@@ -88,23 +88,17 @@ func _on_lock_overlay_gui_input(_event: InputEvent) -> void:
 		_lock_overlay.accept_event()
 
 
-func _load_intro_frames() -> Array[Texture2D]:
-	var textures: Array[Texture2D] = []
-	for path in frame_paths:
-		var texture := AssetPaths.load_texture(path)
-		if texture != null:
-			textures.append(texture)
-	return textures
-
-
-func _play_frame_intro(frames: Array[Texture2D]) -> void:
+func _play_frame_intro() -> void:
 	_ensure_visual_overlay()
 	if _intro_texture == null:
 		return
 	_visual_overlay.visible = true
-	for frame in frames:
+	for path in frame_paths:
 		if root == null or not root.is_inside_tree():
 			return
+		var frame := AssetPaths.load_texture(path)
+		if frame == null:
+			continue
 		_intro_texture.texture = frame
 		await root.get_tree().create_timer(frame_time).timeout
 	_hide_visual_overlay()

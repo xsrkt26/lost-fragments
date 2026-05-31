@@ -55,13 +55,34 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_true(first_button.has_meta("item_id"))
 	assert_true(first_button.tooltip_text.length() > 0)
 	assert_not_null(first_button.get_node_or_null("PhotoCorner"))
+	var item_icon := first_button.get_node_or_null("ItemIcon") as TextureRect
+	assert_not_null(item_icon)
+	assert_not_null(item_icon.texture)
+	assert_eq(item_icon.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
 	assert_not_null(first_button.get_node_or_null("SelectionPin"))
 
 	var selected_paper := gallery.get_node_or_null("DesignRoot/UiLayer/SelectedPaper") as Control
 	var memory_paper := gallery.get_node_or_null("DesignRoot/UiLayer/MemoryPaper") as Control
 	assert_not_null(selected_paper)
+	assert_null(selected_paper.get_script(), "Magnifier preview container should not draw a paper background.")
 	assert_not_null(memory_paper)
+	var selected_icon := selected_paper.get_node_or_null("SelectedIcon") as TextureRect
+	assert_not_null(selected_icon)
+	assert_true(selected_icon.visible)
+	assert_eq(selected_icon.texture, item_icon.texture)
+	var selected_name := gallery.get_node_or_null("DesignRoot/UiLayer/SelectedName") as Label
+	assert_not_null(selected_name)
+	assert_eq(selected_name.get_parent(), gallery.get_node("DesignRoot/UiLayer"))
+	assert_true(selected_name.text.contains("\n"))
+	var selected_meta := selected_paper.get_node_or_null("SelectedMeta") as Label
+	if selected_meta != null:
+		assert_false(selected_meta.visible)
 
-	var detail_name := gallery.get_node_or_null("DesignRoot/UiLayer/DetailName") as Label
-	assert_not_null(detail_name)
-	assert_true(detail_name.text.length() > 0)
+	var detail_text := gallery.get_node_or_null("DesignRoot/UiLayer/DetailText") as Label
+	assert_not_null(detail_text)
+	assert_true(detail_text.text.length() > 0)
+	var item_db = gallery.get_node_or_null("/root/ItemDatabase")
+	assert_not_null(item_db)
+	var first_item: ItemData = item_db.items[str(first_button.get_meta("item_id"))]
+	assert_string_contains(detail_text.text, str(first_item.price))
+	assert_eq(selected_name.text.replace("\n", ""), first_item.item_name.replace(" ", ""))

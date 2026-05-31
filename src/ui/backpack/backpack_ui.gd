@@ -23,6 +23,7 @@ var context: GameContext
 var manager: BackpackManager # 仅用于读取网格尺寸等基础信息
 var item_ui_map: Dictionary = {}
 var grid_step = Vector2(103.2857, 97.7142)
+var _highlighted_slot_indices: Array[int] = []
 
 func _ready() -> void:
 	_sync_grid_geometry()
@@ -141,6 +142,7 @@ func configure_item_for_grid(item_ui: Control, target_parent: Node = null) -> vo
 
 func update_slot_visuals(ignore_item_data: ItemData = null):
 	if not manager: return
+	_highlighted_slot_indices.clear()
 	_sync_grid_geometry()
 	_sync_static_grid_slots()
 	
@@ -176,6 +178,52 @@ func update_slot_visuals(ignore_item_data: ItemData = null):
 			inactive_slot.visible = false
 			_set_locked_cell_pin_visible(inactive_slot, false)
 
+func _refresh_slot_visual(index: int, ignore_item_data: ItemData = null) -> void:
+	if manager == null or index < 0 or index >= grid_container.get_child_count():
+		return
+	var slot = grid_container.get_child(index) as ColorRect
+	if slot == null:
+		return
+	var active_slot_count := manager.grid_width * manager.grid_height
+	if index >= active_slot_count:
+		slot.visible = false
+		_set_locked_cell_pin_visible(slot, false)
+		return
+	slot.visible = true
+	slot.custom_minimum_size = grid_step
+	var pos = Vector2i(index % manager.grid_width, floori(float(index) / manager.grid_width))
+	if manager.has_method("is_pos_blocked") and manager.is_pos_blocked(pos):
+		slot.color = COLOR_LOCKED
+		slot.tooltip_text = "锁定格"
+		_set_locked_cell_pin_visible(slot, true)
+	elif not manager.is_pos_usable(pos):
+		slot.color = COLOR_LOCKED
+		slot.tooltip_text = "锁定格"
+		_set_locked_cell_pin_visible(slot, true)
+	elif manager.grid.has(pos):
+		var occupied_item = manager.grid[pos].data
+		if ignore_item_data and ignore_item_data.runtime_id != -1 and occupied_item.runtime_id == ignore_item_data.runtime_id:
+			slot.color = COLOR_EMPTY
+			slot.tooltip_text = "可用格"
+		else:
+			slot.color = COLOR_EMPTY
+			slot.tooltip_text = occupied_item.item_name
+		_set_locked_cell_pin_visible(slot, false)
+	else:
+		slot.color = COLOR_EMPTY
+		slot.tooltip_text = "可用格"
+		_set_locked_cell_pin_visible(slot, false)
+
+func clear_placement_highlight(ignore_item_data: ItemData = null) -> void:
+	if _highlighted_slot_indices.is_empty():
+		return
+	if manager == null:
+		_highlighted_slot_indices.clear()
+		return
+	for index in _highlighted_slot_indices:
+		_refresh_slot_visual(index, ignore_item_data)
+	_highlighted_slot_indices.clear()
+
 func _set_locked_cell_pin_visible(slot: Control, pin_visible: bool) -> void:
 	if slot == null:
 		return
@@ -185,22 +233,24 @@ func _set_locked_cell_pin_visible(slot: Control, pin_visible: bool) -> void:
 
 ## 高亮显示预测的放置结果 (由外部在 Drag 过程中调用)
 func highlight_placement(root_pos: Vector2i, item_data: ItemData):
-	update_slot_visuals(item_data) # 先重置，并忽略当前拖拽物品的占位
-	
-	if root_pos == Vector2i(-1, -1): return
-	
-	var can_place = manager.can_place_item(item_data, root_pos)
-	var highlight_color = COLOR_VALID if can_place else COLOR_INVALID
-	
-	for offset in item_data.shape:
-		var target_pos = root_pos + offset
-		if target_pos.x >= 0 and target_pos.x < manager.grid_width and \
-		   target_pos.y >= 0 and target_pos.y < manager.grid_height:
-			var index = target_pos.y * manager.grid_width + target_pos.x
-			if index >= grid_container.get_child_count():
+	clear_placement_highlight(item_data)
+	if manager == null or item_data == null or root_pos == Vector2i(-1, -1):
+		return
+	var can_place_delta = manager.can_place_item(item_data, root_pos)
+	var highlight_color_delta = COLOR_VALID if can_place_delta else COLOR_INVALID
+	for offset_delta in item_data.shape:
+		var target_pos_delta = root_pos + offset_delta
+		if target_pos_delta.x >= 0 and target_pos_delta.x < manager.grid_width and \
+		   target_pos_delta.y >= 0 and target_pos_delta.y < manager.grid_height:
+			var index_delta = target_pos_delta.y * manager.grid_width + target_pos_delta.x
+			if index_delta >= grid_container.get_child_count():
 				continue
-			var slot = grid_container.get_child(index) as ColorRect
-			slot.color = highlight_color
+			var slot_delta = grid_container.get_child(index_delta) as ColorRect
+			if slot_delta == null:
+				continue
+			slot_delta.color = highlight_color_delta
+			if not _highlighted_slot_indices.has(index_delta):
+				_highlighted_slot_indices.append(index_delta)
 
 
 func get_slot_center_position(grid_pos: Vector2i) -> Vector2:

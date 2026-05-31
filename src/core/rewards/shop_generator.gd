@@ -1,4 +1,4 @@
-class_name ShopGenerator
+﻿class_name ShopGenerator
 extends RefCounted
 
 const TYPE_ITEM := "item"
@@ -59,7 +59,7 @@ static func _get_item_offers(item_db: Node, act: int, count: int, build_tags: Di
 			"type": TYPE_ITEM,
 			"id": item.id,
 			"title": item.item_name,
-			"description": "%s\n购买后暂存，整理背包时可摆放。" % item.description,
+			"description": "%s\n购买后进入待放置区，可拖入背包网格。" % item.description,
 			"item_destination": "staging",
 			"price": _calculate_item_price(item, act),
 			"weight": StageConfig.apply_weight_modifiers(_get_item_weight(item, build_tags), TYPE_ITEM, item.id, item.tags, "", weight_modifiers),

@@ -90,6 +90,9 @@ var _trash_hit_texture: Texture2D = null
 var _trash_hit_image: Image = null
 var _embedded_return_callback: Callable = Callable()
 var _is_embedded_mode := false
+var _last_drag_root_grid_pos := Vector2i(-999999, -999999)
+var _last_drag_item_id := 0
+var _last_drag_over_trash := false
 
 @onready var stats_panel = $ContentLayer/StatsPanel
 @onready var ornaments_panel = $ContentLayer/OrnamentsPanel
@@ -973,6 +976,20 @@ func _update_backpack_slot_visuals() -> void:
 		return
 	backpack_ui.update_slot_visuals()
 
+func _clear_backpack_placement_highlight() -> void:
+	if backpack_ui != null and backpack_ui.has_method("clear_placement_highlight"):
+		backpack_ui.clear_placement_highlight()
+	else:
+		_update_backpack_slot_visuals()
+
+func _reset_drag_highlight_tracking() -> void:
+	_last_drag_root_grid_pos = Vector2i(-999999, -999999)
+	_last_drag_item_id = 0
+	_last_drag_over_trash = false
+
+func _get_drag_item_id(item_ui: Control) -> int:
+	return int(item_ui.get_instance_id()) if item_ui != null else 0
+
 func _render_existing_backpack_items():
 	if not battle_manager or not backpack_ui:
 		return
@@ -1119,20 +1136,33 @@ func _connect_item_ui_signals(card: Control):
 	card.rotation_requested.connect(_handle_item_rotation_requested)
 
 func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
+	var drag_item_id := _get_drag_item_id(item_ui)
 	var over_trash := _is_point_in_trash_drop_area(mouse_pos)
 	_set_trash_bin_drag_hover(over_trash)
 	if over_trash:
-		_update_backpack_slot_visuals()
+		if _last_drag_item_id != drag_item_id or not _last_drag_over_trash:
+			_update_backpack_slot_visuals()
+			_last_drag_root_grid_pos = Vector2i(-1, -1)
+		_last_drag_item_id = drag_item_id
+		_last_drag_over_trash = true
 		return
 	var mouse_grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 	var root_grid_pos = mouse_grid_pos - item_pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
+	if _last_drag_item_id == drag_item_id and _last_drag_root_grid_pos == root_grid_pos and not _last_drag_over_trash:
+		return
+	_last_drag_item_id = drag_item_id
+	_last_drag_root_grid_pos = root_grid_pos
+	_last_drag_over_trash = false
 	_highlight_backpack_placement(root_grid_pos, item_ui.item_data)
 
 func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, item_pivot_offset: Vector2i):
+	_clear_backpack_placement_highlight()
+	_reset_drag_highlight_tracking()
 	if battle_manager and battle_manager.has_method("request_rotate_item"):
 		battle_manager.request_rotate_item(item_ui, mouse_global_pos, item_pivot_offset)
 
 func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
+	_reset_drag_highlight_tracking()
 	_update_backpack_slot_visuals() # 清除高亮
 
 	# 1. 检查是否掉落在垃圾桶

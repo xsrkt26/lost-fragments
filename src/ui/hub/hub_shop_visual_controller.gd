@@ -1,0 +1,751 @@
+extends RefCounted
+
+const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
+const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
+const PendingItemPresenter = preload("res://src/ui/backpack/pending_item_presenter.gd")
+const PlayableBagTexture = preload("res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png")
+
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
+const INTRO_CANVAS_LAYER := 90
+const BACKPACK_CANVAS_LAYER := 89
+const OFFER_CANVAS_LAYER := 92
+const BACKPACK_DESIGN_RECT := Rect2(Vector2(364.0, 104.0), Vector2(676.0, 854.0))
+const BACKPACK_RISE_OFFSET_Y := 620.0
+const BACKPACK_RISE_DURATION := 1.0
+const SHOP_EXIT_DESIGN_RECT := Rect2(Vector2(92.0, 612.0), Vector2(240.0, 86.0))
+const SHOP_EXIT_HOVER_SCALE := 1.08
+const PLAYABLE_BAG_SOURCE_SIZE := Vector2(806.6115, 1018.74243)
+const PLAYABLE_BAG_GRID_SOURCE_RECT := Rect2(Vector2(119.28073, 384.0497), Vector2(576.8495, 532.6164))
+const OFFER_DESIGN_RECTS := [
+	Rect2(Vector2(1110.0, 236.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1465.0, 236.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1110.0, 382.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1465.0, 382.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1110.0, 528.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1465.0, 528.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1110.0, 674.0), Vector2(315.0, 112.0)),
+	Rect2(Vector2(1465.0, 674.0), Vector2(315.0, 112.0)),
+]
+
+var _owner_node: Node = null
+var _intro_canvas: CanvasLayer = null
+var _intro_frame: TextureRect = null
+var _backpack_canvas: CanvasLayer = null
+var _backpack_root: Control = null
+var _backpack_panel: Control = null
+var _backpack_art: TextureRect = null
+var _backpack_ui: Control = null
+var _shards_label: Label = null
+var _pending_item_panel: Control = null
+var _pending_item_area: Control = null
+var _offers_canvas: CanvasLayer = null
+var _offers_root: Control = null
+var _exit_button: Button = null
+var _offer_buttons: Array[Button] = []
+var _last_viewport_size := DESIGN_SIZE
+var _battle_manager: BattleManager = null
+var _rendered_item_uis: Array[Control] = []
+var _last_drag_root_grid_pos := Vector2i(-999999, -999999)
+var _last_drag_item_id := 0
+var _is_closing := false
+var _close_requested_callback: Callable = Callable()
+
+
+func play_intro_overlay(owner_node: Node, run_manager: Node, item_db: Node, ornament_db: Node, keep_final_frame: bool = true, frame_rate: float = 30.0, close_requested_callback: Callable = Callable()):
+	_owner_node = owner_node
+	close()
+	_close_requested_callback = close_requested_callback
+	if owner_node == null or not owner_node.is_inside_tree():
+		return null
+
+	_last_viewport_size = Vector2(owner_node.get_viewport().get_visible_rect().size)
+	_create_intro_canvas(owner_node)
+	_create_backpack_overlay(owner_node)
+	_setup_interactive_backpack(owner_node, run_manager, item_db)
+	await owner_node.get_tree().process_frame
+	_layout_all(_last_viewport_size, true)
+	_render_backpack(run_manager, item_db)
+	_animate_backpack_in()
+
+	var frame_paths: Array = AssetPaths.shop_intro_frame_paths()
+	var frame_delay := 1.0 / maxf(frame_rate, 1.0)
+	for frame_path in frame_paths:
+		if owner_node == null or not owner_node.is_inside_tree():
+			break
+		var texture: Texture2D = AssetPaths.load_texture(str(frame_path)) as Texture2D
+		if texture == null:
+			continue
+		if _intro_frame != null and is_instance_valid(_intro_frame):
+			_intro_frame.texture = texture
+		await owner_node.get_tree().create_timer(frame_delay).timeout
+
+	if keep_final_frame:
+		if _intro_frame != null and is_instance_valid(_intro_frame):
+			_intro_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_render_offer_buttons(run_manager, item_db, ornament_db)
+		_create_exit_button(owner_node)
+		_layout_exit_button()
+		return _intro_canvas
+	close()
+	return null
+
+
+func request_close_with_animation(frame_rate: float = 60.0) -> void:
+	if _is_closing:
+		return
+	_is_closing = true
+	_set_shop_interactable(false)
+	_persist_backpack()
+	_hide_tooltips()
+	await _play_close_animation(frame_rate)
+	if _close_requested_callback.is_valid():
+		_close_requested_callback.call()
+	else:
+		close()
+
+
+func close() -> void:
+	if _battle_manager != null and is_instance_valid(_battle_manager):
+		if _battle_manager.has_method("persist_backpack_to_run"):
+			_battle_manager.persist_backpack_to_run()
+		_battle_manager.queue_free()
+	if _intro_canvas != null and is_instance_valid(_intro_canvas):
+		_intro_canvas.queue_free()
+	if _backpack_canvas != null and is_instance_valid(_backpack_canvas):
+		_backpack_canvas.queue_free()
+	if _offers_canvas != null and is_instance_valid(_offers_canvas):
+		_offers_canvas.queue_free()
+	_intro_canvas = null
+	_intro_frame = null
+	_backpack_canvas = null
+	_backpack_root = null
+	_backpack_panel = null
+	_backpack_art = null
+	_backpack_ui = null
+	_shards_label = null
+	_pending_item_panel = null
+	_pending_item_area = null
+	_offers_canvas = null
+	_offers_root = null
+	_exit_button = null
+	_battle_manager = null
+	_rendered_item_uis.clear()
+	_reset_drag_highlight_tracking()
+	_offer_buttons.clear()
+	_is_closing = false
+	_close_requested_callback = Callable()
+	GlobalTooltip.hide()
+
+
+func layout(viewport_size: Vector2) -> void:
+	_layout_all(viewport_size, false)
+
+
+func _create_intro_canvas(owner_node: Node) -> void:
+	_intro_canvas = CanvasLayer.new()
+	_intro_canvas.name = "ShopIntroOverlayCanvas"
+	_intro_canvas.layer = INTRO_CANVAS_LAYER
+	owner_node.add_child(_intro_canvas)
+
+	_intro_frame = TextureRect.new()
+	_intro_frame.name = "ShopIntroFrame"
+	_intro_frame.mouse_filter = Control.MOUSE_FILTER_STOP
+	_intro_frame.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_intro_frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
+	_intro_canvas.add_child(_intro_frame)
+	_intro_frame.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+
+
+func _create_backpack_overlay(owner_node: Node) -> void:
+	_backpack_canvas = CanvasLayer.new()
+	_backpack_canvas.name = "ShopBackpackOverlayCanvas"
+	_backpack_canvas.layer = BACKPACK_CANVAS_LAYER
+	owner_node.add_child(_backpack_canvas)
+
+	_backpack_root = Control.new()
+	_backpack_root.name = "ShopBackpackRoot"
+	_backpack_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backpack_canvas.add_child(_backpack_root)
+	_backpack_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+
+	_backpack_panel = Control.new()
+	_backpack_panel.name = "ShopBackpackPanel"
+	_backpack_panel.mouse_filter = Control.MOUSE_FILTER_STOP
+	_backpack_root.add_child(_backpack_panel)
+
+	_backpack_art = TextureRect.new()
+	_backpack_art.name = "PlayableBagArt"
+	_backpack_art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backpack_art.texture = PlayableBagTexture
+	_backpack_art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	_backpack_art.stretch_mode = TextureRect.STRETCH_SCALE
+	_backpack_panel.add_child(_backpack_art)
+
+	_shards_label = Label.new()
+	_shards_label.name = "ShardLabel"
+	_shards_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	_shards_label.add_theme_font_size_override("font_size", 22)
+	_shards_label.add_theme_color_override("font_color", Color(0.1, 0.07, 0.04, 1.0))
+	_backpack_panel.add_child(_shards_label)
+
+	_pending_item_panel = Control.new()
+	_pending_item_panel.name = "PendingItemPanel"
+	_pending_item_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backpack_panel.add_child(_pending_item_panel)
+
+	var pending_label := Label.new()
+	pending_label.name = "PendingItemLabel"
+	pending_label.text = "待放置商品"
+	pending_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	pending_label.add_theme_font_size_override("font_size", 20)
+	pending_label.add_theme_color_override("font_color", Color(0.1, 0.07, 0.04, 1.0))
+	_pending_item_panel.add_child(pending_label)
+
+	_pending_item_area = Control.new()
+	_pending_item_area.name = "PendingItemArea"
+	_pending_item_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_pending_item_panel.add_child(_pending_item_area)
+
+	_backpack_ui = BackpackUIScene.instantiate() as Control
+	if _backpack_ui == null:
+		return
+	_backpack_ui.name = "ShopBackpackUI"
+	_backpack_panel.add_child(_backpack_ui)
+
+
+func _render_backpack(run_manager: Node, item_db: Node) -> void:
+	if _owner_node == null or _backpack_ui == null or _battle_manager == null or run_manager == null or item_db == null:
+		return
+	_render_existing_backpack_items()
+	_render_pending_items(run_manager, item_db)
+	_update_shards_label(run_manager)
+
+
+func _setup_interactive_backpack(owner_node: Node, run_manager: Node, item_db: Node) -> void:
+	if owner_node == null or _backpack_ui == null:
+		return
+	_battle_manager = BattleManager.new()
+	_battle_manager.name = "ShopBackpackBattleManager"
+	_battle_manager.run_manager_override = run_manager
+	_battle_manager.item_database_override = item_db
+	owner_node.add_child(_battle_manager)
+	_battle_manager.backpack_ui = _backpack_ui
+
+
+func _render_existing_backpack_items() -> void:
+	_clear_rendered_item_uis()
+	if _battle_manager == null or _backpack_ui == null:
+		return
+	_battle_manager.managed_item_uis.clear()
+	if _backpack_ui.get("item_ui_map") is Dictionary:
+		_backpack_ui.set("item_ui_map", {})
+	if _backpack_ui.has_method("clear_item_visuals"):
+		_backpack_ui.clear_item_visuals()
+	if _backpack_ui.has_method("_refresh_grid"):
+		_backpack_ui._refresh_grid()
+	for instance in _battle_manager.backpack_manager.get_all_instances():
+		if instance == null or instance.data == null:
+			continue
+		var card := ItemUIScene.instantiate() as Control
+		if card == null:
+			continue
+		_backpack_panel.add_child(card)
+		card.setup(instance.data, _battle_manager.context)
+		card.set("item_instance", instance)
+		_battle_manager.managed_item_uis.append(card)
+		_rendered_item_uis.append(card)
+		_connect_item_ui_signals(card)
+		if _backpack_ui.has_method("add_item_visual"):
+			_backpack_ui.add_item_visual(card, instance.root_pos)
+
+
+func _clear_rendered_item_uis() -> void:
+	for item_ui in _rendered_item_uis:
+		if is_instance_valid(item_ui):
+			item_ui.queue_free()
+	_rendered_item_uis.clear()
+
+
+func _render_pending_items(run_manager: Node, item_db: Node) -> void:
+	if _pending_item_panel == null or _pending_item_area == null:
+		return
+	if run_manager == null or item_db == null or not run_manager.has_method("get_pending_item_rewards"):
+		PendingItemPresenter.clear(_pending_item_panel, _pending_item_area)
+		return
+	var pending_items: Array = Array(run_manager.get_pending_item_rewards())
+	PendingItemPresenter.render(_pending_item_panel, _pending_item_area, pending_items, item_db, _battle_manager.context if _battle_manager != null else null, Callable(self, "_connect_item_ui_signals"))
+
+
+func _connect_item_ui_signals(card: Control) -> void:
+	if card == null or not card.has_signal("dropped") or not card.has_signal("drag_moved") or not card.has_signal("rotation_requested"):
+		return
+	card.dropped.connect(func(mouse_pos, pivot): _handle_item_dropped(card, mouse_pos, pivot))
+	card.drag_moved.connect(func(item_ui, mouse_pos, pivot): _handle_item_dragged(item_ui, mouse_pos, pivot))
+	card.rotation_requested.connect(_handle_item_rotation_requested)
+
+
+func _reset_drag_highlight_tracking() -> void:
+	_last_drag_root_grid_pos = Vector2i(-999999, -999999)
+	_last_drag_item_id = 0
+
+
+func _get_drag_item_id(item_ui: Control) -> int:
+	return int(item_ui.get_instance_id()) if item_ui != null else 0
+
+
+func _clear_backpack_placement_highlight() -> void:
+	if _backpack_ui == null:
+		return
+	if _backpack_ui.has_method("clear_placement_highlight"):
+		_backpack_ui.clear_placement_highlight()
+	elif _backpack_ui.has_method("update_slot_visuals"):
+		_backpack_ui.update_slot_visuals()
+
+
+func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i) -> void:
+	if _backpack_ui == null or not _backpack_ui.has_method("get_grid_pos_at") or not _backpack_ui.has_method("highlight_placement"):
+		return
+	var drag_item_id := _get_drag_item_id(item_ui)
+	var mouse_grid_pos: Vector2i = _backpack_ui.get_grid_pos_at(mouse_pos)
+	var root_grid_pos := mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
+	if _last_drag_item_id == drag_item_id and _last_drag_root_grid_pos == root_grid_pos:
+		return
+	_last_drag_item_id = drag_item_id
+	_last_drag_root_grid_pos = root_grid_pos
+	var item_data = item_ui.get("item_data") if item_ui != null else null
+	_backpack_ui.highlight_placement(root_grid_pos, item_data)
+
+
+func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i) -> void:
+	_reset_drag_highlight_tracking()
+	if _backpack_ui != null and _backpack_ui.has_method("update_slot_visuals"):
+		_backpack_ui.update_slot_visuals()
+	if _battle_manager == null or _backpack_ui == null or not _backpack_ui.has_method("get_grid_pos_at"):
+		return
+	var mouse_grid_pos: Vector2i = _backpack_ui.get_grid_pos_at(mouse_pos)
+	var root_grid_pos := mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
+	_battle_manager.request_place_item(item_ui, root_grid_pos)
+	_consume_pending_item_if_placed(item_ui)
+	_persist_backpack()
+
+
+func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i) -> void:
+	_clear_backpack_placement_highlight()
+	_reset_drag_highlight_tracking()
+	if _battle_manager != null and _battle_manager.has_method("request_rotate_item"):
+		_battle_manager.request_rotate_item(item_ui, mouse_global_pos, pivot_offset)
+		_persist_backpack()
+
+
+func _consume_pending_item_if_placed(item_ui: Control) -> void:
+	if item_ui == null or not item_ui.has_meta("pending_item_uid"):
+		return
+	if item_ui.get("item_instance") == null:
+		return
+	var run_manager := _get_run_manager()
+	if run_manager != null and run_manager.has_method("consume_pending_item"):
+		run_manager.consume_pending_item(int(item_ui.get_meta("pending_item_uid")))
+	item_ui.remove_meta("pending_item_uid")
+	if _battle_manager != null and not _battle_manager.managed_item_uis.has(item_ui):
+		_battle_manager.managed_item_uis.append(item_ui)
+	_render_pending_items(run_manager, _get_item_database())
+
+
+func _persist_backpack() -> void:
+	if _battle_manager != null and _battle_manager.has_method("persist_backpack_to_run"):
+		_battle_manager.persist_backpack_to_run()
+
+
+func _create_offer_overlay(owner_node: Node) -> void:
+	if _offers_canvas != null and is_instance_valid(_offers_canvas):
+		return
+	_offers_canvas = CanvasLayer.new()
+	_offers_canvas.name = "ShopOfferOverlayCanvas"
+	_offers_canvas.layer = OFFER_CANVAS_LAYER
+	owner_node.add_child(_offers_canvas)
+
+	_offers_root = Control.new()
+	_offers_root.name = "ShopOfferRoot"
+	_offers_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_offers_canvas.add_child(_offers_root)
+	_offers_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+
+
+func _render_offer_buttons(run_manager: Node, item_db: Node, ornament_db: Node) -> void:
+	if _owner_node == null or not _owner_node.is_inside_tree():
+		return
+	_create_offer_overlay(_owner_node)
+	_clear_offer_buttons()
+	if _offers_root == null or run_manager == null or item_db == null:
+		return
+
+	var offers: Array = _get_current_offers(run_manager, item_db, ornament_db)
+	var button_count: int = mini(offers.size(), OFFER_DESIGN_RECTS.size())
+	for index in range(button_count):
+		var offer: Dictionary = Dictionary(offers[index])
+		var button := Button.new()
+		button.name = "ShopOfferButton%d" % index
+		button.flat = true
+		button.focus_mode = Control.FOCUS_NONE
+		button.mouse_filter = Control.MOUSE_FILTER_STOP
+		button.set_meta("offer", offer)
+		button.text = _format_offer_text(offer, run_manager)
+		button.tooltip_text = str(offer.get("description", ""))
+		button.add_theme_font_size_override("font_size", 20)
+		button.add_theme_color_override("font_color", Color(0.12, 0.08, 0.04, 1.0))
+		button.add_theme_color_override("font_hover_color", Color(0.05, 0.03, 0.01, 1.0))
+		_apply_offer_button_style(button)
+		button.pressed.connect(_on_offer_button_pressed.bind(button, offer, run_manager, item_db))
+		button.mouse_entered.connect(_show_offer_tooltip.bind(offer, item_db))
+		button.mouse_exited.connect(_hide_offer_tooltip)
+		_offers_root.add_child(button)
+		_offer_buttons.append(button)
+	_layout_offer_buttons()
+	_refresh_offer_buttons(run_manager)
+
+
+func _clear_offer_buttons() -> void:
+	for button in _offer_buttons:
+		if is_instance_valid(button):
+			button.queue_free()
+	_offer_buttons.clear()
+
+
+func _on_offer_button_pressed(button: Button, offer: Dictionary, run_manager: Node, item_db: Node) -> void:
+	if button == null or run_manager == null or item_db == null:
+		return
+	var purchase_offer: Dictionary = offer.duplicate(true)
+	if str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_ITEM:
+		purchase_offer["item_destination"] = "staging"
+		purchase_offer["destination"] = "staging"
+	if run_manager.has_method("buy_shop_offer") and bool(run_manager.buy_shop_offer(purchase_offer, item_db)):
+		button.set_meta("purchased", true)
+		button.disabled = true
+		button.text = "%s\n已购买" % str(offer.get("title", "商品"))
+		_render_pending_items(run_manager, item_db)
+		_refresh_offer_buttons(run_manager)
+		return
+	print("[HubShop] buy offer failed: ", offer.get("title", ""))
+
+
+func _refresh_offer_buttons(run_manager: Node) -> void:
+	_update_shards_label(run_manager)
+	var current_shards := 0
+	if run_manager != null:
+		current_shards = int(run_manager.get("current_shards"))
+	for button in _offer_buttons:
+		if not is_instance_valid(button) or not button.has_meta("offer"):
+			continue
+		var offer: Dictionary = Dictionary(button.get_meta("offer"))
+		var is_purchased := bool(button.get_meta("purchased", false)) or _is_offer_purchased(run_manager, offer)
+		var price := _get_offer_price(offer, run_manager)
+		button.disabled = is_purchased or current_shards < price
+		if is_purchased:
+			button.text = "%s\n已购买" % str(offer.get("title", "商品"))
+		else:
+			button.text = _format_offer_text(offer, run_manager)
+
+
+func _get_current_offers(run_manager: Node, item_db: Node, ornament_db: Node) -> Array:
+	if run_manager == null or item_db == null or not run_manager.has_method("generate_current_shop_offers"):
+		return []
+	return Array(run_manager.generate_current_shop_offers(item_db, ornament_db, ShopGenerator.DEFAULT_OFFER_COUNT))
+
+
+func _format_offer_text(offer: Dictionary, run_manager: Node) -> String:
+	var title := str(offer.get("title", "商品"))
+	var price := _get_offer_price(offer, run_manager)
+	var kind_text := _get_offer_kind_text(offer)
+	return "%s\n%d 碎片\n%s" % [title, price, kind_text]
+
+
+func _get_offer_kind_text(offer: Dictionary) -> String:
+	match str(offer.get("type", "")):
+		ShopGenerator.TYPE_ITEM:
+			return "购买后拖入背包"
+		ShopGenerator.TYPE_ORNAMENT:
+			return "饰品"
+		ShopGenerator.TYPE_TOOL:
+			return "道具"
+	return "商品"
+
+
+func _get_offer_price(offer: Dictionary, run_manager: Node) -> int:
+	if run_manager != null and run_manager.has_method("get_current_shop_offer_price"):
+		return int(run_manager.get_current_shop_offer_price(offer))
+	return int(offer.get("price", 0))
+
+
+func _is_offer_purchased(run_manager: Node, offer: Dictionary) -> bool:
+	if run_manager != null and run_manager.has_method("is_current_shop_offer_purchased"):
+		return bool(run_manager.is_current_shop_offer_purchased(offer))
+	return false
+
+
+func _show_offer_tooltip(offer: Dictionary, item_db: Node) -> void:
+	if str(offer.get("type", "")) != ShopGenerator.TYPE_ITEM:
+		GlobalTooltip.hide()
+		return
+	if item_db == null or not item_db.has_method("get_item_by_id"):
+		GlobalTooltip.hide()
+		return
+	var item_data = item_db.get_item_by_id(str(offer.get("id", "")))
+	if item_data != null:
+		GlobalTooltip.show_item(item_data)
+	else:
+		GlobalTooltip.hide()
+
+
+func _hide_offer_tooltip() -> void:
+	GlobalTooltip.hide()
+
+
+func _update_shards_label(run_manager: Node) -> void:
+	if _shards_label == null:
+		return
+	var current_shards := 0
+	if run_manager != null:
+		current_shards = int(run_manager.get("current_shards"))
+	_shards_label.text = "碎片: %d" % current_shards
+
+
+func _layout_all(viewport_size: Vector2, place_backpack_at_start: bool) -> void:
+	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
+		return
+	_last_viewport_size = viewport_size
+	if _intro_frame != null and is_instance_valid(_intro_frame):
+		_intro_frame.position = Vector2.ZERO
+		_intro_frame.size = viewport_size
+	if _backpack_root != null and is_instance_valid(_backpack_root):
+		_backpack_root.size = viewport_size
+	if _offers_root != null and is_instance_valid(_offers_root):
+		_offers_root.size = viewport_size
+	_layout_backpack_panel(place_backpack_at_start)
+	_layout_offer_buttons()
+	_layout_exit_button()
+
+
+func _layout_backpack_panel(place_at_start: bool) -> void:
+	if _backpack_panel == null or not is_instance_valid(_backpack_panel):
+		return
+	var target_rect := _design_rect_to_viewport(BACKPACK_DESIGN_RECT)
+	_backpack_panel.size = target_rect.size
+	var target_position := target_rect.position
+	if place_at_start:
+		target_position.y += BACKPACK_RISE_OFFSET_Y * _get_cover_scale()
+	_backpack_panel.position = target_position
+	if _backpack_art != null:
+		_backpack_art.position = Vector2.ZERO
+		_backpack_art.size = target_rect.size
+	if _shards_label != null:
+		_shards_label.position = Vector2(target_rect.size.x * 0.16, target_rect.size.y * 0.29)
+		_shards_label.size = Vector2(target_rect.size.x * 0.68, target_rect.size.y * 0.055)
+	if _pending_item_panel != null:
+		_pending_item_panel.position = Vector2(target_rect.size.x * 0.08, target_rect.size.y * 0.08)
+		_pending_item_panel.size = Vector2(target_rect.size.x * 0.84, target_rect.size.y * 0.2)
+		var pending_label := _pending_item_panel.get_node_or_null("PendingItemLabel") as Label
+		if pending_label != null:
+			pending_label.position = Vector2.ZERO
+			pending_label.size = Vector2(_pending_item_panel.size.x, target_rect.size.y * 0.045)
+		if _pending_item_area != null:
+			_pending_item_area.position = Vector2(0.0, target_rect.size.y * 0.05)
+			_pending_item_area.size = Vector2(_pending_item_panel.size.x, _pending_item_panel.size.y - _pending_item_area.position.y)
+	if _backpack_ui != null:
+		var grid_rect := _get_backpack_grid_rect(target_rect.size)
+		_backpack_ui.position = grid_rect.position
+		_backpack_ui.size = grid_rect.size
+		_backpack_ui.custom_minimum_size = grid_rect.size
+
+
+func _layout_offer_buttons() -> void:
+	for index in range(_offer_buttons.size()):
+		var button := _offer_buttons[index]
+		if not is_instance_valid(button) or index >= OFFER_DESIGN_RECTS.size():
+			continue
+		var target_rect := _design_rect_to_viewport(OFFER_DESIGN_RECTS[index])
+		button.position = target_rect.position
+		button.size = target_rect.size
+
+
+func _animate_backpack_in() -> void:
+	if _backpack_panel == null or not is_instance_valid(_backpack_panel):
+		return
+	var target_rect := _design_rect_to_viewport(BACKPACK_DESIGN_RECT)
+	var tween := _backpack_panel.create_tween()
+	tween.set_trans(Tween.TRANS_BACK)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(_backpack_panel, "position:y", target_rect.position.y, BACKPACK_RISE_DURATION)
+
+
+func _animate_backpack_out(duration: float) -> void:
+	if _backpack_panel == null or not is_instance_valid(_backpack_panel):
+		return
+	var target_y := _last_viewport_size.y + 80.0 * _get_cover_scale()
+	var tween := _backpack_panel.create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_IN)
+	tween.tween_property(_backpack_panel, "position:y", target_y, maxf(duration, 0.1))
+	await tween.finished
+
+
+func _play_close_animation(frame_rate: float) -> void:
+	var owner_node := _owner_node
+	if owner_node == null or not owner_node.is_inside_tree():
+		return
+	var frame_paths: Array = AssetPaths.shop_intro_frame_paths()
+	frame_paths.reverse()
+	var frame_delay := 1.0 / maxf(frame_rate, 1.0)
+	_animate_backpack_out(float(frame_paths.size()) * frame_delay)
+	for frame_path in frame_paths:
+		if owner_node == null or not owner_node.is_inside_tree():
+			break
+		var texture: Texture2D = AssetPaths.load_texture(str(frame_path)) as Texture2D
+		if texture == null:
+			continue
+		if _intro_frame != null and is_instance_valid(_intro_frame):
+			_intro_frame.texture = texture
+		await owner_node.get_tree().create_timer(frame_delay).timeout
+
+
+func _design_rect_to_viewport(design_rect: Rect2) -> Rect2:
+	var cover_scale := _get_cover_scale()
+	var rendered_size := DESIGN_SIZE * cover_scale
+	var rendered_offset := (_last_viewport_size - rendered_size) * 0.5
+	return Rect2(rendered_offset + design_rect.position * cover_scale, design_rect.size * cover_scale)
+
+
+func _get_backpack_grid_rect(panel_size: Vector2) -> Rect2:
+	var scale := Vector2(
+		panel_size.x / PLAYABLE_BAG_SOURCE_SIZE.x,
+		panel_size.y / PLAYABLE_BAG_SOURCE_SIZE.y
+	)
+	return Rect2(
+		PLAYABLE_BAG_GRID_SOURCE_RECT.position * scale,
+		PLAYABLE_BAG_GRID_SOURCE_RECT.size * scale
+	)
+
+
+func _get_cover_scale() -> float:
+	if _last_viewport_size.x <= 0.0 or _last_viewport_size.y <= 0.0:
+		return 1.0
+	return maxf(_last_viewport_size.x / DESIGN_SIZE.x, _last_viewport_size.y / DESIGN_SIZE.y)
+
+
+func _apply_panel_style(panel: PanelContainer) -> void:
+	var panel_style := StyleBoxFlat.new()
+	panel_style.bg_color = Color(0.78, 0.62, 0.43, 0.72)
+	panel_style.border_color = Color(0.26, 0.16, 0.08, 0.72)
+	panel_style.set_border_width_all(3)
+	panel_style.set_corner_radius_all(18)
+	panel.add_theme_stylebox_override("panel", panel_style)
+
+
+func _apply_offer_button_style(button: Button) -> void:
+	var normal_style := StyleBoxFlat.new()
+	normal_style.bg_color = Color(0.94, 0.74, 0.42, 0.18)
+	normal_style.border_color = Color(0.28, 0.14, 0.05, 0.22)
+	normal_style.set_border_width_all(2)
+	normal_style.set_corner_radius_all(12)
+	button.add_theme_stylebox_override("normal", normal_style)
+
+	var hover_style := normal_style.duplicate() as StyleBoxFlat
+	hover_style.bg_color = Color(1.0, 0.82, 0.46, 0.34)
+	hover_style.border_color = Color(0.34, 0.16, 0.05, 0.5)
+	button.add_theme_stylebox_override("hover", hover_style)
+
+	var pressed_style := normal_style.duplicate() as StyleBoxFlat
+	pressed_style.bg_color = Color(0.74, 0.48, 0.22, 0.38)
+	button.add_theme_stylebox_override("pressed", pressed_style)
+
+	var disabled_style := normal_style.duplicate() as StyleBoxFlat
+	disabled_style.bg_color = Color(0.24, 0.2, 0.16, 0.18)
+	disabled_style.border_color = Color(0.12, 0.1, 0.08, 0.2)
+	button.add_theme_stylebox_override("disabled", disabled_style)
+
+
+func _create_exit_button(owner_node: Node) -> void:
+	if _offers_root == null:
+		_create_offer_overlay(owner_node)
+	if _offers_root == null:
+		return
+	if _exit_button != null and is_instance_valid(_exit_button):
+		return
+	_exit_button = Button.new()
+	_exit_button.name = "ShopExitButton"
+	_exit_button.text = "退出"
+	_exit_button.flat = true
+	_exit_button.focus_mode = Control.FOCUS_NONE
+	_exit_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_exit_button.rotation_degrees = -6.0
+	_exit_button.pivot_offset = SHOP_EXIT_DESIGN_RECT.size * 0.5
+	_exit_button.add_theme_font_size_override("font_size", 38)
+	_exit_button.add_theme_color_override("font_color", Color.BLACK)
+	_exit_button.add_theme_color_override("font_hover_color", Color.BLACK)
+	_exit_button.add_theme_color_override("font_pressed_color", Color.BLACK)
+	_apply_exit_button_style(_exit_button)
+	_exit_button.mouse_entered.connect(_on_exit_button_mouse_entered)
+	_exit_button.mouse_exited.connect(_on_exit_button_mouse_exited)
+	_exit_button.pressed.connect(func(): await request_close_with_animation(60.0))
+	_offers_root.add_child(_exit_button)
+
+
+func _layout_exit_button() -> void:
+	if _exit_button == null or not is_instance_valid(_exit_button):
+		return
+	var target_rect := _design_rect_to_viewport(SHOP_EXIT_DESIGN_RECT)
+	_exit_button.position = target_rect.position
+	_exit_button.size = target_rect.size
+	_exit_button.pivot_offset = target_rect.size * 0.5
+
+
+func _apply_exit_button_style(button: Button) -> void:
+	var empty := StyleBoxEmpty.new()
+	button.add_theme_stylebox_override("normal", empty)
+	button.add_theme_stylebox_override("hover", empty)
+	button.add_theme_stylebox_override("pressed", empty)
+	button.add_theme_stylebox_override("disabled", empty)
+
+
+func _on_exit_button_mouse_entered() -> void:
+	_tween_exit_button_scale(Vector2.ONE * SHOP_EXIT_HOVER_SCALE)
+
+
+func _on_exit_button_mouse_exited() -> void:
+	_tween_exit_button_scale(Vector2.ONE)
+
+
+func _tween_exit_button_scale(target_scale: Vector2) -> void:
+	if _exit_button == null or not is_instance_valid(_exit_button) or _is_closing:
+		return
+	var tween := _exit_button.create_tween()
+	tween.set_trans(Tween.TRANS_QUAD)
+	tween.set_ease(Tween.EASE_OUT)
+	tween.tween_property(_exit_button, "scale", target_scale, 0.12)
+
+
+func _set_shop_interactable(enabled: bool) -> void:
+	for button in _offer_buttons:
+		if is_instance_valid(button):
+			button.disabled = not enabled
+	if _exit_button != null and is_instance_valid(_exit_button):
+		_exit_button.disabled = not enabled
+	if _backpack_panel != null and is_instance_valid(_backpack_panel):
+		_backpack_panel.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
+	if _intro_frame != null and is_instance_valid(_intro_frame):
+		_intro_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+
+
+func _hide_tooltips() -> void:
+	GlobalTooltip.hide()
+
+
+func _get_run_manager() -> Node:
+	if _owner_node == null:
+		return null
+	return _owner_node.get_node_or_null("/root/RunManager")
+
+
+func _get_item_database() -> Node:
+	if _owner_node == null:
+		return null
+	return _owner_node.get_node_or_null("/root/ItemDatabase")

@@ -7,6 +7,7 @@ const HubBattleController = preload("res://src/ui/hub/hub_battle_controller.gd")
 const HubMerchantController = preload("res://src/ui/hub/hub_merchant_controller.gd")
 const HubPlayerController = preload("res://src/ui/hub/hub_player_controller.gd")
 const HubInteractionFlowController = preload("res://src/ui/hub/hub_interaction_flow_controller.gd")
+const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
 
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
@@ -52,6 +53,7 @@ const HUB_TO_BATTLE_BOARD_TARGET_UV := Vector2(0.24, 0.35)
 const HUB_TO_BATTLE_BOARD_BOTTOM_LOCK_OFFSET := 0.0
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
+const SHOP_INTRO_FRAME_RATE := 60.0
 func _first_existing_node(paths: Array[String]) -> Node:
 	for path in paths:
 		var node := get_node_or_null(path)
@@ -112,10 +114,16 @@ var _dreamcatcher_idle_tween: Tween = null
 var _hub_battle_manager: BattleManager = null
 var _is_hub_battle_session_active := false
 var _hub_focus_layer_base_transforms: Dictionary = {}
+var _shop_visual_overlay_canvas: CanvasLayer = null
+var _is_shop_visual_state_active := false
+var _is_shop_intro_sequence_running := false
+var _pending_merchant_shop_open := false
+var _merchant_shop_sequence_running := false
 var _battle_controller = HubBattleController.new()
 var _merchant_controller = HubMerchantController.new()
 var _player_controller = HubPlayerController.new()
 var _interaction_flow_controller = HubInteractionFlowController.new()
+var _shop_visual_controller = HubShopVisualControllerScript.new()
 var _pending_auto_interaction: String:
 	get:
 		return _get_pending_auto_interaction()
@@ -183,6 +191,7 @@ func _process(_delta: float) -> void:
 	if not _is_book_hub_current():
 		return
 	_sync_merchant_presence_state()
+	_try_start_pending_merchant_shop_sequence()
 
 
 func _exit_tree() -> void:
@@ -197,6 +206,14 @@ func _get_stage_bgm_key(key: String, fallback: String) -> String:
 
 func _get_run_manager() -> Node:
 	return get_node_or_null("/root/RunManager")
+
+
+func _get_item_database() -> Node:
+	return get_node_or_null("/root/ItemDatabase")
+
+
+func _get_ornament_database() -> Node:
+	return get_node_or_null("/root/OrnamentDatabase")
 
 
 func _get_stage_visual() -> Dictionary:
@@ -312,14 +329,45 @@ func _on_interaction_flow_open_gallery_requested() -> void:
 	_enter_gallery()
 
 
-func _on_merchant_move_requested(target_x: float, _should_open_shop: bool) -> void:
+func _on_merchant_move_requested(target_x: float, should_open_shop: bool) -> void:
+	_pending_merchant_shop_open = should_open_shop
+	if should_open_shop and _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_idle()
 	_queue_auto_interaction(AUTO_INTERACTION_MERCHANT, target_x)
+	_try_start_pending_merchant_shop_sequence()
 
 
 func _on_merchant_open_shop_requested() -> void:
+	if _is_shop_visual_state_active or _is_shop_intro_sequence_running:
+		return
+	if _merchant_controller != null:
+		_merchant_controller.shop_click_ready = false
+	_pending_merchant_shop_open = false
+	_merchant_shop_sequence_running = false
+	_is_shop_intro_sequence_running = true
 	if _interaction_flow_controller != null:
 		_interaction_flow_controller.mark_transitioning()
-	_enter_current_route_node()
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	_shop_visual_overlay_canvas = await _play_shop_intro_overlay(true)
+	_is_shop_intro_sequence_running = false
+	_enter_shop_visual_state()
+
+
+func _try_start_pending_merchant_shop_sequence() -> void:
+	if not _pending_merchant_shop_open:
+		return
+	if _merchant_shop_sequence_running or _is_shop_visual_state_active or _is_shop_intro_sequence_running:
+		return
+	if _merchant_controller == null or not _merchant_controller.is_player_in_position(_get_run_manager()):
+		return
+	_merchant_shop_sequence_running = true
+	_pending_merchant_shop_open = false
+	_clear_pending_auto_interaction()
+	if _player_controller != null and _player_controller.has_method("clear_move_target"):
+		_player_controller.clear_move_target()
+	_merchant_controller.is_player_at_merchant = true
+	await _merchant_controller.complete_interaction(_get_run_manager(), false)
+	_merchant_shop_sequence_running = false
 
 
 func _apply_stage_hub_background() -> void:
@@ -629,6 +677,11 @@ func _fit_hub_room_sprite(sprite: Sprite2D, texture: Texture2D) -> void:
 func _input(event: InputEvent) -> void:
 	if Engine.is_editor_hint():
 		return
+	if _is_shop_visual_state_active:
+		if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
+			_close_shop_visual_state()
+			get_viewport().set_input_as_handled()
+		return
 	if not GlobalInput.can_cancel():
 		return
 	if _is_hub_battle_session_active:
@@ -855,13 +908,13 @@ func _source_x_to_viewport(source_x: float) -> float:
 	return _source_rect_to_viewport(Rect2(Vector2(source_x, 0.0), Vector2.ZERO)).position.x
 
 
-func _enter_current_route_node() -> void:
+func _enter_current_route_node(use_scene_transition: bool = true) -> void:
 	var rm = _get_run_manager()
 	if rm:
-		_enter_route_node(rm.current_route_index)
+		_enter_route_node(rm.current_route_index, use_scene_transition)
 
 
-func _enter_route_node(index: int) -> void:
+func _enter_route_node(index: int, use_scene_transition: bool = true) -> void:
 	var rm = _get_run_manager()
 	if not rm or not rm.can_enter_route_node(index):
 		print("[Hub] 节点未解锁，无法进入: ", index)
@@ -904,7 +957,54 @@ func _enter_route_node(index: int) -> void:
 		_open_hub_battle_session()
 	else:
 		print("[Hub] Non-battle node: fallback to SceneManager transition.")
-		GlobalScene.transition_with_zoom(target_scene, dreamcatcher_uv, end_focus)
+		if use_scene_transition:
+			GlobalScene.transition_with_zoom(target_scene, dreamcatcher_uv, end_focus)
+		else:
+			GlobalScene.transition_to_direct(target_scene)
+
+
+func _enter_shop_visual_state() -> void:
+	_is_shop_visual_state_active = true
+	current_zone = "shop"
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_idle()
+	GlobalInput.set_context(GlobalInput.Context.UI)
+
+
+func _close_shop_visual_state() -> void:
+	_is_shop_visual_state_active = false
+	_is_shop_intro_sequence_running = false
+	_pending_merchant_shop_open = false
+	_merchant_shop_sequence_running = false
+	current_zone = ""
+	if _shop_visual_controller != null:
+		_shop_visual_controller.close()
+	_shop_visual_overlay_canvas = null
+	_complete_current_shop_route_node()
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_idle()
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+
+func _play_shop_intro_overlay(keep_final_frame: bool = false):
+	return await _shop_visual_controller.play_intro_overlay(
+		self,
+		_get_run_manager(),
+		_get_item_database(),
+		_get_ornament_database(),
+		keep_final_frame,
+		SHOP_INTRO_FRAME_RATE,
+		Callable(self, "_close_shop_visual_state")
+	)
+
+
+func _complete_current_shop_route_node() -> void:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("get_current_route_node_type") or not rm.has_method("advance_route_node"):
+		return
+	if str(rm.get_current_route_node_type()) != RouteConfig.NODE_SHOP:
+		return
+	rm.advance_route_node()
 
 
 func _open_hub_battle_session() -> void:
@@ -1233,7 +1333,12 @@ func _on_dreamcatcher_button_pressed() -> void:
 
 func _on_merchant_button_pressed() -> void:
 	if _interaction_flow_controller != null:
-		_interaction_flow_controller.request_merchant_interaction(_get_run_manager())
+		if _is_merchant_shop_available():
+			_interaction_flow_controller.mark_idle()
+		if _interaction_flow_controller.request_merchant_interaction(_get_run_manager()):
+			return
+	if _merchant_controller != null:
+		_merchant_controller.interact(_get_run_manager())
 
 func _on_gallery_button_pressed() -> void:
 	_open_book_page(BookPageNavigator.PAGE_GALLERY)
@@ -1412,6 +1517,8 @@ func _layout_scene() -> void:
 	_layout_hub_art(viewport_size)
 	_layout_book_design_root()
 	_layout_canvas_design_root()
+	if _shop_visual_controller != null:
+		_shop_visual_controller.layout(viewport_size)
 	_layout_player_and_floor(viewport_size)
 	_layout_merchant()
 

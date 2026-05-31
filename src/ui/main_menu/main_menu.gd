@@ -47,7 +47,7 @@ func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F1:
 		GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F2:
-		GlobalScene.transition_to(GlobalScene.SceneType.SHOP)
+		_debug_enter_hub_after_first_dreamcatcher()
 
 func _configure_interactive_feedback() -> void:
 	for node_name in RESPONSIVE_CONTROL_NAMES:
@@ -193,3 +193,31 @@ func _start_new_run() -> bool:
 		return false
 	rm.start_new_run()
 	return true
+
+func _debug_enter_hub_after_first_dreamcatcher() -> void:
+	print("[MainMenu Debug] F2: enter Hub after first dreamcatcher battle.")
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[MainMenu Debug] RunManager is missing; cannot prepare shop debug route.")
+		return
+	rm.start_new_run()
+	_debug_skip_intro_story()
+	if rm.has_method("get_current_route_node_type") and RouteConfig.is_battle_node_type(str(rm.get_current_route_node_type())):
+		rm.advance_route_node()
+	GlobalScene.transition_to(GlobalScene.SceneType.HUB)
+
+func _debug_skip_intro_story() -> void:
+	var sm = get_node_or_null("/root/StoryManager")
+	var rm = _get_run_manager()
+	var skipped_flags := {
+		"beginning": true,
+		"enter_stage_1": true,
+		"进入场景1": true,
+		"enter_battle_1": true,
+		"进入局内1": true,
+		"进入局内": true,
+	}
+	if rm != null and rm.has_method("set_story_played_flags"):
+		rm.set_story_played_flags(skipped_flags, true)
+	if sm != null and sm.has_method("set_played_flags"):
+		sm.set_played_flags(skipped_flags)

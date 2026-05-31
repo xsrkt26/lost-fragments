@@ -2,7 +2,6 @@ extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 const ShopBackpackSellPresenter = preload("res://src/ui/shop/shop_backpack_sell_presenter.gd")
-const ShopIntroController = preload("res://src/ui/shop/shop_intro_controller.gd")
 
 ## 商店场景：允许玩家购买物品和饰品
 
@@ -16,13 +15,10 @@ const SHOP_OFFER_COUNT := ShopGenerator.DEFAULT_OFFER_COUNT
 @onready var shelf = $MarginContainer/VBoxContainer/ScrollContainer/GridContainer
 @onready var refresh_button = $MarginContainer/VBoxContainer/Header/RefreshButton
 @onready var back_button = $MarginContainer/VBoxContainer/Header/BackButton
-@onready var intro_animation_player: AnimationPlayer = get_node_or_null("AnimationPlayer") as AnimationPlayer
 
 var shop_backpack_ui: Control = null
 var sell_hint_label: Label = null
-var _shop_intro_frame_paths := AssetPaths.shop_intro_frame_paths()
 var _sell_presenter := ShopBackpackSellPresenter.new()
-var _intro_controller := ShopIntroController.new()
 var run_manager_override = null
 var item_database_override = null
 var ornament_database_override = null
@@ -30,9 +26,6 @@ var ornament_database_override = null
 func _ready():
 	print("[Shop] 欢迎光临梦境商店")
 	GlobalInput.set_context(GlobalInput.Context.UI)
-	_intro_controller.setup(self, intro_animation_player, ShopIntroController.DEFAULT_INTRO_ANIMATION, _shop_intro_frame_paths)
-	_intro_controller.lock_ui()
-	_set_shop_ui_visible(false)
 	if not resized.is_connected(_layout_design_root):
 		resized.connect(_layout_design_root)
 	_ensure_shop_layout()
@@ -44,26 +37,14 @@ func _ready():
 	
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	back_button.pressed.connect(_on_back_pressed)
-	call_deferred("_play_shop_intro_and_unlock")
 
 func _input(event):
-	if _intro_controller.is_ui_locked():
-		return
 	# 输入权限检查
 	if not GlobalInput.can_cancel(): return
 
 	if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
 		_on_back_pressed()
 
-
-func _play_shop_intro_and_unlock() -> void:
-	await _intro_controller.play_intro_and_unlock()
-	_set_shop_ui_visible(true)
-
-
-func _set_shop_ui_visible(visible_state: bool) -> void:
-	if design_root != null:
-		design_root.visible = visible_state
 
 func _update_shard_display():
 	var rm = _get_run_manager()

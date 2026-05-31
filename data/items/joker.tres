@@ -11,7 +11,7 @@ score_amount = 3
 [resource]
 script = ExtResource("item")
 id = "joker"
-item_name = "joker（一张废弃扑克牌）"
+item_name = "废弃扑克牌"
 description = "被撞：+3分"
 tags = Array[String](["废弃物"])
 price = 10

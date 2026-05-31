@@ -211,21 +211,27 @@ func apply_reward(reward: Dictionary, item_db: Node = null, save_after: bool = t
 
 func generate_current_shop_offers(item_db: Node, ornament_db: Node, count: int = ShopGenerator.DEFAULT_OFFER_COUNT) -> Array[Dictionary]:
 	var state = _get_current_shop_state()
+	var purchased_keys := _to_string_array(state.get("purchased_offer_keys", []))
 	var cached = _to_dictionary_array(state.get("offers", []))
 	if not cached.is_empty():
-		return cached
+		return _filter_unpurchased_shop_offers(cached, purchased_keys)
 	return _generate_and_cache_current_shop_offers(item_db, ornament_db, count, state)
 
 func refresh_current_shop_offers(item_db: Node, ornament_db: Node, count: int = ShopGenerator.DEFAULT_OFFER_COUNT) -> Array[Dictionary]:
 	var state = _get_current_shop_state()
 	var cost = get_current_shop_refresh_cost()
 	if current_shards < cost:
-		return _to_dictionary_array(state.get("offers", []))
+		return _filter_unpurchased_shop_offers(_to_dictionary_array(state.get("offers", [])), _to_string_array(state.get("purchased_offer_keys", [])))
 	current_shards -= cost
 	shards_changed.emit(current_shards)
 	state["refresh_count"] = int(state.get("refresh_count", 0)) + 1
 	state.erase("offers")
 	return _generate_and_cache_current_shop_offers(item_db, ornament_db, count, state)
+
+func is_current_shop_offer_purchased(offer: Dictionary) -> bool:
+	var state = _get_current_shop_state()
+	var purchased_keys := _to_string_array(state.get("purchased_offer_keys", []))
+	return purchased_keys.has(ShopGenerator.make_offer_key(offer))
 
 func get_current_shop_refresh_cost() -> int:
 	var state = _get_current_shop_state()
@@ -482,7 +488,14 @@ func _record_shop_purchase(offer: Dictionary) -> void:
 		elif not bool(state.get("first_item_purchase_done", false)):
 			state["first_item_purchase_done"] = true
 			state["discount_next_item"] = true
-	shop_purchase_state[key] = state
+		shop_purchase_state[key] = state
+
+func _filter_unpurchased_shop_offers(offers: Array[Dictionary], purchased_keys: Array[String]) -> Array[Dictionary]:
+	var result: Array[Dictionary] = []
+	for offer in offers:
+		if not purchased_keys.has(ShopGenerator.make_offer_key(offer)):
+			result.append(offer)
+	return result
 
 func _get_current_shop_state() -> Dictionary:
 	return Dictionary(shop_purchase_state.get(_get_current_shop_state_key(), {}))
@@ -870,14 +883,17 @@ func _get_initial_backpack_items(item_db: Node = null) -> Array[Dictionary]:
 		var entry := Dictionary(raw_entry).duplicate(true)
 		var runtime_data := _make_runtime_backpack_item_data(entry, item_db)
 		if runtime_data != null:
-			var first_pos := backpack.find_available_pos(runtime_data)
-			if first_pos != Vector2i(-1, -1):
-				entry["x"] = first_pos.x
-				entry["y"] = first_pos.y
-				entry["direction"] = int(runtime_data.direction)
-				entry["shape"] = _serialize_shape(runtime_data.shape)
-				backpack.place_item(runtime_data, first_pos)
-		result.append(entry)
+		var desired_pos := Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
+		var place_pos := desired_pos
+		if not backpack.can_place_item(runtime_data, place_pos):
+			place_pos = backpack.find_available_pos(runtime_data)
+		if place_pos != Vector2i(-1, -1):
+			entry["x"] = place_pos.x
+			entry["y"] = place_pos.y
+			entry["direction"] = int(runtime_data.direction)
+			entry["shape"] = _serialize_shape(runtime_data.shape)
+			backpack.place_item(runtime_data, place_pos)
+			result.append(entry)
 	backpack.free()
 	return result
 

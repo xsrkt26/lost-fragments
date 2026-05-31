@@ -35,6 +35,7 @@ var _drag_offset: Vector2 = Vector2.ZERO
 var _held_pivot_offset: Vector2i = Vector2i.ZERO # 拖拽时鼠标按在哪个格子上
 
 func _ready():
+	set_process(false)
 	add_to_group("item_uis")
 	_init_cell_size_from_scene()
 	if item_data:
@@ -164,6 +165,7 @@ func _refresh_hover_tooltip():
 
 func _start_drag():
 	_is_dragging = true
+	set_process(true)
 	var local_mouse = get_local_mouse_position()
 	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	_held_pivot_offset = Vector2i(
@@ -177,13 +179,14 @@ func _start_drag():
 func _stop_drag():
 	if not _is_dragging: return
 	_is_dragging = false
+	set_process(false)
 	z_index = 0
 	
 	dropped.emit(get_global_mouse_position(), _held_pivot_offset)
 
 func _request_rotation():
-	# 旋转时停止拖拽
 	_is_dragging = false
+	set_process(false)
 	var local_mouse = get_local_mouse_position()
 	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	var item_pivot_offset = Vector2i(

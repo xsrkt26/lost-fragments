@@ -50,6 +50,28 @@ func test_item_ui_uses_configured_grid_cell_size_for_shape_size():
 	assert_eq(ui.size, Vector2(160.0, 144.0))
 
 
+func test_item_ui_processes_only_while_dragging():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	assert_false(ui.is_processing())
+
+	ui._start_drag()
+
+	assert_true(ui.is_processing())
+
+	ui._stop_drag()
+
+	assert_false(ui.is_processing())
+
+	ui._start_drag()
+	ui._request_rotation()
+
+	assert_false(ui.is_processing())
+
+
 func test_item_ui_shows_configured_icon_texture():
 	var item = _make_item_data()
 	var image := Image.create(8, 8, false, Image.FORMAT_RGBA8)
@@ -149,6 +171,31 @@ func test_backpack_refresh_uses_existing_static_grid_slots():
 
 	assert_eq(grid.get_child_count(), slot_count)
 	assert_eq(slot_count, 49)
+
+
+func test_backpack_highlight_restores_only_previous_highlighted_slots():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	await get_tree().process_frame
+	var grid := backpack.get_node_or_null("GridContainer") as GridContainer
+	assert_not_null(grid)
+
+	var manager = autofree(BackpackManager.new())
+	manager.setup_grid(7, 7, 7, 7)
+	backpack.manager = manager
+	backpack._refresh_grid()
+
+	var unrelated_slot := grid.get_node("Slot_6_6") as ColorRect
+	var first_slot := grid.get_node("Slot_1_1") as ColorRect
+	var second_slot := grid.get_node("Slot_2_2") as ColorRect
+	unrelated_slot.color = Color.MAGENTA
+
+	var item = _make_item_data()
+	backpack.highlight_placement(Vector2i(1, 1), item)
+	backpack.highlight_placement(Vector2i(2, 2), item)
+
+	assert_eq(first_slot.color, Color(1, 1, 1, 0))
+	assert_eq(second_slot.color, Color(0.2, 0.8, 0.2, 0.4))
+	assert_eq(unrelated_slot.color, Color.MAGENTA)
 
 
 func test_backpack_add_item_visual_positions_immediately_from_grid_coordinates():

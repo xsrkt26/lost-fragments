@@ -1,6 +1,7 @@
 extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const SelectedNameFont = preload("res://assets/fonts/chill_huosong_f_ex_bold.otf")
 
 ## 图鉴场景：以相册页素材拼装物品图鉴，右侧为绳网索引，左侧为选中物体和记忆纸片。
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
@@ -13,6 +14,12 @@ const SLOT_SELECTED_TEXT_COLOR := Color(0.05, 0.03, 0.018, 1.0)
 const ITEM_CELL_SIZE := Vector2(99.14, 125.6)
 const ITEM_COLUMNS := 7
 const MEMORY_TEXT_LIMIT := 124
+const SLOT_ICON_POSITION := Vector2(13.0, 15.0)
+const SLOT_ICON_SIZE := Vector2(73.0, 68.0)
+const SLOT_NAME_POSITION_WITH_ICON := Vector2(8.0, 86.0)
+const SLOT_NAME_SIZE_WITH_ICON := Vector2(83.0, 33.0)
+const SLOT_NAME_POSITION_FALLBACK := Vector2(12.0, 18.0)
+const SLOT_NAME_SIZE_FALLBACK := ITEM_CELL_SIZE - Vector2(24.0, 34.0)
 
 var _selected_item_id := ""
 var _slot_buttons: Array[Button] = []
@@ -22,10 +29,11 @@ var _photo_corner_texture: Texture2D = null
 @onready var design_root: Control = $DesignRoot
 @onready var item_grid: GridContainer = $DesignRoot/UiLayer/ItemScroll/ItemGrid
 @onready var item_scroll: ScrollContainer = $DesignRoot/UiLayer/ItemScroll
-@onready var detail_name: Label = $DesignRoot/UiLayer/DetailName
-@onready var detail_text: Label = $DesignRoot/UiLayer/DetailText
-@onready var selected_name: Label = $DesignRoot/UiLayer/SelectedPaper/SelectedName
-@onready var selected_meta: Label = $DesignRoot/UiLayer/SelectedPaper/SelectedMeta
+@onready var detail_name: Label = get_node_or_null("DesignRoot/UiLayer/DetailName") as Label
+@onready var detail_text: Label = get_node_or_null("DesignRoot/UiLayer/DetailText") as Label
+@onready var selected_icon: TextureRect = get_node_or_null("DesignRoot/UiLayer/SelectedPaper/SelectedIcon") as TextureRect
+@onready var selected_name: Label = get_node_or_null("DesignRoot/UiLayer/SelectedName") as Label
+@onready var selected_meta: Label = get_node_or_null("DesignRoot/UiLayer/SelectedPaper/SelectedMeta") as Label
 @onready var art_layer: Control = $DesignRoot/ArtLayer
 @onready var ui_layer: Control = $DesignRoot/UiLayer
 
@@ -100,6 +108,16 @@ func _create_item_slot(item: ItemData) -> Button:
 	corner.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT
 	button.add_child(corner)
 
+	var icon_rect := TextureRect.new()
+	icon_rect.name = "ItemIcon"
+	icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon_rect.texture = item.icon
+	icon_rect.visible = item.icon != null
+	icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon_rect.modulate = Color(1, 1, 1, 0.96)
+	button.add_child(icon_rect)
+
 	var label := Label.new()
 	label.name = "NameLabel"
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -123,10 +141,19 @@ func _create_item_slot(item: ItemData) -> Button:
 
 func _select_item(item: ItemData) -> void:
 	_selected_item_id = item.id
-	selected_name.text = item.item_name
-	selected_meta.text = _build_selected_meta(item)
-	detail_name.text = "记\n忆"
-	detail_text.text = _build_memory_text(item)
+	if selected_icon != null:
+		selected_icon.texture = item.icon
+		selected_icon.visible = item.icon != null
+	if selected_name != null:
+		selected_name.text = _vertical_text(item.item_name)
+		selected_name.add_theme_font_size_override("font_size", _selected_name_font_size(item.item_name))
+	if selected_meta != null:
+		selected_meta.text = ""
+		selected_meta.visible = false
+	if detail_name != null:
+		detail_name.text = "记\n忆"
+	if detail_text != null:
+		detail_text.text = _build_detail_text(item)
 	_update_slot_selection()
 
 func _build_selected_meta(item: ItemData) -> String:
@@ -157,6 +184,13 @@ func _build_memory_text(item: ItemData) -> String:
 		text = text.substr(0, MEMORY_TEXT_LIMIT - 1).strip_edges() + "..."
 	return text
 
+func _build_detail_text(item: ItemData) -> String:
+	var lines: Array[String] = [_build_selected_meta(item)]
+	var memory_text := _build_memory_text(item)
+	if memory_text != "":
+		lines.append(memory_text)
+	return "\n\n".join(lines)
+
 func _plain_text(source: String) -> String:
 	var text := source
 	for token in [
@@ -167,6 +201,25 @@ func _plain_text(source: String) -> String:
 	]:
 		text = text.replace(token, "")
 	return text.strip_edges()
+
+func _vertical_text(source: String) -> String:
+	var chars: Array[String] = []
+	for index in range(source.length()):
+		var character := source.substr(index, 1)
+		if character == " ":
+			continue
+		chars.append(character)
+	return "\n".join(chars)
+
+func _selected_name_font_size(source: String) -> int:
+	var visible_chars := source.replace(" ", "").length()
+	if visible_chars <= 4:
+		return 52
+	if visible_chars <= 7:
+		return 42
+	if visible_chars <= 10:
+		return 34
+	return 28
 
 func _update_slot_selection() -> void:
 	for button in _slot_buttons:
@@ -204,24 +257,40 @@ func _layout_item_slots() -> void:
 		if corner != null:
 			corner.position = Vector2(4.0, 3.0)
 			corner.size = Vector2(39.0, 40.0)
+		var icon_rect := button.get_node_or_null("ItemIcon") as TextureRect
+		var has_icon := icon_rect != null and icon_rect.texture != null
+		if icon_rect != null:
+			icon_rect.position = SLOT_ICON_POSITION
+			icon_rect.size = SLOT_ICON_SIZE
+			icon_rect.visible = has_icon
 		var label := button.get_node_or_null("NameLabel") as Label
 		if label != null:
-			label.position = Vector2(12.0, 18.0)
-			label.size = ITEM_CELL_SIZE - Vector2(24.0, 34.0)
-			label.add_theme_font_size_override("font_size", 15)
+			label.position = SLOT_NAME_POSITION_WITH_ICON if has_icon else SLOT_NAME_POSITION_FALLBACK
+			label.size = SLOT_NAME_SIZE_WITH_ICON if has_icon else SLOT_NAME_SIZE_FALLBACK
+			label.add_theme_font_size_override("font_size", 13 if has_icon else 15)
 		var pin := button.get_node_or_null("SelectionPin") as ColorRect
 		if pin != null:
 			pin.position = Vector2(30.0, 10.0)
 			pin.size = Vector2(38.0, 6.0)
 
 func _configure_static_text() -> void:
-	detail_name.text = "记\n忆"
-	detail_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	detail_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	detail_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	detail_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
-	selected_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
-	selected_meta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if detail_name != null:
+		detail_name.text = "记\n忆"
+		detail_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		detail_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	if detail_text != null:
+		detail_text.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+		detail_text.horizontal_alignment = HORIZONTAL_ALIGNMENT_LEFT
+	if selected_name != null:
+		selected_name.add_theme_font_override("font", SelectedNameFont)
+		selected_name.add_theme_font_size_override("font_size", 52)
+		selected_name.add_theme_constant_override("outline_size", 1)
+		selected_name.add_theme_color_override("font_outline_color", Color(0.0, 0.0, 0.0, 0.55))
+		selected_name.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		selected_name.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	if selected_meta != null:
+		selected_meta.visible = false
+		selected_meta.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 
 func _make_slot_style(fill: Color, border: Color, border_width: int) -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

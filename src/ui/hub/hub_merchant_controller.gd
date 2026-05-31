@@ -12,18 +12,25 @@ const MERCHANT_ANIMATION_SPEED := 6.0
 const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
 const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
 const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
+const MERCHANT_HOVER_SCALE := 1.04
+const MERCHANT_CLICK_HIT_PADDING := Vector4(16.0, 18.0, 16.0, 18.0)
 
 var merchant_sprite: AnimatedSprite2D = null
 var merchant_button: Button = null
 var player: CharacterBody2D = null
 var room_art: Sprite2D = null
 var is_player_at_merchant := false
+var shop_click_ready := false
 
 var _frames_cache: Dictionary = {}
 var _default_room_position := Vector2.ZERO
 var _source_to_viewport: Callable = Callable()
 var _get_player_half_width: Callable = Callable()
 var _art_scale := 1.0
+var _base_sprite_scale := Vector2.ONE
+var _base_sprite_position := Vector2.ZERO
+var _is_hovered := false
+var _hover_tween: Tween = null
 
 func setup(
 	p_merchant_sprite: AnimatedSprite2D,
@@ -41,6 +48,13 @@ func setup(
 	_default_room_position = default_room_position
 	_source_to_viewport = source_to_viewport
 	_get_player_half_width = get_player_half_width
+	if merchant_button != null:
+		var enter_callback := Callable(self, "_on_merchant_mouse_entered")
+		if not merchant_button.mouse_entered.is_connected(enter_callback):
+			merchant_button.mouse_entered.connect(enter_callback)
+		var exit_callback := Callable(self, "_on_merchant_mouse_exited")
+		if not merchant_button.mouse_exited.is_connected(exit_callback):
+			merchant_button.mouse_exited.connect(exit_callback)
 
 func set_layout_scale(scale_factor: float) -> void:
 	_art_scale = scale_factor
@@ -55,10 +69,12 @@ func update_state(run_manager: Node, hub_page_visible: bool) -> void:
 		else:
 			merchant_sprite.stop()
 			is_player_at_merchant = false
+			shop_click_ready = false
+			_is_hovered = false
 	if merchant_button != null:
 		merchant_button.visible = should_show
 		merchant_button.disabled = false
-		merchant_button.tooltip_text = "Shop" if can_enter_shop else ""
+		merchant_button.tooltip_text = "点击进入商店" if can_enter_shop and shop_click_ready else "点击接近商人" if can_enter_shop else ""
 		merchant_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if can_enter_shop else Control.CURSOR_ARROW
 
 func should_show(run_manager: Node) -> bool:
@@ -76,6 +92,10 @@ func can_open_shop(run_manager: Node) -> bool:
 	return run_manager.get_current_route_node_type() == RouteConfig.NODE_SHOP
 
 func interact(run_manager: Node) -> void:
+	if can_open_shop(run_manager) and is_player_at_merchant and shop_click_ready:
+		request_open_shop.emit()
+		return
+	shop_click_ready = false
 	var target_x := get_interaction_target_x()
 	move_requested.emit(target_x, can_open_shop(run_manager))
 
@@ -89,7 +109,9 @@ func complete_interaction(run_manager: Node, played_arrival: bool) -> void:
 	if not is_player_at_merchant:
 		return
 	if can_open_shop(run_manager):
-		request_open_shop.emit()
+		shop_click_ready = true
+		if merchant_button != null:
+			merchant_button.tooltip_text = "点击进入商店"
 
 func get_animation_key(run_manager: Node) -> String:
 	var act := int(run_manager.get("current_act")) if run_manager != null else 1
@@ -116,11 +138,13 @@ func apply_animation(animation_key: String) -> void:
 
 func layout(source_offset: Vector2) -> void:
 	if merchant_sprite != null and room_art != null:
-		merchant_sprite.position = room_art.position
-		merchant_sprite.scale = room_art.scale
+		_base_sprite_position = room_art.position
+		merchant_sprite.position = _get_hover_target_position()
+		_base_sprite_scale = room_art.scale
+		merchant_sprite.scale = _get_hover_target_scale()
 	if merchant_button == null:
 		return
-	var target := get_interaction_source_rect()
+	var target := get_click_source_rect()
 	merchant_button.position = target.position + source_offset
 	merchant_button.size = target.size
 
@@ -157,8 +181,6 @@ func interaction_contains_x(global_x: float) -> bool:
 	return global_x >= interaction_rect.position.x and global_x <= interaction_rect.end.x
 
 func get_interaction_target_x() -> float:
-	if merchant_button != null and merchant_button.size.x > 0.0:
-		return merchant_button.get_global_rect().get_center().x
 	return get_interaction_viewport_rect().get_center().x
 
 func get_interaction_source_rect() -> Rect2:
@@ -173,11 +195,22 @@ func get_interaction_source_rect() -> Rect2:
 	source_rect.position.x += MERCHANT_INTERACTION_SOURCE_OFFSET_X
 	return source_rect
 
+func get_click_source_rect() -> Rect2:
+	var animation_key := get_animation_key(_get_run_manager())
+	var frame_bounds: Rect2 = MERCHANT_FRAME_BOUNDS.get(animation_key, MERCHANT_FRAME_BOUNDS["stage"])
+	var room_scale := room_art.scale if room_art != null else Vector2.ONE
+	var room_position := room_art.position if room_art != null else _default_room_position
+	var padding := MERCHANT_CLICK_HIT_PADDING
+	return Rect2(
+		room_position + Vector2(frame_bounds.position.x - padding.x, frame_bounds.position.y - padding.y) * room_scale,
+		Vector2(frame_bounds.size.x + padding.x + padding.z, frame_bounds.size.y + padding.y + padding.w) * room_scale
+	)
+
 func get_interaction_viewport_rect() -> Rect2:
-	if merchant_button != null and merchant_button.size.x > 0.0 and merchant_button.size.y > 0.0:
-		return merchant_button.get_global_rect()
 	if _source_to_viewport.is_valid():
 		return _source_to_viewport.call(get_interaction_source_rect())
+	if merchant_button != null and merchant_button.size.x > 0.0 and merchant_button.size.y > 0.0:
+		return merchant_button.get_global_rect()
 	return Rect2()
 
 func get_reach_distance() -> float:
@@ -194,6 +227,7 @@ func play_arrival_animation() -> bool:
 func play_departure_animation() -> bool:
 	if not _prepare_animation():
 		return false
+	shop_click_ready = false
 	var last_frame := _get_last_frame()
 	if last_frame <= 0:
 		return false
@@ -216,6 +250,40 @@ func _prepare_animation() -> bool:
 	else:
 		merchant_sprite.speed_scale = absf(merchant_sprite.speed_scale)
 	return true
+
+func _on_merchant_mouse_entered() -> void:
+	if not shop_click_ready:
+		return
+	_is_hovered = true
+	_tween_hover_transform()
+
+func _on_merchant_mouse_exited() -> void:
+	_is_hovered = false
+	_tween_hover_transform()
+
+func _get_hover_target_scale() -> Vector2:
+	var hover_scale := MERCHANT_HOVER_SCALE if _is_hovered and shop_click_ready else 1.0
+	return _base_sprite_scale * hover_scale
+
+func _get_hover_target_position() -> Vector2:
+	var hover_scale := MERCHANT_HOVER_SCALE if _is_hovered and shop_click_ready else 1.0
+	if is_equal_approx(hover_scale, 1.0):
+		return _base_sprite_position
+	var rect := get_click_source_rect()
+	var center := rect.get_center()
+	return center + (_base_sprite_position - center) * hover_scale
+
+func _tween_hover_transform() -> void:
+	if merchant_sprite == null or not merchant_sprite.visible:
+		return
+	if _hover_tween != null and _hover_tween.is_valid():
+		_hover_tween.kill()
+	_hover_tween = merchant_sprite.create_tween()
+	_hover_tween.set_parallel(true)
+	_hover_tween.set_trans(Tween.TRANS_QUAD)
+	_hover_tween.set_ease(Tween.EASE_OUT)
+	_hover_tween.tween_property(merchant_sprite, "scale", _get_hover_target_scale(), 0.12)
+	_hover_tween.tween_property(merchant_sprite, "position", _get_hover_target_position(), 0.12)
 
 func _get_sprite_frames(animation_key: String) -> SpriteFrames:
 	if _frames_cache.has(animation_key):

@@ -27,6 +27,8 @@ var _rendered_item_uis: Array[Control] = []
 var run_manager_override = null
 var item_database_override = null
 var ornament_database_override = null
+var _last_drag_root_grid_pos := Vector2i(-999999, -999999)
+var _last_drag_item_id := 0
 
 
 func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> void:
@@ -164,15 +166,40 @@ func _connect_item_ui_signals(card: Control) -> void:
 	card.rotation_requested.connect(_handle_item_rotation_requested)
 
 
+func _reset_drag_highlight_tracking() -> void:
+	_last_drag_root_grid_pos = Vector2i(-999999, -999999)
+	_last_drag_item_id = 0
+
+
+func _get_drag_item_id(item_ui: Control) -> int:
+	return int(item_ui.get_instance_id()) if item_ui != null else 0
+
+
+func _clear_backpack_placement_highlight() -> void:
+	if backpack_ui == null:
+		return
+	if backpack_ui.has_method("clear_placement_highlight"):
+		backpack_ui.clear_placement_highlight()
+	elif backpack_ui.has_method("update_slot_visuals"):
+		backpack_ui.update_slot_visuals()
+
+
 func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i) -> void:
 	if backpack_ui == null or not backpack_ui.has_method("get_grid_pos_at") or not backpack_ui.has_method("highlight_placement"):
 		return
+	var drag_item_id := _get_drag_item_id(item_ui)
 	var mouse_grid_pos: Vector2i = backpack_ui.get_grid_pos_at(mouse_pos)
 	var root_grid_pos := mouse_grid_pos - pivot_offset if mouse_grid_pos != Vector2i(-1, -1) else Vector2i(-1, -1)
-	backpack_ui.highlight_placement(root_grid_pos, item_ui.get("item_data"))
+	if _last_drag_item_id == drag_item_id and _last_drag_root_grid_pos == root_grid_pos:
+		return
+	_last_drag_item_id = drag_item_id
+	_last_drag_root_grid_pos = root_grid_pos
+	var item_data = item_ui.get("item_data") if item_ui != null else null
+	backpack_ui.highlight_placement(root_grid_pos, item_data)
 
 
 func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i) -> void:
+	_reset_drag_highlight_tracking()
 	if backpack_ui != null and backpack_ui.has_method("update_slot_visuals"):
 		backpack_ui.update_slot_visuals()
 	if battle_manager == null or backpack_ui == null or not backpack_ui.has_method("get_grid_pos_at"):
@@ -185,6 +212,8 @@ func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Ve
 
 
 func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i) -> void:
+	_clear_backpack_placement_highlight()
+	_reset_drag_highlight_tracking()
 	if battle_manager != null and battle_manager.has_method("request_rotate_item"):
 		battle_manager.request_rotate_item(item_ui, mouse_global_pos, pivot_offset)
 		_persist_backpack()
