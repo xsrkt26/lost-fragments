@@ -46,6 +46,8 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and event.keycode == KEY_F1:
 		GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
+	if event is InputEventKey and event.pressed and event.keycode == KEY_F2:
+		GlobalScene.transition_to(GlobalScene.SceneType.SHOP)
 
 func _configure_interactive_feedback() -> void:
 	for node_name in RESPONSIVE_CONTROL_NAMES:

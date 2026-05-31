@@ -5,6 +5,7 @@ signal close_requested
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
+const PendingItemPresenter = preload("res://src/ui/backpack/pending_item_presenter.gd")
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 
@@ -23,6 +24,9 @@ var battle_manager: BattleManager = null
 var _book_page_navigator: Node = null
 var _close_callback: Callable = Callable()
 var _rendered_item_uis: Array[Control] = []
+var run_manager_override = null
+var item_database_override = null
+var ornament_database_override = null
 
 
 func configure_for_backpack_overlay(close_callback: Callable = Callable()) -> void:
@@ -142,32 +146,14 @@ func _clear_rendered_item_uis() -> void:
 func _render_pending_items() -> void:
 	if pending_item_panel == null or pending_item_area == null:
 		return
-	for child in pending_item_area.get_children():
-		child.queue_free()
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
 	if rm == null or item_db == null or not rm.has_method("get_pending_item_rewards"):
-		pending_item_panel.hide()
+		PendingItemPresenter.clear(pending_item_panel, pending_item_area)
 		return
 	var pending_items = rm.get_pending_item_rewards()
-	pending_item_panel.visible = not pending_items.is_empty()
-	if pending_items.is_empty():
-		return
-	var index := 0
-	for entry in pending_items:
-		var item_data = item_db.get_item_by_id(str(entry.get("id", ""))) if item_db.has_method("get_item_by_id") else null
-		if item_data == null:
-			continue
-		var card := ItemUIScene.instantiate() as Control
-		if card == null:
-			continue
-		pending_item_area.add_child(card)
-		card.setup(item_data, battle_manager.context)
-		card.set_meta("pending_item_uid", int(entry.get("uid", -1)))
-		card.scale = Vector2(0.58, 0.58)
-		card.position = Vector2(12.0 + index * 92.0, 24.0)
-		_connect_item_ui_signals(card)
-		index += 1
+	var card_context = battle_manager.context if battle_manager != null else null
+	PendingItemPresenter.render(pending_item_panel, pending_item_area, pending_items, item_db, card_context, Callable(self, "_connect_item_ui_signals"))
 
 
 func _connect_item_ui_signals(card: Control) -> void:
@@ -209,7 +195,7 @@ func _consume_pending_item_if_placed(item_ui: Control) -> void:
 		return
 	if item_ui.get("item_instance") == null:
 		return
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm != null and rm.has_method("consume_pending_item"):
 		rm.consume_pending_item(int(item_ui.get_meta("pending_item_uid")))
 	item_ui.remove_meta("pending_item_uid")
@@ -242,8 +228,8 @@ func _refresh_effect_labels() -> void:
 
 func _get_ornament_entries() -> Array[String]:
 	var entries: Array[String] = []
-	var rm = get_node_or_null("/root/RunManager")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var rm = _get_run_manager()
+	var ornament_db = _get_ornament_database()
 	if rm != null and ornament_db != null:
 		for ornament_id in rm.current_ornaments:
 			var ornament = ornament_db.get_ornament_by_id(ornament_id)
@@ -260,7 +246,7 @@ func _get_ornament_entries() -> Array[String]:
 func _refresh_stats_label() -> void:
 	if stats_label == null:
 		return
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	var act := 1
 	var node_index := 1
 	if rm != null:
@@ -283,3 +269,18 @@ func _request_close() -> void:
 func _persist_backpack() -> void:
 	if battle_manager != null and battle_manager.has_method("persist_backpack_to_run"):
 		battle_manager.persist_backpack_to_run()
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
+
+func _get_item_database():
+	if item_database_override != null:
+		return item_database_override
+	return get_node_or_null("/root/ItemDatabase")
+
+func _get_ornament_database():
+	if ornament_database_override != null:
+		return ornament_database_override
+	return get_node_or_null("/root/OrnamentDatabase")

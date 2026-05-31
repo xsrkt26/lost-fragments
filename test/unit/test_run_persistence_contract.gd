@@ -1,6 +1,7 @@
 extends GutTest
 
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
+const RunPersistenceCodec = preload("res://src/core/run/run_persistence_codec.gd")
 const RouteConfig = preload("res://src/core/route/route_config.gd")
 
 const EXPECTED_SAVE_KEYS: Array[String] = [
@@ -24,8 +25,10 @@ const EXPECTED_SAVE_KEYS: Array[String] = [
 	"route_id",
 	"route_index",
 	"seen_event_ids",
+	"schema_version",
 	"shards",
 	"shop_purchase_state",
+	"story_played_flags",
 	"temporary_backpack_locked_cells",
 	"tools",
 ]
@@ -69,6 +72,22 @@ func test_deserialize_run_accepts_legacy_tool_entry_arrays():
 	})
 
 	assert_eq(run_manager.current_tools, {"small_patch": 3})
+
+func test_serialize_run_includes_current_schema_version():
+	var serialized = run_manager.serialize_run()
+
+	assert_eq(int(serialized.get("schema_version", 0)), RunPersistenceCodec.SAVE_SCHEMA_VERSION)
+
+func test_deserialize_run_rejects_future_schema_version():
+	var before_shards = run_manager.current_shards
+	var accepted = RunPersistenceCodec.deserialize_into(run_manager, {
+		"schema_version": RunPersistenceCodec.SAVE_SCHEMA_VERSION + 1,
+		"is_active": true,
+		"shards": before_shards + 99,
+	})
+
+	assert_false(accepted)
+	assert_eq(run_manager.current_shards, before_shards)
 
 func test_serialize_run_returns_defensive_mutable_copies():
 	run_manager.current_deck = ["paper_ball"] as Array[String]

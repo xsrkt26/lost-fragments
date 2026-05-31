@@ -59,22 +59,22 @@ static func load_stage_table_from_path(path: String = STAGE_DATA_PATH) -> Dictio
 
 static func _load_stage_table_uncached(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		return _fallback_stage_table()
+		return _fallback_stage_table("[StageConfig] Missing stage table: " + path)
 
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return _fallback_stage_table()
+		return _fallback_stage_table("[StageConfig] Failed to open stage table: " + path)
 
 	var parser = JSON.new()
 	if parser.parse(file.get_as_text()) != OK:
-		return _fallback_stage_table()
+		return _fallback_stage_table("[StageConfig] Invalid stage table JSON %s: %s" % [path, parser.get_error_message()])
 	var parsed = parser.data
 	if not (parsed is Dictionary):
-		return _fallback_stage_table()
+		return _fallback_stage_table("[StageConfig] Stage table root must be a dictionary: " + path)
 
 	var normalized = _normalize_stage_table(parsed)
 	if normalized.is_empty():
-		return _fallback_stage_table()
+		return _fallback_stage_table("[StageConfig] Stage table contains no valid stages: " + path)
 	return normalized
 
 static func get_max_act(path: String = STAGE_DATA_PATH) -> int:
@@ -144,7 +144,9 @@ static func apply_weight_modifiers(base_weight: float, candidate_type: String, c
 			result *= _multiplier_from_map(tag_modifiers, str(tag_value))
 	return max(0.1, result)
 
-static func _fallback_stage_table() -> Dictionary:
+static func _fallback_stage_table(reason: String = "") -> Dictionary:
+	if reason != "":
+		push_warning(reason)
 	var stages := {}
 	for act in range(1, DEFAULT_MAX_ACT + 1):
 		var stage = DEFAULT_STAGE.duplicate(true)

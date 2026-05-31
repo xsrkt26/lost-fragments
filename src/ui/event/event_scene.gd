@@ -21,12 +21,24 @@ func _ready():
 		resized.connect(_layout_design_root)
 	_layout_design_root()
 	continue_button.pressed.connect(_on_continue_pressed)
+	if _try_play_fixed_story_event():
+		return
 	_populate_event()
 	call_deferred("_layout_design_root")
 
 
 func _layout_design_root() -> void:
 	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
+
+func _try_play_fixed_story_event() -> bool:
+	var sm = get_node_or_null("/root/StoryManager")
+	if sm == null or not sm.has_method("play_current_event_sequence"):
+		return false
+	if not bool(sm.play_current_event_sequence(true)):
+		return false
+	if design_root != null:
+		design_root.visible = false
+	return true
 
 func _populate_event() -> void:
 	var rm = get_node_or_null("/root/RunManager")

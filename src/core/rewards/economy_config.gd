@@ -121,21 +121,17 @@ static func act_economy_snapshot(act: int) -> Dictionary:
 static func load_config_from_path(path: String = ECONOMY_CONFIG_PATH) -> Dictionary:
 	if _config_cache.has(path):
 		return Dictionary(_config_cache[path]).duplicate(true)
-	var config = DEFAULT_CONFIG.duplicate(true)
 	if path == "" or not FileAccess.file_exists(path):
-		_config_cache[path] = config.duplicate(true)
-		return config
+		return _cache_config(path, _fallback_config("[EconomyConfig] Missing economy config: " + path))
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		_config_cache[path] = config.duplicate(true)
-		return config
-	var parsed = JSON.parse_string(file.get_as_text())
-	if not (parsed is Dictionary):
-		_config_cache[path] = config.duplicate(true)
-		return config
-	config = _normalize_config(parsed)
-	_config_cache[path] = config.duplicate(true)
-	return config.duplicate(true)
+		return _cache_config(path, _fallback_config("[EconomyConfig] Failed to open economy config: " + path))
+	var parser := JSON.new()
+	var err := parser.parse(file.get_as_text())
+	if err != OK or not (parser.data is Dictionary):
+		return _cache_config(path, _fallback_config("[EconomyConfig] Invalid economy config JSON %s: %s" % [path, parser.get_error_message()]))
+	var config = _normalize_config(parser.data)
+	return _cache_config(path, config)
 
 
 static func _normalize_config(raw: Dictionary) -> Dictionary:
@@ -148,6 +144,17 @@ static func _normalize_config(raw: Dictionary) -> Dictionary:
 			merged[key] = raw_section[key]
 		config[section_name] = merged
 	return config
+
+
+static func _fallback_config(reason: String = "") -> Dictionary:
+	if reason != "":
+		push_warning(reason)
+	return DEFAULT_CONFIG.duplicate(true)
+
+
+static func _cache_config(path: String, config: Dictionary) -> Dictionary:
+	_config_cache[path] = config.duplicate(true)
+	return config.duplicate(true)
 
 
 static func _route_battle_reward_summary(act: int) -> Dictionary:

@@ -7,6 +7,7 @@ const AUDIO_ROOT := ROOT + "/audio"
 const CHARACTER_ROOT := ROOT + "/characters"
 const FONT_ROOT := ROOT + "/fonts"
 const STORY_ROOT := ROOT + "/story"
+const SHOP_INTRO_ROOT := UI_ROOT + "/shop/intro"
 
 const FONT_BODY := FONT_ROOT + "/chill_huosong_f_regular.otf"
 const FONT_DISPLAY := FONT_ROOT + "/chill_huosong_f_ex_bold.otf"
@@ -45,6 +46,8 @@ const INTRO_BAG_REVEAL_FRAME_PATHS := [
 	UI_ROOT + "/battle/intro_bag_reveal/bag_reveal_04.png",
 	UI_ROOT + "/battle/intro_bag_reveal/bag_reveal_05.png",
 ]
+
+const SHOP_INTRO_FRAME_COUNT := 21
 
 const HUB_BACKGROUND_PATHS := {
 	"grandma": UI_ROOT + "/hub/backgrounds/grandma.png",
@@ -95,6 +98,10 @@ static func numbered_index_paths(directory: String, prefix: String, indices: Arr
 
 static func intro_bag_reveal_frame_paths() -> PackedStringArray:
 	return PackedStringArray(INTRO_BAG_REVEAL_FRAME_PATHS)
+
+
+static func shop_intro_frame_paths() -> PackedStringArray:
+	return numbered_paths(SHOP_INTRO_ROOT, "shop_intro", SHOP_INTRO_FRAME_COUNT, 1, 2)
 
 
 static func merchant_frame_paths(merchant_id: String) -> PackedStringArray:

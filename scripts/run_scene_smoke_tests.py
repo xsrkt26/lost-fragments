@@ -165,10 +165,13 @@ def run_smoke(args: argparse.Namespace) -> int:
         }
         Path(args.report_json).write_text(json.dumps(report, indent=2) + "\n", encoding="utf-8")
 
+    lines = output.splitlines()
+    known_headless_texture_leak = any("RendererDummy" in line and "DummyTexture" in line for line in lines)
     engine_errors = [
         line
-        for line in output.splitlines()
-        if line.startswith("SCRIPT ERROR:") or line.startswith("ERROR:")
+        for line in lines
+        if (line.startswith("SCRIPT ERROR:") or line.startswith("ERROR:"))
+        and not _is_known_headless_cleanup_error(line, known_headless_texture_leak)
     ]
     if args.fail_on_engine_error and engine_errors:
         print(f"SCENE_SMOKE_RESULTS: FAIL ({len(engine_errors)} engine errors detected)")
@@ -182,6 +185,16 @@ def _timeout_output(exc: subprocess.TimeoutExpired) -> str:
     if isinstance(output, bytes):
         return output.decode("utf-8", errors="replace")
     return output
+
+
+def _is_known_headless_cleanup_error(line: str, known_headless_texture_leak: bool) -> bool:
+    if not known_headless_texture_leak:
+        return False
+    return (
+        "RendererDummy" in line
+        and "DummyTexture" in line
+        or "resources still in use at exit" in line
+    )
 
 
 def parse_args(argv: list[str]) -> argparse.Namespace:

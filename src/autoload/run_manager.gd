@@ -32,6 +32,7 @@ const ROOT_DREAM_ID := "root_dream"
 const ITEM_DEST_DECK := "deck"
 const ITEM_DEST_BACKPACK := "backpack"
 const ITEM_DEST_STAGING := "staging"
+const LEGACY_ITEM_ID_MAP := {}
 const INITIAL_BACKPACK_ITEMS: Array[Dictionary] = [
 	{
 		"id": ROOT_DREAM_ID,
@@ -59,6 +60,7 @@ var backpack_usable_height: int = INITIAL_BACKPACK_USABLE_HEIGHT
 var shop_purchase_state: Dictionary = {}
 var event_node_state: Dictionary = {}
 var seen_event_ids: Array[String] = []
+var story_played_flags: Dictionary = {}
 var rng_seed: int = 0
 var rng_state: int = 0
 var current_depth: int = 1
@@ -72,6 +74,9 @@ var is_run_complete: bool = false
 var saver: SaveManager = null
 var _route_progress: RunRouteProgress = RunRouteProgress.new()
 var _rng_service: RunRngService = RunRngService.new()
+var game_state_override = null
+var item_database_override = null
+var tool_database_override = null
 
 func _ready():
 	if saver == null:
@@ -86,7 +91,7 @@ func start_new_run():
 	print("[RunManager] 开启新的一局...")
 	
 	# 重置全局战斗状态（梦值、分数等）
-	var gs = get_node_or_null("/root/GameState") if is_inside_tree() else null
+	var gs = _get_game_state()
 	if gs:
 		gs.reset_game()
 	
@@ -105,6 +110,7 @@ func start_new_run():
 	shop_purchase_state.clear()
 	event_node_state.clear()
 	seen_event_ids = []
+	story_played_flags.clear()
 	_initialize_random_source()
 	current_depth = 1
 	reset_route_progress()
@@ -194,7 +200,7 @@ func apply_reward(reward: Dictionary, item_db: Node = null, save_after: bool = t
 		RewardGenerator.TYPE_TOOL:
 			var tool_id = str(reward.get("id", ""))
 			var amount = max(1, int(reward.get("amount", 1)))
-			var tool_db = get_node_or_null("/root/ToolDatabase") if is_inside_tree() else null
+			var tool_db = _get_tool_database()
 			if not grant_tool(tool_id, amount, tool_db, "reward", false):
 				return false
 		_:
@@ -252,7 +258,7 @@ func buy_shop_offer(offer: Dictionary, item_db: Node = null) -> bool:
 			if tool_id == "":
 				return false
 			var amount = max(1, int(offer.get("amount", 1)))
-			var tool_db = get_node_or_null("/root/ToolDatabase") if is_inside_tree() else null
+			var tool_db = _get_tool_database()
 			current_shards -= price
 			if not grant_tool(tool_id, amount, tool_db, "shop", false):
 				current_shards += price
@@ -269,7 +275,7 @@ func sell_backpack_item(runtime_id: int, item_db: Node = null) -> int:
 	if runtime_id == -1:
 		return 0
 	if item_db == null and is_inside_tree():
-		item_db = get_node_or_null("/root/ItemDatabase")
+		item_db = _get_item_database()
 	for index in range(current_backpack_items.size() - 1, -1, -1):
 		var entry: Dictionary = current_backpack_items[index]
 		if not (entry is Dictionary) or int(entry.get("runtime_id", 0)) != runtime_id:
@@ -291,7 +297,7 @@ func grant_tool(tool_id: String, amount: int = 1, tool_db: Node = null, _source:
 	if tool_id == "" or amount <= 0:
 		return false
 	if tool_db == null and is_inside_tree():
-		tool_db = get_node_or_null("/root/ToolDatabase")
+		tool_db = _get_tool_database()
 	if tool_db != null and tool_db.has_method("get_tool_by_id") and tool_db.get_tool_by_id(tool_id) == null:
 		return false
 	current_tools[tool_id] = max(0, int(current_tools.get(tool_id, 0))) + amount
@@ -324,7 +330,7 @@ func get_current_tools() -> Dictionary:
 
 func get_tool_inventory_entries(tool_db: Node = null) -> Array[Dictionary]:
 	if tool_db == null and is_inside_tree():
-		tool_db = get_node_or_null("/root/ToolDatabase")
+		tool_db = _get_tool_database()
 	var result: Array[Dictionary] = []
 	for tool_id in current_tools.keys():
 		var count = int(current_tools.get(tool_id, 0))
@@ -534,8 +540,8 @@ func apply_event_choice(choice: Dictionary) -> bool:
 		"backpack_deleted_cells": backpack_deleted_cells.duplicate(true),
 		"temporary_backpack_locked_cells": temporary_backpack_locked_cells.duplicate(true),
 		"ornaments": current_ornaments.duplicate(),
-		"backpack_width": backpack_usable_width,
-		"backpack_height": backpack_usable_height,
+		"backpack_usable_width": backpack_usable_width,
+		"backpack_usable_height": backpack_usable_height,
 	}
 
 	current_shards -= cost_shards
@@ -568,13 +574,13 @@ func _apply_event_effect(effect: Dictionary) -> bool:
 	var effect_type = str(effect.get("type", ""))
 	match effect_type:
 		RewardGenerator.TYPE_SHARDS, RewardGenerator.TYPE_ITEM, RewardGenerator.TYPE_ORNAMENT, RewardGenerator.TYPE_TOOL:
-			var item_db = get_node_or_null("/root/ItemDatabase") if is_inside_tree() else null
+			var item_db = _get_item_database()
 			return apply_reward(effect, item_db, false)
 		"sanity":
 			var amount = int(effect.get("amount", 0))
 			if amount == 0:
 				return false
-			var gs = get_node_or_null("/root/GameState") if is_inside_tree() else null
+			var gs = _get_game_state()
 			if gs == null or not gs.has_method("heal_sanity"):
 				return false
 			gs.heal_sanity(amount)
@@ -783,8 +789,8 @@ func _restore_event_snapshot(snapshot: Dictionary) -> void:
 	backpack_deleted_cells = _to_dictionary_array(snapshot.get("backpack_deleted_cells", backpack_deleted_cells))
 	temporary_backpack_locked_cells = _to_dictionary_array(snapshot.get("temporary_backpack_locked_cells", temporary_backpack_locked_cells))
 	current_ornaments = _to_string_array(snapshot.get("ornaments", current_ornaments))
-	backpack_usable_width = int(snapshot.get("backpack_width", backpack_usable_width))
-	backpack_usable_height = int(snapshot.get("backpack_height", backpack_usable_height))
+	backpack_usable_width = int(snapshot.get("backpack_usable_width", snapshot.get("backpack_width", backpack_usable_width)))
+	backpack_usable_height = int(snapshot.get("backpack_usable_height", snapshot.get("backpack_height", backpack_usable_height)))
 	shards_changed.emit(current_shards)
 	deck_changed.emit(current_deck)
 	ornaments_changed.emit(current_ornaments)
@@ -809,10 +815,16 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 	if item_db == null:
 		return
 	for entry in current_backpack_items:
-		var item_id = str(entry.get("id", ""))
+		var item_id: String = str(entry.get("id", ""))
 		var item_data = item_db.get_item_by_id(item_id) if item_db.has_method("get_item_by_id") else null
 		if item_data == null:
-			continue
+			var legacy_id: String = item_id
+			item_id = str(LEGACY_ITEM_ID_MAP.get(item_id, item_id))
+			item_data = item_db.get_item_by_id(item_id) if legacy_id != item_id and item_db.has_method("get_item_by_id") else null
+			if item_data == null:
+				push_warning("[RunManager] Missing saved backpack item '%s'; skipped during restore." % legacy_id)
+				continue
+			push_warning("[RunManager] Migrated saved backpack item '%s' to '%s'." % [legacy_id, item_id])
 		var runtime_data: ItemData = item_data.duplicate(true)
 		runtime_data.runtime_id = int(entry.get("runtime_id", randi()))
 		runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
@@ -908,10 +920,26 @@ func _make_runtime_backpack_item_data(entry: Dictionary, item_db: Node) -> ItemD
 	return runtime_data
 
 func _get_item_database() -> Node:
+	if item_database_override != null:
+		return item_database_override
 	var tree := Engine.get_main_loop() as SceneTree
 	if tree == null or tree.root == null:
 		return null
 	return tree.root.get_node_or_null("ItemDatabase")
+
+func _get_game_state() -> Node:
+	if game_state_override != null:
+		return game_state_override
+	if not is_inside_tree():
+		return null
+	return get_node_or_null("/root/GameState")
+
+func _get_tool_database() -> Node:
+	if tool_database_override != null:
+		return tool_database_override
+	if not is_inside_tree():
+		return null
+	return get_node_or_null("/root/ToolDatabase")
 
 func _is_derived_item(instance: BackpackManager.ItemInstance) -> bool:
 	return instance != null and instance.data != null and instance.data.tags.has("衍生物品")
@@ -940,6 +968,18 @@ func get_current_route_node() -> Dictionary:
 
 func get_current_route_node_type() -> String:
 	return _route_progress.get_current_route_node_type(self)
+
+func can_enter_current_route_node() -> bool:
+	return can_enter_route_node(current_route_index)
+
+func can_enter_current_battle() -> bool:
+	return can_enter_current_route_node() and RouteConfig.is_battle_node_type(get_current_route_node_type())
+
+func is_current_shop_unlocked() -> bool:
+	return can_enter_current_route_node() and get_current_route_node_type() == RouteConfig.NODE_SHOP
+
+func can_enter_current_shop() -> bool:
+	return is_current_shop_unlocked()
 
 func can_enter_route_node(index: int) -> bool:
 	return _route_progress.can_enter_route_node(self, index)
@@ -1000,6 +1040,14 @@ func deserialize_run(data: Dictionary):
 	pending_items_changed.emit(get_pending_item_rewards())
 	tools_changed.emit(get_current_tools())
 	_emit_route_changed()
+
+func get_story_played_flags() -> Dictionary:
+	return story_played_flags.duplicate(true)
+
+func set_story_played_flags(flags: Dictionary, save_after: bool = true) -> void:
+	story_played_flags = flags.duplicate(true)
+	if save_after:
+		save_current_state()
 
 func _to_string_array(value: Variant) -> Array[String]:
 	var result: Array[String] = []

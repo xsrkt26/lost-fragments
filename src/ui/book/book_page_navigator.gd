@@ -1,6 +1,7 @@
 extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const BookPageRegistry = preload("res://src/ui/book/book_page_registry.gd")
 
 signal page_changed(page_id: String)
 
@@ -13,11 +14,6 @@ const PAGE_MAIN_MENU := "main_menu"
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const PAGE_STACK_Z := BookBackgroundConfig.PAGE_STACK_Z
-const PAGE_SCENE_PATHS := {
-	PAGE_BACKPACK: "res://src/ui/backpack/backpack_page.tscn",
-	PAGE_GALLERY: "res://src/ui/gallery/gallery_scene.tscn",
-	PAGE_SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",
-}
 const PAGE_TAB_NODE_NAMES := {
 	PAGE_HUB: "AlbumTab",
 	PAGE_BACKPACK: "BackpackTab",
@@ -331,18 +327,9 @@ func _ensure_page(page_id: String) -> Control:
 		return null
 	if _pages.has(page_id) and is_instance_valid(_pages[page_id]):
 		return _pages[page_id] as Control
-	var scene_path: String = str(PAGE_SCENE_PATHS.get(page_id, ""))
-	if scene_path == "":
-		return null
-	var packed := load(scene_path) as PackedScene
-	if packed == null:
-		push_warning("[BookPageNavigator] Failed to load page scene: %s" % scene_path)
-		return null
-	var page := packed.instantiate() as Control
+	var page := BookPageRegistry.instantiate_page(page_id, "%sPage" % page_id.capitalize())
 	if page == null:
-		push_warning("[BookPageNavigator] Page scene is not a Control: %s" % scene_path)
 		return null
-	page.name = "%sPage" % page_id.capitalize()
 	page.set_anchors_preset(Control.PRESET_FULL_RECT, true)
 	page.mouse_filter = Control.MOUSE_FILTER_STOP
 	page.visible = false
@@ -1216,16 +1203,9 @@ func _create_compressed_page_tab(page_id: String) -> TextureRect:
 func _create_compressed_page_content(page_id: String) -> Node:
 	if page_id == PAGE_HUB:
 		return _create_compressed_hub_content()
-	var scene_path := str(PAGE_SCENE_PATHS.get(page_id, ""))
-	if scene_path == "":
-		return null
-	var packed := load(scene_path) as PackedScene
-	if packed == null:
-		return null
-	var page := packed.instantiate() as Control
+	var page := BookPageRegistry.instantiate_page(page_id, "%sCompressedContent" % page_id.capitalize())
 	if page == null:
 		return null
-	page.name = "%sCompressedContent" % page_id.capitalize()
 	page.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	page.visible = true
 	return page

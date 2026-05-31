@@ -11,7 +11,7 @@ Detailed large-module split planning is tracked in `spec/Docs/02_Tech/06_Refacto
 - Battle scene: `res://src/ui/main_game_ui.tscn`
 - Shop scene: `res://src/ui/shop/shop_scene.tscn`
 - Event scene: `res://src/ui/event/event_scene.tscn`
-- Backpack overlay currently reuses `main_game_ui.tscn` through `configure_for_backpack_overlay()`.
+- Backpack page: `res://src/ui/backpack/backpack_page.tscn`; book navigation configures it through `configure_for_backpack_overlay()`.
 
 ## Runtime Ownership
 
@@ -32,6 +32,7 @@ Detailed large-module split planning is tracked in `spec/Docs/02_Tech/06_Refacto
 - Routes: `data/routes/routes.json` through `RouteConfig`
 - Stages: `data/stages/stages.json` through `StageConfig`
 - Economy: `data/economy/economy.json` through `EconomyConfig`
+- Story sequences: `assets/story/story_events.json` through `StoryManager`
 
 ## Current Design Constraints
 

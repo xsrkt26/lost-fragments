@@ -2,6 +2,11 @@
 extends Node2D
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const HubLayoutMetrics = preload("res://src/ui/hub/hub_layout_metrics.gd")
+const HubBattleController = preload("res://src/ui/hub/hub_battle_controller.gd")
+const HubMerchantController = preload("res://src/ui/hub/hub_merchant_controller.gd")
+const HubPlayerController = preload("res://src/ui/hub/hub_player_controller.gd")
+const HubInteractionFlowController = preload("res://src/ui/hub/hub_interaction_flow_controller.gd")
 
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
@@ -14,9 +19,9 @@ const PLAYER_FLOOR_SOURCE_Y := 1000.0
 const PLAYER_FLOOR_OFFSET := 64.0
 const PLAYER_WALK_MIN_SOURCE_X := 410.0
 const PLAYER_WALK_MAX_SOURCE_X := 1640.0
-const AUTO_INTERACTION_ROUTE := "route"
-const AUTO_INTERACTION_GALLERY := "gallery"
-const AUTO_INTERACTION_MERCHANT := "merchant"
+const AUTO_INTERACTION_ROUTE := HubInteractionFlowController.AUTO_INTERACTION_ROUTE
+const AUTO_INTERACTION_GALLERY := HubInteractionFlowController.AUTO_INTERACTION_GALLERY
+const AUTO_INTERACTION_MERCHANT := HubInteractionFlowController.AUTO_INTERACTION_MERCHANT
 const LEFT_BOOKMARK_BUTTON_PATHS := [
 	"CanvasLayer/DesignRoot/RouteButton",
 	"CanvasLayer/DesignRoot/BackpackButton",
@@ -47,17 +52,6 @@ const HUB_TO_BATTLE_BOARD_TARGET_UV := Vector2(0.24, 0.35)
 const HUB_TO_BATTLE_BOARD_BOTTOM_LOCK_OFFSET := 0.0
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
-const MERCHANT_FRAME_BOUNDS := {
-	"cat": Rect2(1236.0, 467.0, 293.0, 367.0),
-	"grandma": Rect2(1295.0, 459.0, 377.0, 476.0),
-	"stage": Rect2(1162.0, 715.0, 372.0, 365.0),
-}
-const MERCHANT_ANIMATION_SPEED := 6.0
-const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
-const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
-const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
-
-
 func _first_existing_node(paths: Array[String]) -> Node:
 	for path in paths:
 		var node := get_node_or_null(path)
@@ -105,11 +99,8 @@ var _default_room_scale := Vector2.ONE
 var _default_room_display_size := Vector2.ZERO
 var _dreamcatcher_button_source_position := Vector2.ZERO
 var _dreamcatcher_button_source_size := Vector2.ZERO
-var _merchant_frames_cache: Dictionary = {}
 var _hub_background_textures: Dictionary = {}
 var _hub_foreground_textures: Dictionary = {}
-var _pending_auto_interaction := ""
-var _is_player_at_merchant := false
 var _hub_source_size := HUB_SOURCE_SIZE
 var _hub_page_visual_root: Control = null
 var _hub_transition_player_frozen := false
@@ -118,15 +109,27 @@ var _dreamcatcher_net_base_position := Vector2.ZERO
 var _dreamcatcher_net_base_rotation := 0.0
 var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _dreamcatcher_idle_tween: Tween = null
-var _is_dreamcatcher_transition_pending := false
 var _hub_battle_manager: BattleManager = null
 var _is_hub_battle_session_active := false
 var _hub_focus_layer_base_transforms: Dictionary = {}
+var _battle_controller = HubBattleController.new()
+var _merchant_controller = HubMerchantController.new()
+var _player_controller = HubPlayerController.new()
+var _interaction_flow_controller = HubInteractionFlowController.new()
+var _pending_auto_interaction: String:
+	get:
+		return _get_pending_auto_interaction()
+	set(value):
+		_set_pending_auto_interaction(value)
 
 
 func _ready() -> void:
 	_cache_layout_source_data()
 	_capture_default_hub_room_art()
+	_setup_battle_controller()
+	_setup_merchant_controller()
+	_setup_player_controller()
+	_setup_interaction_flow_controller()
 	_setup_hub_page_visual_root()
 	if Engine.is_editor_hint():
 		_sync_editor_preview_state()
@@ -146,7 +149,7 @@ func _ready() -> void:
 	GlobalAudio.play_bgm(_get_stage_bgm_key("hub_bgm_key", "hub"))
 	_hide_speech()
 
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.has_signal("route_changed"):
 		var route_changed_callback := Callable(self, "_on_route_changed")
 		if not rm.route_changed.is_connected(route_changed_callback):
@@ -172,9 +175,6 @@ func _ready() -> void:
 	_update_merchant_state()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
-	var target_reached_callback := Callable(self, "_on_player_move_target_reached")
-	if player != null and player.has_signal("move_target_reached") and not player.is_connected("move_target_reached", target_reached_callback):
-		player.connect("move_target_reached", target_reached_callback)
 
 
 func _process(_delta: float) -> void:
@@ -195,8 +195,12 @@ func _get_stage_bgm_key(key: String, fallback: String) -> String:
 	return bgm_key if bgm_key != "" else fallback
 
 
+func _get_run_manager() -> Node:
+	return get_node_or_null("/root/RunManager")
+
+
 func _get_stage_visual() -> Dictionary:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not rm.has_method("get_current_stage_visual"):
 		return {}
 	var visual = rm.get_current_stage_visual()
@@ -230,8 +234,96 @@ func _cache_layout_source_data() -> void:
 		_dreamcatcher_button_source_size = dreamcatcher_button.size
 
 
+func _setup_battle_controller() -> void:
+	if _battle_controller == null:
+		_battle_controller = HubBattleController.new()
+	_battle_controller.setup(dreamcatcher_button, self)
+
+	var enter_callback := Callable(self, "_on_battle_controller_enter_requested")
+	if not _battle_controller.request_enter_battle.is_connected(enter_callback):
+		_battle_controller.request_enter_battle.connect(enter_callback)
+
+	var restart_idle_callback := Callable(self, "_on_battle_controller_idle_restart_requested")
+	if not _battle_controller.request_idle_restart.is_connected(restart_idle_callback):
+		_battle_controller.request_idle_restart.connect(restart_idle_callback)
+
+
+func _on_battle_controller_enter_requested() -> void:
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_transitioning()
+	_enter_current_route_node()
+
+
+func _on_battle_controller_idle_restart_requested() -> void:
+	_start_hub_dreamcatcher_idle_swing()
+
+
+func _setup_merchant_controller() -> void:
+	if _merchant_controller == null:
+		_merchant_controller = HubMerchantController.new()
+	_merchant_controller.setup(
+		merchant_sprite,
+		merchant_button,
+		player,
+		room_art,
+		_default_room_position,
+		Callable(self, "_source_rect_to_viewport"),
+		Callable(self, "_get_player_collision_half_width")
+	)
+	_merchant_controller.set_layout_scale(_art_scale)
+
+	var move_callback := Callable(self, "_on_merchant_move_requested")
+	if not _merchant_controller.move_requested.is_connected(move_callback):
+		_merchant_controller.move_requested.connect(move_callback)
+
+	var open_shop_callback := Callable(self, "_on_merchant_open_shop_requested")
+	if not _merchant_controller.request_open_shop.is_connected(open_shop_callback):
+		_merchant_controller.request_open_shop.connect(open_shop_callback)
+
+
+func _setup_player_controller() -> void:
+	if _player_controller == null:
+		_player_controller = HubPlayerController.new()
+	_player_controller.setup(player)
+	var target_reached_callback := Callable(self, "_on_player_move_target_reached")
+	if not _player_controller.is_connected("target_reached", target_reached_callback):
+		_player_controller.connect("target_reached", target_reached_callback)
+
+
+func _setup_interaction_flow_controller() -> void:
+	if _interaction_flow_controller == null:
+		_interaction_flow_controller = HubInteractionFlowController.new()
+	_interaction_flow_controller.setup(_player_controller, _merchant_controller, _battle_controller)
+
+	var route_callback := Callable(self, "_on_interaction_flow_enter_route_node_requested")
+	if not _interaction_flow_controller.is_connected("request_enter_route_node", route_callback):
+		_interaction_flow_controller.connect("request_enter_route_node", route_callback)
+
+	var gallery_callback := Callable(self, "_on_interaction_flow_open_gallery_requested")
+	if not _interaction_flow_controller.is_connected("request_open_gallery", gallery_callback):
+		_interaction_flow_controller.connect("request_open_gallery", gallery_callback)
+
+
+func _on_interaction_flow_enter_route_node_requested() -> void:
+	_enter_current_route_node()
+
+
+func _on_interaction_flow_open_gallery_requested() -> void:
+	_enter_gallery()
+
+
+func _on_merchant_move_requested(target_x: float, _should_open_shop: bool) -> void:
+	_queue_auto_interaction(AUTO_INTERACTION_MERCHANT, target_x)
+
+
+func _on_merchant_open_shop_requested() -> void:
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_transitioning()
+	_enter_current_route_node()
+
+
 func _apply_stage_hub_background() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not bool(rm.get("is_run_active")):
 		_restore_default_hub_background()
 		_update_merchant_state()
@@ -398,175 +490,76 @@ func _play_hub_dreamcatcher_start_swing() -> void:
 
 
 func _update_dreamcatcher_state() -> void:
-	if dreamcatcher_button == null:
-		return
-	var can_start_game := _is_dreamcatcher_game_available() and not _is_dreamcatcher_transition_pending and _is_book_hub_current()
-	dreamcatcher_button.disabled = not can_start_game
-	dreamcatcher_button.tooltip_text = "Start dream" if can_start_game else ""
-	dreamcatcher_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if can_start_game else Control.CURSOR_ARROW
+	if _battle_controller != null:
+		_battle_controller.update_state(_get_run_manager(), _is_book_hub_current())
 
 
 func _is_dreamcatcher_game_available() -> bool:
-	var rm = get_node_or_null("/root/RunManager")
-	if rm == null or not bool(rm.get("is_run_active")):
-		return false
-	if not rm.has_method("get_current_route_node_type"):
-		return false
-	if rm.has_method("can_enter_route_node") and not rm.can_enter_route_node(int(rm.get("current_route_index"))):
-		return false
-	return RouteConfig.is_battle_node_type(rm.get_current_route_node_type())
+	return _battle_controller != null and _battle_controller.can_enter_battle(_get_run_manager())
+
+
+func _is_dreamcatcher_transition_pending() -> bool:
+	return _battle_controller != null and _battle_controller.is_transition_pending()
 
 
 func _update_merchant_state() -> void:
-	var hub_page_visible := _is_book_hub_current()
-	var should_show := _should_show_merchant() and hub_page_visible
-	var can_enter_shop := _is_merchant_shop_available()
-	if merchant_sprite != null:
-		merchant_sprite.visible = should_show
-		if should_show:
-			_apply_merchant_animation(_get_merchant_animation_key())
-		else:
-			merchant_sprite.stop()
-			_is_player_at_merchant = false
-	if merchant_button != null:
-		merchant_button.visible = should_show
-		merchant_button.disabled = false
-		merchant_button.tooltip_text = "商店" if can_enter_shop else ""
-		merchant_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if can_enter_shop else Control.CURSOR_ARROW
+	if _merchant_controller == null:
+		return
+	_merchant_controller.update_state(_get_run_manager(), _is_book_hub_current())
 	_layout_merchant()
 	_sync_merchant_presence_state()
 
 
 func _should_show_merchant() -> bool:
-	var rm = get_node_or_null("/root/RunManager")
-	return rm != null and bool(rm.get("is_run_active"))
+	return _merchant_controller != null and _merchant_controller.should_show(_get_run_manager())
 
 
 func _is_merchant_shop_available() -> bool:
-	var rm = get_node_or_null("/root/RunManager")
-	if rm == null or not bool(rm.get("is_run_active")):
-		return false
-	if not rm.has_method("get_current_route_node_type"):
-		return false
-	return rm.get_current_route_node_type() == RouteConfig.NODE_SHOP
-
-
-func _get_merchant_animation_key() -> String:
-	var rm = get_node_or_null("/root/RunManager")
-	var act := int(rm.get("current_act")) if rm != null else 1
-	match act:
-		1:
-			return "cat"
-		2:
-			return "grandma"
-		_:
-			return "stage"
-
-
-func _apply_merchant_animation(animation_key: String) -> void:
-	if merchant_sprite == null:
-		return
-	var frames := _get_merchant_sprite_frames(animation_key)
-	if frames == null:
-		merchant_sprite.visible = false
-		return
-	if merchant_sprite.sprite_frames != frames:
-		merchant_sprite.sprite_frames = frames
-		merchant_sprite.animation = &"idle"
-		merchant_sprite.stop()
-		merchant_sprite.frame = 0
-
-
-func _get_merchant_sprite_frames(animation_key: String) -> SpriteFrames:
-	if _merchant_frames_cache.has(animation_key):
-		return _merchant_frames_cache[animation_key] as SpriteFrames
-	var paths := AssetPaths.merchant_frame_paths(animation_key)
-	if paths.is_empty():
-		return null
-	var frames := SpriteFrames.new()
-	if frames.has_animation("default"):
-		frames.remove_animation("default")
-	frames.add_animation("idle")
-	frames.set_animation_loop("idle", false)
-	frames.set_animation_speed("idle", MERCHANT_ANIMATION_SPEED)
-	for path in paths:
-		var texture := AssetPaths.load_texture(path)
-		if texture != null:
-			frames.add_frame("idle", texture)
-	if frames.get_frame_count("idle") <= 0:
-		return null
-	_merchant_frames_cache[animation_key] = frames
-	return frames
+	return _merchant_controller != null and _merchant_controller.can_open_shop(_get_run_manager())
 
 
 func _layout_merchant() -> void:
-	if merchant_sprite != null and room_art != null:
-		merchant_sprite.position = room_art.position
-		merchant_sprite.scale = room_art.scale
-	if merchant_button == null:
+	if _merchant_controller == null:
 		return
-	var target := _get_merchant_interaction_source_rect()
-	merchant_button.position = target.position + hub_art_source_offset
-	merchant_button.size = target.size
-
-
-func _get_merchant_interaction_source_rect() -> Rect2:
-	var animation_key := _get_merchant_animation_key()
-	var frame_bounds: Rect2 = MERCHANT_FRAME_BOUNDS.get(animation_key, MERCHANT_FRAME_BOUNDS["stage"])
-	var room_scale := room_art.scale if room_art != null else Vector2.ONE
-	var room_position := room_art.position if room_art != null else _default_room_position
-	var source_rect := Rect2(
-		room_position + frame_bounds.position * room_scale,
-		frame_bounds.size * room_scale
-	)
-	source_rect.position.x += MERCHANT_INTERACTION_SOURCE_OFFSET_X
-	return source_rect
-
-
-func _get_merchant_interaction_viewport_rect() -> Rect2:
-	if merchant_button != null and merchant_button.size.x > 0.0 and merchant_button.size.y > 0.0:
-		return merchant_button.get_global_rect()
-	return _source_rect_to_viewport(_get_merchant_interaction_source_rect())
+	_merchant_controller.set_layout_scale(_art_scale)
+	_merchant_controller.layout(hub_art_source_offset)
 
 
 func _sync_merchant_presence_state() -> void:
-	if player == null or merchant_sprite == null or not merchant_sprite.visible:
-		_is_player_at_merchant = false
+	if _merchant_controller == null:
 		return
-	if _pending_auto_interaction != "" and _pending_auto_interaction != AUTO_INTERACTION_MERCHANT:
-		return
-	var is_at_merchant := _is_player_in_merchant_position()
-	if is_at_merchant == _is_player_at_merchant:
-		return
-	_is_player_at_merchant = is_at_merchant
-	if is_at_merchant:
-		_play_merchant_arrival_animation()
-	else:
-		_play_merchant_departure_animation()
-
-
-func _is_player_in_merchant_position() -> bool:
-	if player == null or not _should_show_merchant():
-		return false
-	var interaction_rect := _get_merchant_interaction_viewport_rect()
-	if interaction_rect.size.x <= 0.0:
-		return absf(player.global_position.x - _get_merchant_interaction_target_x()) <= _get_merchant_reach_distance()
-	if _is_player_at_merchant:
-		var exit_padding := MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X * _art_scale
-		interaction_rect = interaction_rect.grow_individual(exit_padding, 0.0, exit_padding, 0.0)
-	return _player_overlaps_rect_x(interaction_rect)
-
-
-func _player_overlaps_rect_x(rect: Rect2) -> bool:
-	var player_half_width := _get_player_collision_half_width()
-	return player.global_position.x + player_half_width >= rect.position.x and player.global_position.x - player_half_width <= rect.end.x
+	_merchant_controller.sync_presence_state(_get_run_manager(), _get_pending_auto_interaction(), AUTO_INTERACTION_MERCHANT)
 
 
 func _merchant_interaction_contains_x(global_x: float) -> bool:
-	var interaction_rect := _get_merchant_interaction_viewport_rect()
-	if interaction_rect.size.x <= 0.0:
-		return absf(global_x - _get_merchant_interaction_target_x()) <= _get_merchant_reach_distance()
-	return global_x >= interaction_rect.position.x and global_x <= interaction_rect.end.x
+	return _merchant_controller != null and _merchant_controller.interaction_contains_x(global_x)
+
+
+func _get_pending_auto_interaction() -> String:
+	if _interaction_flow_controller == null:
+		return ""
+	return str(_interaction_flow_controller.get_pending_auto_interaction())
+
+
+func _has_pending_auto_interaction() -> bool:
+	return _interaction_flow_controller != null and _interaction_flow_controller.has_pending_auto_interaction()
+
+
+func _clear_pending_auto_interaction() -> void:
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.clear_pending_auto_interaction()
+
+
+func _set_pending_auto_interaction(value: String) -> void:
+	if _player_controller == null:
+		return
+	_player_controller.pending_auto_interaction = value
+
+
+func _request_player_manual_move(target_x: float) -> bool:
+	if _interaction_flow_controller == null:
+		return false
+	return _interaction_flow_controller.request_manual_move(target_x) == true
 
 
 func _get_player_collision_half_width() -> float:
@@ -579,55 +572,6 @@ func _get_player_collision_half_width() -> float:
 	if rectangle_shape == null:
 		return 0.0
 	return rectangle_shape.size.x * absf(collision_shape.scale.x) * 0.5
-
-
-func _get_merchant_reach_distance() -> float:
-	return maxf(8.0, MERCHANT_INTERACTION_REACH_DISTANCE * _art_scale)
-
-
-func _play_merchant_arrival_animation() -> bool:
-	if not _prepare_merchant_animation():
-		return false
-	merchant_sprite.stop()
-	merchant_sprite.frame = 0
-	merchant_sprite.play(&"idle", 1.0, false)
-	return true
-
-
-func _play_merchant_departure_animation() -> bool:
-	if not _prepare_merchant_animation():
-		return false
-	var last_frame := _get_merchant_last_frame()
-	if last_frame <= 0:
-		return false
-	var start_frame := clampi(merchant_sprite.frame, 0, last_frame)
-	if start_frame <= 0:
-		start_frame = last_frame
-	merchant_sprite.stop()
-	merchant_sprite.frame = start_frame
-	merchant_sprite.play(&"idle", -1.0, false)
-	return true
-
-
-func _prepare_merchant_animation() -> bool:
-	if merchant_sprite == null or not merchant_sprite.visible:
-		return false
-	_apply_merchant_animation(_get_merchant_animation_key())
-	if merchant_sprite.sprite_frames == null or not merchant_sprite.sprite_frames.has_animation("idle"):
-		return false
-	if is_zero_approx(merchant_sprite.speed_scale):
-		merchant_sprite.speed_scale = 1.0
-	else:
-		merchant_sprite.speed_scale = absf(merchant_sprite.speed_scale)
-	return true
-
-
-func _get_merchant_last_frame() -> int:
-	if merchant_sprite == null or merchant_sprite.sprite_frames == null:
-		return 0
-	if not merchant_sprite.sprite_frames.has_animation("idle"):
-		return 0
-	return maxi(0, merchant_sprite.sprite_frames.get_frame_count("idle") - 1)
 
 
 func _load_texture_from_path(path: String) -> Texture2D:
@@ -730,12 +674,15 @@ func _is_route_advance_shortcut(event: InputEvent) -> bool:
 
 
 func _advance_current_route_by_shortcut() -> bool:
-	if _pending_auto_interaction != "" or _is_dreamcatcher_transition_pending:
+	if _has_pending_auto_interaction() or _is_dreamcatcher_transition_pending():
 		return false
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not bool(rm.get("is_run_active")):
 		return false
-	if not rm.has_method("can_enter_route_node") or not rm.can_enter_route_node(int(rm.get("current_route_index"))):
+	if rm.has_method("can_enter_current_route_node"):
+		if not rm.can_enter_current_route_node():
+			return false
+	elif not rm.has_method("can_enter_route_node") or not rm.can_enter_route_node(int(rm.get("current_route_index"))):
 		return false
 
 	var node_type: String = rm.get_current_route_node_type() if rm.has_method("get_current_route_node_type") else ""
@@ -772,9 +719,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		if _activate_hub_dreamcatcher_at_position(event.position):
 			get_viewport().set_input_as_handled()
 			return
-		_pending_auto_interaction = ""
-		if player and player.has_method("move_to_global_x"):
-			player.move_to_global_x(event.position.x)
+		if _request_player_manual_move(event.position.x):
 			get_viewport().set_input_as_handled()
 
 
@@ -800,7 +745,7 @@ func _activate_book_page_tab_at_position(point: Vector2) -> bool:
 
 
 func _activate_hub_dreamcatcher_at_position(point: Vector2) -> bool:
-	if _is_dreamcatcher_transition_pending or not _is_dreamcatcher_game_available():
+	if _is_dreamcatcher_transition_pending() or not _is_dreamcatcher_game_available():
 		return false
 	if not _is_point_on_hub_dreamcatcher(point):
 		return false
@@ -884,52 +829,40 @@ func _is_bookmark_button_hit(button: Button, point: Vector2) -> bool:
 
 
 func _queue_auto_interaction(interaction: String, target_x: float) -> void:
-	_pending_auto_interaction = interaction
-	if player != null and player.has_method("move_to_global_x"):
-		player.move_to_global_x(target_x)
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.queue_auto_interaction(interaction, target_x)
 
 
-func _on_player_move_target_reached(_target_x: float) -> void:
-	var interaction := _pending_auto_interaction
-	_pending_auto_interaction = ""
-	var reached_merchant := (interaction == AUTO_INTERACTION_MERCHANT or interaction == "") and _merchant_interaction_contains_x(_target_x)
-	var played_merchant_arrival := false
-	if reached_merchant and merchant_sprite != null and merchant_sprite.visible:
-		if not _is_player_at_merchant:
-			_is_player_at_merchant = true
-			played_merchant_arrival = _play_merchant_arrival_animation()
-	match interaction:
-		AUTO_INTERACTION_ROUTE:
-			_enter_current_route_node()
-		AUTO_INTERACTION_GALLERY:
-			_enter_gallery()
-		AUTO_INTERACTION_MERCHANT:
-			if _is_merchant_shop_available():
-				if played_merchant_arrival and merchant_sprite != null and merchant_sprite.is_playing():
-					await merchant_sprite.animation_finished
-				if not is_inside_tree() or not _is_player_at_merchant:
-					return
-				_enter_current_route_node()
+func _on_player_move_target_reached(interaction: String, target_x: float) -> void:
+	if _interaction_flow_controller == null:
+		return
+	await _interaction_flow_controller.complete_player_arrival(
+		interaction,
+		target_x,
+		_get_run_manager(),
+		merchant_sprite,
+		Callable(self, "_merchant_interaction_contains_x")
+	)
+
+
+func _get_merchant_interaction_target_x() -> float:
+	if _merchant_controller == null:
+		return 0.0
+	return _merchant_controller.get_interaction_target_x()
 
 
 func _source_x_to_viewport(source_x: float) -> float:
 	return _source_rect_to_viewport(Rect2(Vector2(source_x, 0.0), Vector2.ZERO)).position.x
 
 
-func _get_merchant_interaction_target_x() -> float:
-	if merchant_button != null and merchant_button.size.x > 0.0:
-		return merchant_button.get_global_rect().get_center().x
-	return _source_rect_to_viewport(_get_merchant_interaction_source_rect()).get_center().x
-
-
 func _enter_current_route_node() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm:
 		_enter_route_node(rm.current_route_index)
 
 
 func _enter_route_node(index: int) -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if not rm or not rm.can_enter_route_node(index):
 		print("[Hub] 节点未解锁，无法进入: ", index)
 		return
@@ -1002,6 +935,9 @@ func _open_hub_battle_session() -> void:
 
 	if battle_layer.has_method("setup"):
 		battle_layer.call("setup", battle_manager, Callable(self, "_on_hub_battle_session_closed"))
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager != null and story_manager.has_method("play_current_battle_intro"):
+		story_manager.play_current_battle_intro()
 	else:
 		push_warning("[Hub] BattleLayer does not expose setup().")
 		_cleanup_hub_battle_session()
@@ -1061,14 +997,16 @@ func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 		_update_dreamcatcher_state()
 		_start_hub_dreamcatcher_idle_swing()
 	else:
-		_pending_auto_interaction = ""
+		_clear_pending_auto_interaction()
 		_stop_hub_dreamcatcher_idle_swing()
 		_update_dreamcatcher_state()
 
 
 func _return_dreamcatcher_to_ready_state() -> void:
-	_is_dreamcatcher_transition_pending = false
-	_update_dreamcatcher_state()
+	if _battle_controller != null:
+		_battle_controller.return_to_ready_state(_get_run_manager(), _is_book_hub_current())
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_idle()
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
 	_set_hub_chrome_visible_for_battle(true)
 
@@ -1256,6 +1194,8 @@ func _restore_hub_focus_layer_base_transforms() -> void:
 
 
 func _lock_before_transition() -> void:
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.mark_transitioning()
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
 
 
@@ -1283,31 +1223,17 @@ func _on_main_menu_button_pressed() -> void:
 	_return_to_main_menu()
 
 func _on_route_button_pressed() -> void:
-	_pending_auto_interaction = ""
+	_clear_pending_auto_interaction()
 	_open_book_page(BookPageNavigator.PAGE_HUB)
 
 func _on_dreamcatcher_button_pressed() -> void:
-	if not _is_dreamcatcher_game_available() or _is_dreamcatcher_transition_pending:
+	if _interaction_flow_controller == null:
 		return
-	_is_dreamcatcher_transition_pending = true
-	_update_dreamcatcher_state()
-	await _play_hub_dreamcatcher_start_swing()
-	if not is_inside_tree():
-		return
-	if _is_dreamcatcher_game_available():
-		_enter_current_route_node()
-	else:
-		_is_dreamcatcher_transition_pending = false
-		_update_dreamcatcher_state()
-		_start_hub_dreamcatcher_idle_swing()
+	await _interaction_flow_controller.request_battle_start(_get_run_manager(), _is_book_hub_current(), Callable(self, "_play_hub_dreamcatcher_start_swing"))
 
 func _on_merchant_button_pressed() -> void:
-	if not _is_merchant_shop_available():
-		_pending_auto_interaction = ""
-		if player != null and player.has_method("move_to_global_x"):
-			player.move_to_global_x(_get_merchant_interaction_target_x())
-		return
-	_queue_auto_interaction(AUTO_INTERACTION_MERCHANT, _get_merchant_interaction_target_x())
+	if _interaction_flow_controller != null:
+		_interaction_flow_controller.request_merchant_interaction(_get_run_manager())
 
 func _on_gallery_button_pressed() -> void:
 	_open_book_page(BookPageNavigator.PAGE_GALLERY)
@@ -1444,7 +1370,7 @@ func set_book_hub_visible(page_visible: bool) -> void:
 		_update_dreamcatcher_state()
 		_start_hub_dreamcatcher_idle_swing()
 	else:
-		_pending_auto_interaction = ""
+		_clear_pending_auto_interaction()
 		_stop_hub_dreamcatcher_idle_swing()
 		_update_dreamcatcher_state()
 
@@ -1507,12 +1433,11 @@ func _validated_layout_viewport_size(viewport_size: Vector2) -> Vector2:
 
 
 func _layout_hub_art(viewport_size: Vector2) -> void:
-	_art_scale = DesignScaler.get_scale_factor(viewport_size, _hub_source_size, DesignScaler.SCALE_MODE_CONTAIN)
-	_book_origin = DesignScaler.get_design_origin(viewport_size, _hub_source_size, _art_scale)
-	_art_origin = _book_origin + hub_art_source_offset * _art_scale
-	if hub_art != null:
-		hub_art.position = _art_origin
-		hub_art.scale = Vector2(_art_scale, _art_scale)
+	var metrics := HubLayoutMetrics.calculate(viewport_size, _hub_source_size, hub_art_source_offset)
+	_art_scale = float(metrics.get("scale", 1.0))
+	_book_origin = metrics.get("book_origin", Vector2.ZERO)
+	_art_origin = metrics.get("art_origin", Vector2.ZERO)
+	HubLayoutMetrics.apply_node2d_source_transform(hub_art, _art_origin, _art_scale)
 	if hub_board_viewport != null:
 		var clip_rect := _get_hub_board_source_clip_rect()
 		hub_board_viewport.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
@@ -1583,25 +1508,13 @@ func _get_sprite_parent_rect(sprite: Sprite2D) -> Rect2:
 
 
 func _layout_book_design_root() -> void:
-	if book_design_root == null:
-		return
-	book_design_root.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	book_design_root.position = _book_origin
-	book_design_root.size = _hub_source_size
-	book_design_root.scale = Vector2(_art_scale, _art_scale)
-	if book_background != null:
-		book_background.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-		book_background.position = Vector2.ZERO
-		book_background.size = _hub_source_size
-		book_background.scale = Vector2.ONE
+	HubLayoutMetrics.apply_scaled_control_root(book_design_root, _book_origin, _hub_source_size, _art_scale)
+	HubLayoutMetrics.apply_full_size_control(book_background, _hub_source_size)
 
 func _layout_canvas_design_root() -> void:
 	if canvas_design_root == null:
 		return
-	canvas_design_root.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	canvas_design_root.position = _book_origin
-	canvas_design_root.size = _hub_source_size
-	canvas_design_root.scale = Vector2(_art_scale, _art_scale)
+	HubLayoutMetrics.apply_scaled_control_root(canvas_design_root, _book_origin, _hub_source_size, _art_scale)
 	_layout_hub_back_tab_button()
 	_layout_hub_left_tab_buttons()
 	_layout_hub_world_buttons()
@@ -1698,5 +1611,4 @@ func _layout_player_and_floor(viewport_size: Vector2) -> void:
 
 
 func _source_rect_to_viewport(source_rect: Rect2) -> Rect2:
-	var offset_rect := Rect2(source_rect.position + hub_art_source_offset, source_rect.size)
-	return DesignScaler.design_to_viewport_rect(offset_rect, _get_layout_viewport_size(), _hub_source_size, DesignScaler.SCALE_MODE_CONTAIN)
+	return HubLayoutMetrics.source_rect_to_viewport(source_rect, _get_layout_viewport_size(), _hub_source_size, hub_art_source_offset)

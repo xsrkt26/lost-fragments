@@ -151,13 +151,13 @@ func test_settings_defaults_start_muted() -> void:
 
 	assert_true(bool(SettingsManager.audio_settings["is_muted"]))
 	assert_true(AudioServer.is_bus_mute(0))
-	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_WINDOWED)
+	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN)
 	assert_eq(SettingsManager.display_settings["resolution"], SettingsManager.DEFAULT_RESOLUTION)
 	assert_eq(int(SettingsManager.display_settings["version"]), SettingsManager.DISPLAY_SETTINGS_VERSION)
 
 	_restore_settings(previous_audio, previous_display, previous_game)
 
-func test_legacy_fullscreen_display_settings_migrate_to_windowed_720p() -> void:
+func test_legacy_fullscreen_display_settings_migrate_to_borderless_fullscreen() -> void:
 	var previous_audio := SettingsManager.audio_settings.duplicate(true)
 	var previous_display := SettingsManager.display_settings.duplicate(true)
 	var previous_game := SettingsManager.game_settings.duplicate(true)
@@ -170,7 +170,7 @@ func test_legacy_fullscreen_display_settings_migrate_to_windowed_720p() -> void:
 
 	SettingsManager.load_settings()
 
-	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_WINDOWED)
+	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN)
 	assert_eq(SettingsManager.display_settings["resolution"], SettingsManager.DEFAULT_RESOLUTION)
 	assert_eq(int(SettingsManager.display_settings["version"]), SettingsManager.DISPLAY_SETTINGS_VERSION)
 

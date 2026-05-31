@@ -47,17 +47,22 @@ func _ready():
 	apply_audio_settings()
 	apply_display_settings()
 
-func save_settings():
+func save_settings() -> bool:
 	for key in audio_settings:
 		config.set_value("audio", key, audio_settings[key])
 	for key in display_settings:
 		config.set_value("display", key, display_settings[key])
 	for key in game_settings:
 		config.set_value("game", key, game_settings[key])
-	config.save(SETTINGS_FILE)
+	var err := config.save(SETTINGS_FILE)
+	if err != OK:
+		push_error("[Settings] Failed to save settings %s: %s" % [SETTINGS_FILE, err])
+		return false
 	print("[Settings] 设置已保存至: ", SETTINGS_FILE)
 
-func load_settings():
+	return true
+
+func load_settings() -> bool:
 	var err = config.load(SETTINGS_FILE)
 	if err == OK:
 		for key in audio_settings.keys():
@@ -77,8 +82,13 @@ func load_settings():
 		print("[Settings] 设置已加载")
 		if display_version < DISPLAY_SETTINGS_VERSION:
 			save_settings()
+		return true
 	else:
+		if FileAccess.file_exists(SETTINGS_FILE):
+			push_warning("[Settings] Failed to load settings %s: %s. Defaults remain active." % [SETTINGS_FILE, err])
 		print("[Settings] 未发现旧设置，使用默认配置")
+
+		return false
 
 func apply_audio_settings():
 	_ensure_audio_buses()

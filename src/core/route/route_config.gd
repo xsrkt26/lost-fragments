@@ -44,22 +44,22 @@ static func load_route_table_from_path(path: String = ROUTE_DATA_PATH) -> Dictio
 
 static func _load_route_table_uncached(path: String) -> Dictionary:
 	if not FileAccess.file_exists(path):
-		return _fallback_route_table()
+		return _fallback_route_table("[RouteConfig] Missing route table: " + path)
 
 	var file = FileAccess.open(path, FileAccess.READ)
 	if file == null:
-		return _fallback_route_table()
+		return _fallback_route_table("[RouteConfig] Failed to open route table: " + path)
 
 	var parser = JSON.new()
 	if parser.parse(file.get_as_text()) != OK:
-		return _fallback_route_table()
+		return _fallback_route_table("[RouteConfig] Invalid route table JSON %s: %s" % [path, parser.get_error_message()])
 	var parsed = parser.data
 	if not (parsed is Dictionary):
-		return _fallback_route_table()
+		return _fallback_route_table("[RouteConfig] Route table root must be a dictionary: " + path)
 
 	var normalized = _normalize_route_table(parsed)
 	if normalized.is_empty():
-		return _fallback_route_table()
+		return _fallback_route_table("[RouteConfig] Route table contains no valid routes: " + path)
 	return normalized
 
 static func normalize_route_id(route_id: String, path: String = ROUTE_DATA_PATH) -> String:
@@ -122,7 +122,9 @@ static func get_score_target_rule(node: Dictionary, act: int) -> Dictionary:
 		return {"enabled": true, "target": max(0, int(node.get("target_score", -1)))}
 	return {"enabled": false, "target": -1}
 
-static func _fallback_route_table() -> Dictionary:
+static func _fallback_route_table(reason: String = "") -> Dictionary:
+	if reason != "":
+		push_warning(reason)
 	return {
 		"default_route_id": DEFAULT_ROUTE_ID,
 		"max_act": MAX_ACT,

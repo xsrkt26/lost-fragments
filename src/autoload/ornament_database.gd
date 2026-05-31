@@ -6,33 +6,25 @@ const GenericOrnamentEffect = preload("res://src/core/ornaments/effects/generic_
 
 var ornaments: Dictionary = {}
 
+
 func _ready() -> void:
 	load_all_ornaments()
 
-func load_all_ornaments() -> void:
-	ornaments.clear()
-	if not FileAccess.file_exists(ORNAMENT_DATA_PATH):
-		push_error("[OrnamentDatabase] Missing ornament table: " + ORNAMENT_DATA_PATH)
-		return
 
-	var file = FileAccess.open(ORNAMENT_DATA_PATH, FileAccess.READ)
-	var parsed = JSON.parse_string(file.get_as_text())
-	if not (parsed is Array):
-		push_error("[OrnamentDatabase] Invalid ornament table JSON")
-		return
-
-	for entry in parsed:
-		if not (entry is Dictionary):
-			continue
-		var ornament = _create_ornament_data(entry)
-		if ornament.id != "":
-			ornaments[ornament.id] = ornament
+func load_all_ornaments(path: String = ORNAMENT_DATA_PATH) -> bool:
+	var loaded := _load_ornament_table(path)
+	if loaded.is_empty():
+		return false
+	ornaments = loaded
 	print("[OrnamentDatabase] Loaded ornaments: ", ornaments.size())
+	return true
+
 
 func get_ornament_by_id(ornament_id: String):
 	if ornaments.has(ornament_id):
 		return ornaments[ornament_id].duplicate(true)
 	return null
+
 
 func get_all_ornaments() -> Array:
 	var result: Array = []
@@ -40,12 +32,40 @@ func get_all_ornaments() -> Array:
 		result.append(ornaments[key].duplicate(true))
 	return result
 
+
 func get_available_ornaments(act: int, owned_ids: Array[String] = []) -> Array:
 	var result: Array = []
 	for ornament in ornaments.values():
 		if ornament.enabled and ornament.earliest_act <= act and not owned_ids.has(ornament.id):
 			result.append(ornament.duplicate(true))
 	return result
+
+
+func _load_ornament_table(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_warning("[OrnamentDatabase] Missing ornament table: " + path)
+		return {}
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning("[OrnamentDatabase] Failed to open ornament table: " + path)
+		return {}
+	var parser := JSON.new()
+	var err := parser.parse(file.get_as_text())
+	if err != OK or not (parser.data is Array):
+		push_warning("[OrnamentDatabase] Invalid ornament table JSON: %s (%s)" % [path, parser.get_error_message()])
+		return {}
+
+	var loaded := {}
+	for entry in Array(parser.data):
+		if not (entry is Dictionary):
+			continue
+		var ornament = _create_ornament_data(entry)
+		if ornament.id != "":
+			loaded[ornament.id] = ornament
+	if loaded.is_empty():
+		push_warning("[OrnamentDatabase] Ornament table contains no valid ornaments: " + path)
+	return loaded
+
 
 func _create_ornament_data(entry: Dictionary):
 	var data = OrnamentDataScript.new()
@@ -64,6 +84,7 @@ func _create_ornament_data(entry: Dictionary):
 	data.effect = _create_effect(data.effect_id)
 	return data
 
+
 func _create_effect(effect_id: String):
 	match effect_id:
 		"old_pocket_watch":
@@ -81,6 +102,7 @@ func _create_effect(effect_id: String):
 		effect.effect_id = effect_id
 		return effect
 	return null
+
 
 func _to_string_array(value: Variant) -> Array[String]:
 	var result: Array[String] = []

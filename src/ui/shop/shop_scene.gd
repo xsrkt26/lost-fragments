@@ -1,11 +1,12 @@
 extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const ShopBackpackSellPresenter = preload("res://src/ui/shop/shop_backpack_sell_presenter.gd")
+const ShopIntroController = preload("res://src/ui/shop/shop_intro_controller.gd")
 
 ## 商店场景：允许玩家购买物品和饰品
 
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
-const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SHOP_OFFER_COUNT := ShopGenerator.DEFAULT_OFFER_COUNT
@@ -15,14 +16,23 @@ const SHOP_OFFER_COUNT := ShopGenerator.DEFAULT_OFFER_COUNT
 @onready var shelf = $MarginContainer/VBoxContainer/ScrollContainer/GridContainer
 @onready var refresh_button = $MarginContainer/VBoxContainer/Header/RefreshButton
 @onready var back_button = $MarginContainer/VBoxContainer/Header/BackButton
+@onready var intro_animation_player: AnimationPlayer = get_node_or_null("AnimationPlayer") as AnimationPlayer
 
-var shop_backpack_manager: BackpackManager = null
 var shop_backpack_ui: Control = null
 var sell_hint_label: Label = null
+var _shop_intro_frame_paths := AssetPaths.shop_intro_frame_paths()
+var _sell_presenter := ShopBackpackSellPresenter.new()
+var _intro_controller := ShopIntroController.new()
+var run_manager_override = null
+var item_database_override = null
+var ornament_database_override = null
 
 func _ready():
 	print("[Shop] 欢迎光临梦境商店")
 	GlobalInput.set_context(GlobalInput.Context.UI)
+	_intro_controller.setup(self, intro_animation_player, ShopIntroController.DEFAULT_INTRO_ANIMATION, _shop_intro_frame_paths)
+	_intro_controller.lock_ui()
+	_set_shop_ui_visible(false)
 	if not resized.is_connected(_layout_design_root):
 		resized.connect(_layout_design_root)
 	_ensure_shop_layout()
@@ -34,22 +44,35 @@ func _ready():
 	
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	back_button.pressed.connect(_on_back_pressed)
+	call_deferred("_play_shop_intro_and_unlock")
 
 func _input(event):
+	if _intro_controller.is_ui_locked():
+		return
 	# 输入权限检查
 	if not GlobalInput.can_cancel(): return
 
 	if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
 		_on_back_pressed()
 
+
+func _play_shop_intro_and_unlock() -> void:
+	await _intro_controller.play_intro_and_unlock()
+	_set_shop_ui_visible(true)
+
+
+func _set_shop_ui_visible(visible_state: bool) -> void:
+	if design_root != null:
+		design_root.visible = visible_state
+
 func _update_shard_display():
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm:
 		shard_label.text = "碎片: " + str(rm.current_shards)
 	_update_refresh_button()
 
 func _update_refresh_button() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not rm.has_method("get_current_shop_refresh_cost"):
 		refresh_button.disabled = true
 		return
@@ -112,9 +135,9 @@ func _layout_design_root() -> void:
 	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
 
 func _populate_shelf():
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
+	var ornament_db = _get_ornament_database()
 	if rm == null or item_db == null:
 		return
 	
@@ -159,8 +182,8 @@ func _format_item_destination(offer: Dictionary) -> String:
 
 func _buy_offer(offer: Dictionary, button: Button):
 	GlobalTooltip.hide()
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
 	if rm and rm.has_method("buy_shop_offer") and rm.buy_shop_offer(offer, item_db):
 		print("[Shop] 购买成功: ", offer.get("title", ""))
 		button.disabled = true
@@ -177,7 +200,7 @@ func _refresh_offer_buttons() -> void:
 			child.text = _format_offer_text(child.get_meta("offer"))
 
 func _get_offer_price(offer: Dictionary) -> int:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.has_method("get_current_shop_offer_price"):
 		return rm.get_current_shop_offer_price(offer)
 	return int(offer.get("price", 0))
@@ -186,7 +209,7 @@ func _show_offer_tooltip(offer: Dictionary) -> void:
 	if str(offer.get("type", "")) != "item":
 		GlobalTooltip.hide()
 		return
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var item_db = _get_item_database()
 	var item = item_db.get_item_by_id(str(offer.get("id", ""))) if item_db and item_db.has_method("get_item_by_id") else null
 	if item:
 		GlobalTooltip.show_item(item)
@@ -199,53 +222,11 @@ func _hide_offer_tooltip() -> void:
 func _render_backpack_for_sale() -> void:
 	if shop_backpack_ui == null:
 		return
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
 	if rm == null or item_db == null:
 		return
-	if shop_backpack_manager == null:
-		shop_backpack_manager = BackpackManager.new()
-		add_child(shop_backpack_manager)
-
-	var config = rm.get_backpack_grid_config() if rm.has_method("get_backpack_grid_config") else {}
-	shop_backpack_manager.setup_grid(
-		int(config.get("grid_width", 7)),
-		int(config.get("grid_height", 7)),
-		int(config.get("usable_width", 5)),
-		int(config.get("usable_height", 5))
-	)
-	if shop_backpack_manager.has_method("set_blocked_cells"):
-		shop_backpack_manager.set_blocked_cells(_to_vector2i_array(config.get("blocked_cells", [])))
-	if rm.has_method("restore_backpack_state"):
-		rm.restore_backpack_state(shop_backpack_manager, item_db)
-
-	if shop_backpack_ui.has_method("clear_item_visuals"):
-		shop_backpack_ui.clear_item_visuals()
-	shop_backpack_ui.set("manager", shop_backpack_manager)
-	if shop_backpack_ui.has_method("_refresh_grid"):
-		shop_backpack_ui._refresh_grid()
-
-	for instance in shop_backpack_manager.get_all_instances():
-		if instance == null or instance.data == null:
-			continue
-		var card := ItemUIScene.instantiate() as Control
-		if card == null:
-			continue
-		card.setup(instance.data)
-		card.set("item_instance", instance)
-		var runtime_id := int(instance.data.runtime_id)
-		card.gui_input.connect(func(event): _on_shop_backpack_item_gui_input(event, runtime_id))
-		if shop_backpack_ui.has_method("add_item_visual"):
-			shop_backpack_ui.add_item_visual(card, instance.root_pos)
-
-func _to_vector2i_array(value: Variant) -> Array[Vector2i]:
-	var result: Array[Vector2i] = []
-	for entry in Array(value):
-		if entry is Vector2i:
-			result.append(entry)
-		elif entry is Dictionary:
-			result.append(Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0))))
-	return result
+	_sell_presenter.render(self, shop_backpack_ui, rm, item_db, Callable(self, "_on_shop_backpack_item_gui_input"))
 
 func _on_shop_backpack_item_gui_input(event: InputEvent, runtime_id: int) -> void:
 	if not (event is InputEventMouseButton):
@@ -259,8 +240,8 @@ func _on_shop_backpack_item_gui_input(event: InputEvent, runtime_id: int) -> voi
 		get_viewport().set_input_as_handled()
 
 func _sell_backpack_item(runtime_id: int) -> bool:
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
 	if rm == null or not rm.has_method("sell_backpack_item"):
 		return false
 	var gained := int(rm.sell_backpack_item(runtime_id, item_db))
@@ -273,9 +254,9 @@ func _sell_backpack_item(runtime_id: int) -> bool:
 
 func _on_refresh_pressed() -> void:
 	GlobalTooltip.hide()
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
+	var ornament_db = _get_ornament_database()
 	if rm == null or item_db == null or not rm.has_method("refresh_current_shop_offers"):
 		return
 	rm.refresh_current_shop_offers(item_db, ornament_db, SHOP_OFFER_COUNT)
@@ -284,10 +265,25 @@ func _on_refresh_pressed() -> void:
 
 func _on_back_pressed():
 	GlobalTooltip.hide()
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.get_current_route_node_type() == RouteConfig.NODE_SHOP:
 		rm.advance_route_node()
 		var next_scene = GlobalScene.SceneType.MAIN_MENU if rm.is_run_complete else GlobalScene.SceneType.HUB
 		GlobalScene.transition_to(next_scene, false)
 	else:
 		GlobalScene.go_back()
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
+
+func _get_item_database():
+	if item_database_override != null:
+		return item_database_override
+	return get_node_or_null("/root/ItemDatabase")
+
+func _get_ornament_database():
+	if ornament_database_override != null:
+		return ornament_database_override
+	return get_node_or_null("/root/OrnamentDatabase")

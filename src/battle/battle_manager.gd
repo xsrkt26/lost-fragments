@@ -21,6 +21,12 @@ enum BattleState {
 
 var backpack_manager: BackpackManager
 var context: GameContext
+var game_state_override = null
+var run_manager_override = null
+var item_database_override = null
+var tool_database_override = null
+var ornament_database_override = null
+var event_bus_override = null
 var backpack_ui: Control: # 保持 Control 以兼容 Mock 测试
 	set(v):
 		backpack_ui = v
@@ -60,7 +66,7 @@ var _battle_modifiers: Dictionary = {}
 func _ready():
 	print("[BattleManager] 节点就绪")
 	# 初始化上下文（依赖注入）
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	context = GameContext.new(gs, self)
 	if gs and not gs.game_over.is_connected(_try_consume_insurance_contract):
 		gs.game_over.connect(_try_consume_insurance_contract)
@@ -80,7 +86,7 @@ func _exit_tree():
 
 func _initialize_battle_data():
 	print("[BattleManager] 正在从 RunManager 初始化战斗数据...")
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm:
 		_battle_modifiers = rm.get_current_battle_modifiers() if rm.has_method("get_current_battle_modifiers") else {}
 		_apply_backpack_grid_config(rm)
@@ -93,8 +99,8 @@ func _initialize_battle_data():
 		print("[BattleManager] 警告: 未找到 RunManager，使用空卡包运行。")
 
 func _make_battle_deck_from_run(rm) -> Array[String]:
-	var item_db = get_node_or_null("/root/ItemDatabase")
-	var tool_db = get_node_or_null("/root/ToolDatabase")
+	var item_db = _get_item_database()
+	var tool_db = _get_tool_database()
 	if item_db != null and rm.has_method("build_current_draw_deck"):
 		var generated_deck = rm.build_current_draw_deck(item_db, ItemDrawPool.DEFAULT_DECK_SIZE, true)
 		if not generated_deck.is_empty():
@@ -127,7 +133,7 @@ func _inject_tools_into_battle_deck(item_deck: Array[String], rm: Node, tool_db:
 
 func _refill_battle_deck_from_run(rm = null) -> void:
 	if rm == null:
-		rm = get_node_or_null("/root/RunManager")
+		rm = _get_run_manager()
 	if rm == null:
 		_current_battle_deck.clear()
 		return
@@ -163,7 +169,7 @@ func _load_ornaments_from_run(rm) -> void:
 	active_ornaments.clear()
 	if rm == null:
 		return
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var ornament_db = _get_ornament_database()
 	if ornament_db == null:
 		return
 	for ornament_id in rm.current_ornaments:
@@ -173,7 +179,7 @@ func _load_ornaments_from_run(rm) -> void:
 		active_ornaments.append({"data": ornament, "state": {}})
 
 func _connect_ornament_bus() -> void:
-	var bus = get_node_or_null("/root/GlobalEventBus")
+	var bus = _get_event_bus()
 	if bus == null:
 		return
 	if not bus.seed_sown.is_connected(_on_ornament_seed_sown):
@@ -186,7 +192,7 @@ func _connect_ornament_bus() -> void:
 		bus.pollution_changed.connect(_on_ornament_pollution_changed)
 
 func _disconnect_ornament_bus() -> void:
-	var bus = get_node_or_null("/root/GlobalEventBus")
+	var bus = _get_event_bus()
 	if bus == null:
 		return
 	if bus.seed_sown.is_connected(_on_ornament_seed_sown):
@@ -201,13 +207,13 @@ func _disconnect_ornament_bus() -> void:
 func _restore_backpack_from_run(rm) -> void:
 	if rm == null or not rm.has_method("restore_backpack_state"):
 		return
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var item_db = _get_item_database()
 	rm.restore_backpack_state(backpack_manager, item_db)
 
 func persist_backpack_to_run() -> void:
 	if not is_inside_tree():
 		return
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.has_method("save_backpack_state"):
 		rm.save_backpack_state(backpack_manager)
 
@@ -221,7 +227,7 @@ func apply_sanity_loss(amount: int, reason: String = "effect", item_data: ItemDa
 		if ornament != null and ornament.effect != null:
 			modified_amount = ornament.effect.modify_sanity_loss(modified_amount, reason, item_data, context, state)
 			modified_amount = max(0, modified_amount)
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		gs.consume_sanity(modified_amount)
 	return modified_amount
@@ -253,22 +259,22 @@ func refresh_ornament_once(ornament_id: String) -> bool:
 func request_use_tool(tool_id: String, target: Dictionary) -> bool:
 	if battle_state != BattleState.INTERACTIVE:
 		return false
-	var rm = get_node_or_null("/root/RunManager")
-	var tool_db = get_node_or_null("/root/ToolDatabase")
+	var rm = _get_run_manager()
+	var tool_db = _get_tool_database()
 	if rm == null or tool_db == null or not rm.has_method("get_tool_count") or rm.get_tool_count(tool_id) <= 0:
 		return false
 	var tool = tool_db.get_tool_by_id(tool_id) if tool_db.has_method("get_tool_by_id") else null
 	if tool == null:
 		return false
-	var item_db = get_node_or_null("/root/ItemDatabase")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var item_db = _get_item_database()
+	var ornament_db = _get_ornament_database()
 	var result = ToolEffectScript.apply_tool(tool, target, self, rm, item_db, ornament_db)
 	if not bool(result.get("success", false)):
 		return false
 	if not rm.consume_tool(tool_id, 1):
 		return false
 	_apply_ornament_tool_used(tool, target, result)
-	var bus = get_node_or_null("/root/GlobalEventBus")
+	var bus = _get_event_bus()
 	if bus:
 		bus.tool_used.emit(tool, target, result)
 	persist_backpack_to_run()
@@ -361,7 +367,7 @@ func request_place_item(item_ui: Control, grid_pos: Vector2i):
 	backpack_manager.place_item(item_data, grid_pos)
 	GlobalAudio.play_sfx("place")
 	
-	var bus = get_node_or_null("/root/GlobalEventBus")
+	var bus = _get_event_bus()
 	if bus:
 		bus.item_placed.emit(backpack_manager.grid[grid_pos])
 	
@@ -419,7 +425,7 @@ func request_discard_item(item_ui: Control):
 			effect.on_discard(item_data, context)
 	_apply_ornament_item_discarded(item_data, old_instance, old_instance != null)
 	_apply_tool_item_discarded(item_data, old_instance, old_instance != null)
-	var bus = get_node_or_null("/root/GlobalEventBus")
+	var bus = _get_event_bus()
 	if bus:
 		bus.item_discarded.emit(item_data)
 
@@ -696,7 +702,7 @@ func request_draw():
 	var deck_entry := str(_current_battle_deck.pop_back())
 	if ToolDrawPool.is_tool_entry(deck_entry):
 		var tool_id := ToolDrawPool.tool_id_from_entry(deck_entry)
-		var tool_db = get_node_or_null("/root/ToolDatabase")
+		var tool_db = _get_tool_database()
 		var tool = tool_db.get_tool_by_id(tool_id) if tool_db != null and tool_db.has_method("get_tool_by_id") else null
 		if tool:
 			battle_state = BattleState.RESOLVING
@@ -706,7 +712,7 @@ func request_draw():
 		return
 
 	var item_id = deck_entry
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var item_db = _get_item_database()
 	var item = item_db.get_item_by_id(item_id)
 	if item:
 		battle_state = BattleState.RESOLVING
@@ -720,7 +726,7 @@ func _process_new_item_acquisition(item: ItemData):
 	draw_count += 1
 	
 	# 扣除捕梦梦值
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		var base_cost = 0
 		if item.base_cost == -1:
@@ -754,7 +760,7 @@ func _process_new_tool_acquisition(tool_data) -> void:
 	if tool_data == null:
 		return
 	draw_count += 1
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		var cost = 1 + max(0, draw_count - 1)
 		cost = max(1, cost + int(_battle_modifiers.get("draw_cost_delta", 0)))
@@ -763,16 +769,16 @@ func _process_new_tool_acquisition(tool_data) -> void:
 			_next_draw_cost_discount = 0
 		var actual_cost = apply_sanity_loss(cost, "draw", null)
 		print("[BattleManager] 捕梦道具消耗: ", actual_cost, " (原始: ", cost, ") | 当前捕梦次数: ", draw_count)
-	var rm = get_node_or_null("/root/RunManager")
-	var tool_db = get_node_or_null("/root/ToolDatabase")
+	var rm = _get_run_manager()
+	var tool_db = _get_tool_database()
 	if rm != null and rm.has_method("grant_tool"):
 		rm.grant_tool(str(tool_data.id), 1, tool_db, "draw", true)
 	_apply_ornament_item_drawn(null)
 	print("[BattleManager] 捕梦获得道具: ", tool_data.tool_name, " (", tool_data.id, ")")
 
 func _try_consume_insurance_contract():
-	var gs = get_node_or_null("/root/GameState")
-	var rm = get_node_or_null("/root/RunManager")
+	var gs = _get_game_state()
+	var rm = _get_run_manager()
 	if gs == null or rm == null:
 		return
 	if rm.has_method("current_battle_has_score_target") and not rm.current_battle_has_score_target():
@@ -868,7 +874,7 @@ func _apply_tool_item_discarded(item_data: ItemData, old_instance: BackpackManag
 		if context != null:
 			context.change_sanity(2)
 		if item_data != null and item_data.id == "apple":
-			var item_db = get_node_or_null("/root/ItemDatabase")
+			var item_db = _get_item_database()
 			if item_db != null:
 				backpack_manager.sow_seed(old_instance, old_instance.data.direction, item_db, 1)
 
@@ -876,8 +882,8 @@ func _apply_tool_item_discarded(item_data: ItemData, old_instance: BackpackManag
 		_tool_recycling_clip_pending -= 1
 		if context != null:
 			context.add_score(8)
-		var rm = get_node_or_null("/root/RunManager")
-		var item_db = get_node_or_null("/root/ItemDatabase")
+		var rm = _get_run_manager()
+		var item_db = _get_item_database()
 		if rm != null and rm.has_method("grant_item"):
 			rm.grant_item("paper_ball", "deck", item_db, "recycling_clip")
 
@@ -995,7 +1001,7 @@ func _find_item_old_pos(item_data: ItemData) -> Vector2i:
 	return Vector2i(-1, -1)
 
 func debug_get_item(item_id: String):
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var item_db = _get_item_database()
 	if item_db:
 		var item = item_db.get_item_by_id(item_id)
 		if item:
@@ -1032,3 +1038,33 @@ func _settle_interactive_state() -> void:
 func _emit_finish_requested(reason: String) -> void:
 	battle_state = BattleState.FINISHING
 	battle_finish_requested.emit(reason)
+
+func _get_game_state():
+	if game_state_override != null:
+		return game_state_override
+	return get_node_or_null("/root/GameState")
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
+
+func _get_item_database():
+	if item_database_override != null:
+		return item_database_override
+	return get_node_or_null("/root/ItemDatabase")
+
+func _get_tool_database():
+	if tool_database_override != null:
+		return tool_database_override
+	return get_node_or_null("/root/ToolDatabase")
+
+func _get_ornament_database():
+	if ornament_database_override != null:
+		return ornament_database_override
+	return get_node_or_null("/root/OrnamentDatabase")
+
+func _get_event_bus():
+	if event_bus_override != null:
+		return event_bus_override
+	return get_node_or_null("/root/GlobalEventBus")

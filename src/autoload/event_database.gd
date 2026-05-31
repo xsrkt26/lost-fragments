@@ -5,33 +5,25 @@ const EventDataScript = preload("res://src/core/events/event_data.gd")
 
 var events: Dictionary = {}
 
+
 func _ready() -> void:
 	load_all_events()
 
-func load_all_events() -> void:
-	events.clear()
-	if not FileAccess.file_exists(EVENT_DATA_PATH):
-		push_error("[EventDatabase] Missing event table: " + EVENT_DATA_PATH)
-		return
 
-	var file = FileAccess.open(EVENT_DATA_PATH, FileAccess.READ)
-	var parsed = JSON.parse_string(file.get_as_text())
-	if not (parsed is Array):
-		push_error("[EventDatabase] Invalid event table JSON")
-		return
-
-	for entry in parsed:
-		if not (entry is Dictionary):
-			continue
-		var event_data = _create_event_data(entry)
-		if event_data.id != "":
-			events[event_data.id] = event_data
+func load_all_events(path: String = EVENT_DATA_PATH) -> bool:
+	var loaded := _load_event_table(path)
+	if loaded.is_empty():
+		return false
+	events = loaded
 	print("[EventDatabase] Loaded events: ", events.size())
+	return true
+
 
 func get_event_by_id(event_id: String):
 	if events.has(event_id):
 		return _with_event_choice_context(events[event_id].duplicate(true))
 	return null
+
 
 func get_all_events() -> Array:
 	var result: Array = []
@@ -40,6 +32,7 @@ func get_all_events() -> Array:
 	result.sort_custom(func(a, b): return a.id < b.id)
 	return result
 
+
 func get_available_events(act: int, excluded_ids: Array = []) -> Array:
 	var result: Array = []
 	for event_data in events.values():
@@ -47,6 +40,7 @@ func get_available_events(act: int, excluded_ids: Array = []) -> Array:
 			result.append(_with_event_choice_context(event_data.duplicate(true)))
 	result.sort_custom(func(a, b): return a.id < b.id)
 	return result
+
 
 func pick_event_for_run(run_manager: Node, rng: RandomNumberGenerator = null):
 	var act = 1
@@ -74,6 +68,33 @@ func pick_event_for_run(run_manager: Node, rng: RandomNumberGenerator = null):
 			return picked.get("event")
 	return available[(act + route_index) % available.size()]
 
+
+func _load_event_table(path: String) -> Dictionary:
+	if not FileAccess.file_exists(path):
+		push_warning("[EventDatabase] Missing event table: " + path)
+		return {}
+	var file = FileAccess.open(path, FileAccess.READ)
+	if file == null:
+		push_warning("[EventDatabase] Failed to open event table: " + path)
+		return {}
+	var parser := JSON.new()
+	var err := parser.parse(file.get_as_text())
+	if err != OK or not (parser.data is Array):
+		push_warning("[EventDatabase] Invalid event table JSON: %s (%s)" % [path, parser.get_error_message()])
+		return {}
+
+	var loaded := {}
+	for entry in Array(parser.data):
+		if not (entry is Dictionary):
+			continue
+		var event_data = _create_event_data(entry)
+		if event_data.id != "":
+			loaded[event_data.id] = event_data
+	if loaded.is_empty():
+		push_warning("[EventDatabase] Event table contains no valid events: " + path)
+	return loaded
+
+
 func _create_event_data(entry: Dictionary):
 	var data = EventDataScript.new()
 	data.id = str(entry.get("id", ""))
@@ -87,12 +108,14 @@ func _create_event_data(entry: Dictionary):
 	data.choices = _to_dictionary_array(entry.get("choices", []))
 	return data
 
+
 func _to_dictionary_array(value: Variant) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	for entry in Array(value):
 		if entry is Dictionary:
-			result.append(entry)
+			result.append(Dictionary(entry).duplicate(true))
 	return result
+
 
 func _with_event_choice_context(event_data):
 	if event_data == null:
@@ -104,6 +127,7 @@ func _with_event_choice_context(event_data):
 		choices.append(next_choice)
 	event_data.choices = choices
 	return event_data
+
 
 func _get_event_weight(event_data, run_manager: Node) -> float:
 	var weight = max(0.0, float(event_data.weight))
@@ -118,6 +142,7 @@ func _get_event_weight(event_data, run_manager: Node) -> float:
 		weight *= 1.0 + (reward - risk) * 0.35
 	weight += _get_tag_affinity(event_data.tags, run_manager)
 	return max(0.01, weight)
+
 
 func _get_tag_affinity(event_tags: Array[String], run_manager: Node) -> float:
 	if run_manager == null:
@@ -139,6 +164,7 @@ func _get_tag_affinity(event_tags: Array[String], run_manager: Node) -> float:
 				if backpack_width < 7 or backpack_height < 7:
 					affinity += 0.25
 	return affinity
+
 
 func _to_string_array(value: Variant) -> Array[String]:
 	var result: Array[String] = []

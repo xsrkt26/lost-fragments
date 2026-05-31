@@ -1,6 +1,8 @@
 extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const PendingItemPresenter = preload("res://src/ui/backpack/pending_item_presenter.gd")
+const ToolPanelPresenter = preload("res://src/ui/battle/tool_panel_presenter.gd")
 
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
@@ -61,6 +63,11 @@ const STATS_SCORE_REACHED_COLOR := Color(0.2, 0.8, 0.2)
 @export_range(0.01, 0.4, 0.01) var trash_drop_scale_duration := 0.11
 
 var battle_manager: BattleManager
+var game_state_override = null
+var run_manager_override = null
+var item_database_override = null
+var tool_database_override = null
+var ornament_database_override = null
 var _is_battle_ended: bool = false
 var _draw_locked: bool = false
 var _dreamcatcher_net_base_position := Vector2.ZERO
@@ -486,7 +493,7 @@ func setup(p_battle_manager: BattleManager, embedded_return_callback: Callable =
 	_select_active_backpack_ui()
 	_apply_stage_visuals()
 
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		gs.reset_game()
 
@@ -507,7 +514,7 @@ func setup(p_battle_manager: BattleManager, embedded_return_callback: Callable =
 	_connect_tool_inventory_signal()
 	_render_tools()
 
-	gs = get_node_or_null("/root/GameState")
+	gs = _get_game_state()
 	if gs:
 		if gs.sanity_changed.is_connected(_on_sanity_changed): gs.sanity_changed.disconnect(_on_sanity_changed)
 		if gs.score_changed.is_connected(_on_score_changed): gs.score_changed.disconnect(_on_score_changed)
@@ -685,7 +692,7 @@ func _kill_trash_bin_tween() -> void:
 	_trash_bin_tween = null
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not rm.has_method("get_current_stage_visual"):
 		return fallback
 	var visual = rm.get_current_stage_visual()
@@ -693,7 +700,7 @@ func _get_stage_bgm_key(key: String, fallback: String) -> String:
 	return bgm_key if bgm_key != "" else fallback
 
 func _apply_stage_visuals() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm == null or not rm.has_method("get_current_stage_visual"):
 		return
 	var visual = rm.get_current_stage_visual()
@@ -769,7 +776,7 @@ func _layout_content_layer_as_fixed_frame(base_size: Vector2, cover_viewport: bo
 
 func _on_game_over():
 	if _is_battle_ended: return
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if gs and gs.current_sanity > 0:
 		return
 	print("[MainGameUI] 收到梦值归零信号，正在按当前战斗规则结算...")
@@ -817,8 +824,8 @@ func _show_result_popup(is_victory: bool):
 	var btn = popup.get_node("%ConfirmButton")
 
 	# 设置文本
-	var gs = get_node("/root/GameState")
-	var rm = get_node_or_null("/root/RunManager")
+	var gs = _get_game_state()
+	var rm = _get_run_manager()
 	var score_rule = _get_current_score_rule()
 	var target_text = _format_target_text(score_rule.has_target, score_rule.target)
 
@@ -847,13 +854,13 @@ func _show_result_popup(is_victory: bool):
 func _get_reward_options(rm) -> Array[Dictionary]:
 	if rm == null or not rm.has_method("generate_current_reward_options"):
 		return []
-	var item_db = get_node_or_null("/root/ItemDatabase")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var item_db = _get_item_database()
+	var ornament_db = _get_ornament_database()
 	var option_count = 4 if _has_empty_dream_trophy_bonus(rm) else 3
 	return rm.generate_current_reward_options(item_db, ornament_db, option_count)
 
 func _has_empty_dream_trophy_bonus(rm) -> bool:
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	if rm == null or gs == null:
 		return false
 	if rm.has_method("has_empty_dream_trophy_reward_bonus"):
@@ -885,7 +892,7 @@ func _add_reward_choices(popup: Control, reward_options: Array[Dictionary], rm) 
 		reward_button.tooltip_text = str(reward.get("description", ""))
 		reward_button.pressed.connect(func():
 			if rm and rm.has_method("apply_reward"):
-				var item_db = get_node_or_null("/root/ItemDatabase")
+				var item_db = _get_item_database()
 				rm.apply_reward(reward, item_db)
 			_complete_victory_route(rm)
 		)
@@ -982,39 +989,22 @@ func _render_existing_backpack_items():
 func _render_pending_items():
 	if pending_item_panel == null or pending_item_area == null:
 		return
-	for child in pending_item_area.get_children():
-		child.queue_free()
-	var rm = get_node_or_null("/root/RunManager")
-	var item_db = get_node_or_null("/root/ItemDatabase")
+	var rm = _get_run_manager()
+	var item_db = _get_item_database()
 	if rm == null or item_db == null or not rm.has_method("get_pending_item_rewards"):
-		pending_item_panel.hide()
+		PendingItemPresenter.clear(pending_item_panel, pending_item_area)
 		return
 	var pending_items = rm.get_pending_item_rewards()
-	pending_item_panel.visible = not pending_items.is_empty()
-	if pending_items.is_empty():
-		return
-	var item_ui_scene = load("res://src/ui/item/item_ui.tscn")
-	var index := 0
-	for entry in pending_items:
-		var item_data = item_db.get_item_by_id(str(entry.get("id", ""))) if item_db.has_method("get_item_by_id") else null
-		if item_data == null:
-			continue
-		var card = item_ui_scene.instantiate()
-		pending_item_area.add_child(card)
-		card.setup(item_data, battle_manager.context)
-		card.set_meta("pending_item_uid", int(entry.get("uid", -1)))
-		card.scale = Vector2(0.58, 0.58)
-		card.position = Vector2(12 + index * 92, 24)
-		_connect_item_ui_signals(card)
-		index += 1
+	var card_context = battle_manager.context if battle_manager != null else null
+	PendingItemPresenter.render(pending_item_panel, pending_item_area, pending_items, item_db, card_context, Callable(self, "_connect_item_ui_signals"))
 
 func _render_ornaments():
 	if ornaments_area == null:
 		return
 	for child in ornaments_area.get_children():
 		child.queue_free()
-	var rm = get_node_or_null("/root/RunManager")
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	var rm = _get_run_manager()
+	var ornament_db = _get_ornament_database()
 	if rm == null or ornament_db == null:
 		return
 	for ornament_id in rm.current_ornaments:
@@ -1037,7 +1027,7 @@ func _ensure_tool_panel() -> void:
 		push_warning("[MainGameUI] ToolPanel/ToolSlots missing from main_game_ui.tscn.")
 
 func _connect_tool_inventory_signal() -> void:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm != null and rm.has_signal("tools_changed") and not rm.tools_changed.is_connected(_on_tools_changed):
 		rm.tools_changed.connect(_on_tools_changed)
 
@@ -1048,30 +1038,15 @@ func _render_tools() -> void:
 	_ensure_tool_panel()
 	if tool_panel == null or tool_slot_area == null:
 		return
-	for child in tool_slot_area.get_children():
-		child.queue_free()
-	var rm = get_node_or_null("/root/RunManager")
-	var tool_db = get_node_or_null("/root/ToolDatabase")
+	var rm = _get_run_manager()
+	var tool_db = _get_tool_database()
 	if rm == null or tool_db == null or not rm.has_method("get_tool_inventory_entries"):
-		tool_panel.hide()
+		ToolPanelPresenter.clear(tool_panel, tool_slot_area)
 		return
 	var entries = rm.get_tool_inventory_entries(tool_db)
-	tool_panel.visible = not entries.is_empty()
 	if entries.is_empty():
 		_selected_tool_id = ""
-		return
-	for entry in entries:
-		var tool_id = str(entry.get("id", ""))
-		var tool = tool_db.get_tool_by_id(tool_id) if tool_db.has_method("get_tool_by_id") else null
-		var button = Button.new()
-		button.custom_minimum_size = Vector2(72, 56)
-		button.focus_mode = Control.FOCUS_NONE
-		button.text = "%s\nx%d" % [str(entry.get("title", tool_id)).substr(0, 4), int(entry.get("count", 0))]
-		button.tooltip_text = tool.get_tooltip_text(int(entry.get("count", 0))) if tool != null else str(entry.get("description", ""))
-		button.set_meta("tool_id", tool_id)
-		button.gui_input.connect(func(event): _on_tool_button_gui_input(event, tool_id, button))
-		tool_slot_area.add_child(button)
-	_update_tool_selection_visuals()
+	ToolPanelPresenter.render(tool_panel, tool_slot_area, entries, tool_db, _selected_tool_id, Callable(self, "_on_tool_button_gui_input"))
 	_layout_current_scene()
 
 func _set_selected_tool(tool_id: String) -> void:
@@ -1079,12 +1054,7 @@ func _set_selected_tool(tool_id: String) -> void:
 	_update_tool_selection_visuals()
 
 func _update_tool_selection_visuals() -> void:
-	if tool_slot_area == null:
-		return
-	for child in tool_slot_area.get_children():
-		if child is Button:
-			var is_selected = str(child.get_meta("tool_id", "")) == _selected_tool_id
-			child.modulate = Color(1.0, 0.92, 0.55) if is_selected else Color.WHITE
+	ToolPanelPresenter.update_selection_visuals(tool_slot_area, _selected_tool_id)
 
 func _on_tool_button_gui_input(event: InputEvent, tool_id: String, button: Button) -> void:
 	if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT:
@@ -1191,7 +1161,7 @@ func _consume_pending_item_if_placed(item_ui: Control) -> void:
 		return
 	if item_ui.get("item_instance") == null:
 		return
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.has_method("consume_pending_item"):
 		rm.consume_pending_item(int(item_ui.get_meta("pending_item_uid")))
 	item_ui.remove_meta("pending_item_uid")
@@ -1305,8 +1275,8 @@ func _evaluate_and_end_battle():
 func _finish_battle_from_current_state():
 	if _is_battle_ended: return
 
-	var gs = get_node("/root/GameState")
-	var rm = get_node_or_null("/root/RunManager")
+	var gs = _get_game_state()
+	var rm = _get_run_manager()
 	var score_rule = _get_current_score_rule()
 
 	print("[MainGameUI] 正在结束战斗. 当前得分: ", gs.current_score, " 目标: ", _format_target_text(score_rule.has_target, score_rule.target))
@@ -1325,12 +1295,12 @@ func _return_to_hub():
 	_return_to_scene_with_embedded_support(GlobalScene.SceneType.HUB, false)
 
 func _on_sanity_changed(new_val):
-	var gs = get_node("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		_update_stats_display(new_val, gs.current_score)
 
 func _on_score_changed(new_val):
-	var gs = get_node("/root/GameState")
+	var gs = _get_game_state()
 	if gs:
 		_update_stats_display(gs.current_sanity, new_val)
 	_try_request_boss_finish_on_target_reached(new_val)
@@ -1340,7 +1310,7 @@ func _try_request_boss_finish_on_target_reached(score: int, run_manager = null) 
 		return
 	if battle_manager.battle_state == BattleManager.BattleState.FINISHING or battle_manager.battle_state == BattleManager.BattleState.FINISHED:
 		return
-	var rm = run_manager if run_manager != null else get_node_or_null("/root/RunManager")
+	var rm = run_manager if run_manager != null else _get_run_manager()
 	if rm == null or not rm.has_method("get_current_battle_config"):
 		return
 	var config = rm.get_current_battle_config()
@@ -1352,7 +1322,7 @@ func _try_request_boss_finish_on_target_reached(score: int, run_manager = null) 
 	battle_manager.request_finish_battle("score_target_reached")
 
 func _update_stats_display(san, score):
-	var gs = get_node_or_null("/root/GameState")
+	var gs = _get_game_state()
 	var score_rule = _get_current_score_rule()
 	var max_san = gs.max_sanity if gs else 100
 	_apply_stats_display(san, score, max_san, score_rule)
@@ -1416,7 +1386,7 @@ func _set_stat_label_text(label: Label, text: String, base_font_size: int, full_
 	label.add_theme_font_size_override("font_size", font_size)
 
 func _get_current_score_rule() -> Dictionary:
-	var rm = get_node_or_null("/root/RunManager")
+	var rm = _get_run_manager()
 	if rm and rm.has_method("get_current_battle_config"):
 		var config = rm.get_current_battle_config()
 		return {
@@ -1432,3 +1402,28 @@ func _format_target_text(has_target: bool, target: int) -> String:
 	if not has_target or target < 0:
 		return "无"
 	return str(target)
+
+func _get_game_state():
+	if game_state_override != null:
+		return game_state_override
+	return get_node_or_null("/root/GameState")
+
+func _get_run_manager():
+	if run_manager_override != null:
+		return run_manager_override
+	return get_node_or_null("/root/RunManager")
+
+func _get_item_database():
+	if item_database_override != null:
+		return item_database_override
+	return get_node_or_null("/root/ItemDatabase")
+
+func _get_tool_database():
+	if tool_database_override != null:
+		return tool_database_override
+	return get_node_or_null("/root/ToolDatabase")
+
+func _get_ornament_database():
+	if ornament_database_override != null:
+		return ornament_database_override
+	return get_node_or_null("/root/OrnamentDatabase")
