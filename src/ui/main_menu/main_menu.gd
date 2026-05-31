@@ -12,6 +12,7 @@ const MENU_PRESS_DROP := 3.0
 const MENU_TEXT_HOVER_SCALE := 1.035
 const MENU_LIGHTER_HOVER_SCALE := 1.045
 const MENU_PRESS_SCALE := 0.985
+const ENABLE_DEBUG_SHORTCUTS_IN_RELEASE := true
 const RESPONSIVE_CONTROL_NAMES := [
 	"NewGameButton",
 	"ContinueButton",
@@ -76,7 +77,7 @@ func _input(event: InputEvent) -> void:
 			_on_settings_button_pressed()
 
 func _is_debug_shortcut_enabled() -> bool:
-	return OS.is_debug_build()
+	return OS.is_debug_build() or ENABLE_DEBUG_SHORTCUTS_IN_RELEASE
 
 func _configure_interactive_feedback() -> void:
 	for node_name in RESPONSIVE_CONTROL_NAMES:
