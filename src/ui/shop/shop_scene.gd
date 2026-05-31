@@ -1,12 +1,16 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 ## 商店场景：允许玩家购买物品和饰品
 
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SHOP_OFFER_COUNT := ShopGenerator.DEFAULT_OFFER_COUNT
 
+@onready var design_root: Control = $MarginContainer
 @onready var shard_label = $MarginContainer/VBoxContainer/Header/ShardLabel
 @onready var shelf = $MarginContainer/VBoxContainer/ScrollContainer/GridContainer
 @onready var refresh_button = $MarginContainer/VBoxContainer/Header/RefreshButton
@@ -19,10 +23,14 @@ var sell_hint_label: Label = null
 func _ready():
 	print("[Shop] 欢迎光临梦境商店")
 	GlobalInput.set_context(GlobalInput.Context.UI)
+	if not resized.is_connected(_layout_design_root):
+		resized.connect(_layout_design_root)
 	_ensure_shop_layout()
+	_layout_design_root()
 	_update_shard_display()
 	_populate_shelf()
 	_render_backpack_for_sale()
+	call_deferred("_layout_design_root")
 	
 	refresh_button.pressed.connect(_on_refresh_pressed)
 	back_button.pressed.connect(_on_back_pressed)
@@ -98,6 +106,10 @@ func _ensure_shop_layout() -> void:
 	shop_backpack_ui.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	shop_backpack_ui.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	side_vbox.add_child(shop_backpack_ui)
+
+
+func _layout_design_root() -> void:
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
 
 func _populate_shelf():
 	var rm = get_node_or_null("/root/RunManager")

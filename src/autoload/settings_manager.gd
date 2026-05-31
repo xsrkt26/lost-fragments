@@ -4,16 +4,18 @@ extends Node
 
 const SETTINGS_FILE = "user://settings.cfg"
 const WINDOW_MODE_WINDOWED := "windowed"
-const WINDOW_MODE_FULLSCREEN := "fullscreen"
-const DISPLAY_SETTINGS_VERSION := 2
-const DEFAULT_RESOLUTION := Vector2i(1280, 720)
+const WINDOW_MODE_BORDERLESS_FULLSCREEN := "borderless_fullscreen"
+const WINDOW_MODE_FULLSCREEN := WINDOW_MODE_BORDERLESS_FULLSCREEN
+const LEGACY_WINDOW_MODE_EXCLUSIVE_FULLSCREEN := "fullscreen"
+const DISPLAY_SETTINGS_VERSION := 4
+const DEFAULT_RESOLUTION := Vector2i(1920, 1080)
 const ANIMATION_SPEED_SLOW := "slow"
 const ANIMATION_SPEED_NORMAL := "normal"
 const ANIMATION_SPEED_FAST := "fast"
 const RESOLUTION_OPTIONS := [
-	DEFAULT_RESOLUTION,
+	Vector2i(1280, 720),
 	Vector2i(1600, 900),
-	Vector2i(1920, 1080),
+	DEFAULT_RESOLUTION,
 ]
 const REQUIRED_AUDIO_BUSES := [
 	"Music",
@@ -31,7 +33,7 @@ var audio_settings = {
 
 var display_settings = {
 	"version": DISPLAY_SETTINGS_VERSION,
-	"window_mode": WINDOW_MODE_WINDOWED,
+	"window_mode": WINDOW_MODE_BORDERLESS_FULLSCREEN,
 	"resolution": DEFAULT_RESOLUTION,
 }
 
@@ -90,8 +92,8 @@ func apply_display_settings():
 	if not _can_control_window():
 		return
 	var window_mode := str(display_settings["window_mode"])
-	if window_mode == WINDOW_MODE_FULLSCREEN:
-		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_EXCLUSIVE_FULLSCREEN)
+	if window_mode == WINDOW_MODE_BORDERLESS_FULLSCREEN:
+		DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_FULLSCREEN)
 		return
 	DisplayServer.window_set_mode(DisplayServer.WINDOW_MODE_WINDOWED)
 	var resolution := _normalize_resolution(display_settings["resolution"])
@@ -178,7 +180,9 @@ func _ensure_audio_buses() -> void:
 		AudioServer.set_bus_send(bus_index, "Master")
 
 func _normalize_window_mode(value: String) -> String:
-	return WINDOW_MODE_FULLSCREEN if value == WINDOW_MODE_FULLSCREEN else WINDOW_MODE_WINDOWED
+	if value == WINDOW_MODE_BORDERLESS_FULLSCREEN or value == LEGACY_WINDOW_MODE_EXCLUSIVE_FULLSCREEN:
+		return WINDOW_MODE_BORDERLESS_FULLSCREEN
+	return WINDOW_MODE_WINDOWED
 
 func _normalize_animation_speed(value: String) -> String:
 	if [ANIMATION_SPEED_SLOW, ANIMATION_SPEED_NORMAL, ANIMATION_SPEED_FAST].has(value):
@@ -199,7 +203,7 @@ func _normalize_resolution(value) -> Vector2i:
 func _default_display_settings() -> Dictionary:
 	return {
 		"version": DISPLAY_SETTINGS_VERSION,
-		"window_mode": WINDOW_MODE_WINDOWED,
+		"window_mode": WINDOW_MODE_BORDERLESS_FULLSCREEN,
 		"resolution": DEFAULT_RESOLUTION,
 	}
 

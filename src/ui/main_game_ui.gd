@@ -1,5 +1,7 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
 const STATS_FONT_SIZE_SANITY := 32
@@ -762,22 +764,8 @@ func _layout_content_layer_as_fixed_frame(base_size: Vector2, cover_viewport: bo
 	if content_layer == null:
 		return
 	content_layer.custom_minimum_size = base_size
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = base_size
-	var scale_factor := minf(
-		viewport_size.x / base_size.x,
-		viewport_size.y / base_size.y
-	)
-	if cover_viewport:
-		scale_factor = maxf(
-			viewport_size.x / base_size.x,
-			viewport_size.y / base_size.y
-		)
-	content_layer.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	content_layer.position = (viewport_size - base_size * scale_factor) * 0.5
-	content_layer.size = base_size
-	content_layer.scale = Vector2(scale_factor, scale_factor)
+	var scale_mode := DesignScaler.SCALE_MODE_COVER if cover_viewport else DesignScaler.SCALE_MODE_CONTAIN
+	DesignScaler.layout_root(content_layer, get_viewport_rect().size, base_size, scale_mode)
 
 func _on_game_over():
 	if _is_battle_ended: return

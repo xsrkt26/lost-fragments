@@ -1,5 +1,7 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 ## 主菜单：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
 
 const DESIGN_SIZE := Vector2(1920.0, 1080.0)
@@ -83,15 +85,7 @@ func _cache_menu_control_poses() -> void:
 		_menu_control_base_scales[node_name] = control.scale
 
 func _layout_design_root() -> void:
-	if design_root == null:
-		return
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = DESIGN_SIZE
-	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	design_root.position = (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
-	design_root.size = DESIGN_SIZE
-	design_root.scale = Vector2(scale_factor, scale_factor)
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 
 func _on_menu_control_mouse_entered(control: Control) -> void:
 	if _is_disabled_button(control):

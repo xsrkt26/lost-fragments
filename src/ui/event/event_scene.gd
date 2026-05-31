@@ -1,6 +1,10 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
+
+@onready var design_root: Control = $MarginContainer
 @onready var title_label = $MarginContainer/VBoxContainer/TitleLabel
 @onready var desc_label = $MarginContainer/VBoxContainer/DescLabel
 @onready var choice_container = $MarginContainer/VBoxContainer/ChoiceContainer
@@ -13,8 +17,16 @@ var pending_confirm_choice_id := ""
 func _ready():
 	GlobalInput.set_context(GlobalInput.Context.UI)
 	GlobalAudio.play_bgm("hub")
+	if not resized.is_connected(_layout_design_root):
+		resized.connect(_layout_design_root)
+	_layout_design_root()
 	continue_button.pressed.connect(_on_continue_pressed)
 	_populate_event()
+	call_deferred("_layout_design_root")
+
+
+func _layout_design_root() -> void:
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
 
 func _populate_event() -> void:
 	var rm = get_node_or_null("/root/RunManager")

@@ -1,5 +1,7 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 ## 图鉴场景：以相册页素材拼装物品图鉴，右侧为绳网索引，左侧为选中物体和记忆纸片。
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SLOT_STYLE_NORMAL := Color(0.78, 0.72, 0.61, 0.82)
@@ -187,15 +189,7 @@ func _update_slot_selection() -> void:
 				pin.color = Color(0.50, 0.15, 0.10, 0.0)
 
 func _layout_design_root() -> void:
-	if design_root == null:
-		return
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = DESIGN_SIZE
-	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	design_root.position = (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
-	design_root.size = DESIGN_SIZE
-	design_root.scale = Vector2(scale_factor, scale_factor)
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 
 func _layout_item_slots() -> void:
 	var cell_size := ITEM_CELL_SIZE

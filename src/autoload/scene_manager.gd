@@ -52,7 +52,6 @@ func _ready():
 		get_tree().root.size_changed.connect(_sync_transition_ui_to_viewport)
 	# 初始判断当前是哪个场景
 	_detect_initial_scene()
-	call_deferred("_preload_transition_targets")
 
 func _setup_transition_ui():
 	# 创建一个最高层级的画布
@@ -102,14 +101,30 @@ func _detect_initial_scene():
 			current_scene_type = type
 			break
 
+func is_scene_available(target: SceneType) -> bool:
+	if not SCENE_PATHS.has(target):
+		return false
+	var scene_path: String = SCENE_PATHS[target]
+	if target == SceneType.DEBUG and not ResourceLoader.exists(scene_path):
+		return false
+	return true
+
+func _warn_unavailable_scene(target: SceneType) -> void:
+	var keys := SceneType.keys()
+	var target_name := str(target)
+	if int(target) >= 0 and int(target) < keys.size():
+		target_name = str(keys[int(target)])
+	var scene_path: String = str(SCENE_PATHS.get(target, ""))
+	push_warning("[SceneManager] Scene unavailable: %s %s" % [target_name, scene_path])
+
 func _preload_transition_targets() -> void:
 	await get_tree().process_frame
 	for target in SCENE_PATHS.keys():
-		if target != current_scene_type:
+		if target != current_scene_type and is_scene_available(target):
 			preload_scene(target)
 
 func preload_scene(target: SceneType) -> void:
-	if not SCENE_PATHS.has(target) or _preloaded_scenes.has(target):
+	if not is_scene_available(target) or _preloaded_scenes.has(target):
 		return
 	var scene_path: String = SCENE_PATHS[target]
 	if ResourceLoader.has_cached(scene_path):
@@ -131,6 +146,9 @@ func preload_scene(target: SceneType) -> void:
 
 ## 核心跳转方法：带有淡入淡出动画
 func transition_to(target: SceneType, push_to_history: bool = true):
+	if not is_scene_available(target):
+		_warn_unavailable_scene(target)
+		return
 	if _is_transitioning:
 		return
 	_is_transitioning = true
@@ -155,6 +173,9 @@ func transition_to(target: SceneType, push_to_history: bool = true):
 	transition_finished.emit(get_tree().current_scene)
 
 func transition_with_zoom(target: SceneType, start_focus: Vector2 = Vector2(0.5, 0.5), end_focus: Vector2 = Vector2(0.8, 0.8), push_to_history: bool = true):
+	if not is_scene_available(target):
+		_warn_unavailable_scene(target)
+		return
 	if _is_transitioning:
 		return
 	_is_transitioning = true
@@ -181,6 +202,9 @@ func transition_with_zoom(target: SceneType, start_focus: Vector2 = Vector2(0.5,
 
 
 func transition_to_direct(target: SceneType, push_to_history: bool = true) -> void:
+	if not is_scene_available(target):
+		_warn_unavailable_scene(target)
+		return
 	if _is_transitioning:
 		return
 	_is_transitioning = true
@@ -395,5 +419,8 @@ func go_back():
 
 ## 快捷跳转 (无动画，测试用)
 func quick_goto(target: SceneType):
+	if not is_scene_available(target):
+		_warn_unavailable_scene(target)
+		return
 	current_scene_type = target
 	get_tree().change_scene_to_file(SCENE_PATHS[target])

@@ -3,6 +3,7 @@ extends Control
 
 signal close_requested
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
@@ -103,14 +104,7 @@ func _configure_book_background() -> void:
 func _layout_page() -> void:
 	if content_layer == null:
 		return
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = DESIGN_SIZE
-	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	content_layer.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
-	content_layer.position = (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
-	content_layer.size = DESIGN_SIZE
-	content_layer.scale = Vector2(scale_factor, scale_factor)
+	DesignScaler.layout_root(content_layer, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 	if art_layer != null:
 		art_layer.position = Vector2.ZERO
 		art_layer.size = DESIGN_SIZE

@@ -1,11 +1,13 @@
 @tool
 extends Node2D
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 
 const PAGE_MAIN_MENU := BookPageNavigator.PAGE_MAIN_MENU
 const HUB_SOURCE_SIZE := BookBackgroundConfig.DESIGN_SIZE
-const DEFAULT_VIEWPORT_SIZE := Vector2(1280.0, 720.0)
+const DEFAULT_VIEWPORT_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
 const PLAYER_START_SOURCE_X := 548.0
 const PLAYER_FLOOR_SOURCE_Y := 1000.0
@@ -911,7 +913,7 @@ func _on_player_move_target_reached(_target_x: float) -> void:
 
 
 func _source_x_to_viewport(source_x: float) -> float:
-	return _art_origin.x + source_x * _art_scale
+	return _source_rect_to_viewport(Rect2(Vector2(source_x, 0.0), Vector2.ZERO)).position.x
 
 
 func _get_merchant_interaction_target_x() -> float:
@@ -1501,18 +1503,12 @@ func _get_layout_viewport_size() -> Vector2:
 
 
 func _validated_layout_viewport_size(viewport_size: Vector2) -> Vector2:
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		return DEFAULT_VIEWPORT_SIZE
-	return viewport_size
+	return DesignScaler.get_valid_viewport_size(viewport_size, DEFAULT_VIEWPORT_SIZE)
 
 
 func _layout_hub_art(viewport_size: Vector2) -> void:
-	_art_scale = minf(
-		viewport_size.x / _hub_source_size.x,
-		viewport_size.y / _hub_source_size.y
-	)
-	var displayed_size := _hub_source_size * _art_scale
-	_book_origin = (viewport_size - displayed_size) * 0.5
+	_art_scale = DesignScaler.get_scale_factor(viewport_size, _hub_source_size, DesignScaler.SCALE_MODE_CONTAIN)
+	_book_origin = DesignScaler.get_design_origin(viewport_size, _hub_source_size, _art_scale)
 	_art_origin = _book_origin + hub_art_source_offset * _art_scale
 	if hub_art != null:
 		hub_art.position = _art_origin
@@ -1702,7 +1698,5 @@ func _layout_player_and_floor(viewport_size: Vector2) -> void:
 
 
 func _source_rect_to_viewport(source_rect: Rect2) -> Rect2:
-	return Rect2(
-		_art_origin + source_rect.position * _art_scale,
-		source_rect.size * _art_scale
-	)
+	var offset_rect := Rect2(source_rect.position + hub_art_source_offset, source_rect.size)
+	return DesignScaler.design_to_viewport_rect(offset_rect, _get_layout_viewport_size(), _hub_source_size, DesignScaler.SCALE_MODE_CONTAIN)

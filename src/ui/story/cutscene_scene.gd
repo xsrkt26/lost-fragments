@@ -1,5 +1,10 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
+
+@onready var design_root: Control = $MarginContainer
 @onready var content_label = $MarginContainer/ContentLabel
 @onready var animation_player = $AnimationPlayer
 
@@ -7,13 +12,21 @@ var _frames: Array = []
 var _current_frame_idx: int = -1
 
 func _ready() -> void:
+	if not resized.is_connected(_layout_design_root):
+		resized.connect(_layout_design_root)
+	_layout_design_root()
 	var sm = get_node_or_null("/root/StoryManager")
 	if sm and sm.current_playing_sequence != "":
 		_frames = sm.get_sequence_frames(sm.current_playing_sequence)
 	else:
-		push_error("[Cutscene] No active sequence.")
+		push_warning("[Cutscene] No active sequence.")
 	
 	_next_frame()
+	call_deferred("_layout_design_root")
+
+
+func _layout_design_root() -> void:
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
 
 func _next_frame() -> void:
 	_current_frame_idx += 1

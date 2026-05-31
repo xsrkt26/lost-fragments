@@ -1,5 +1,7 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 ## 设置界面：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const SPEED_IDS := [
@@ -63,7 +65,7 @@ func _populate_options() -> void:
 
 	window_mode_option.clear()
 	window_mode_option.add_item("Windowed")
-	window_mode_option.add_item("Fullscreen")
+	window_mode_option.add_item("Borderless Fullscreen")
 
 	animation_speed_option.clear()
 	animation_speed_option.add_item("慢")
@@ -141,22 +143,12 @@ func _update_ui() -> void:
 
 	var resolution: Vector2i = SettingsManager.display_settings["resolution"]
 	resolution_option.select(_resolution_index(resolution))
-	window_mode_option.select(1 if str(SettingsManager.display_settings["window_mode"]) == SettingsManager.WINDOW_MODE_FULLSCREEN else 0)
+	window_mode_option.select(1 if str(SettingsManager.display_settings["window_mode"]) == SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN else 0)
 	animation_speed_option.select(max(0, SPEED_IDS.find(str(SettingsManager.game_settings["animation_speed"]))))
 	_is_updating = false
 
 func _layout_controls() -> void:
-	if design_root == null:
-		return
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		viewport_size = DESIGN_SIZE
-	var scale_factor: float = maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	var displayed_art_size := DESIGN_SIZE * scale_factor
-	var displayed_art_origin := (viewport_size - displayed_art_size) * 0.5
-	design_root.position = displayed_art_origin
-	design_root.size = DESIGN_SIZE
-	design_root.scale = Vector2(scale_factor, scale_factor)
+	DesignScaler.layout_root(design_root, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 	_update_zipper_heads()
 
 func _update_zipper_heads() -> void:
@@ -206,7 +198,7 @@ func _on_resolution_selected(index: int) -> void:
 func _on_window_mode_selected(index: int) -> void:
 	if _is_updating:
 		return
-	var mode := SettingsManager.WINDOW_MODE_FULLSCREEN if index == 1 else SettingsManager.WINDOW_MODE_WINDOWED
+	var mode := SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN if index == 1 else SettingsManager.WINDOW_MODE_WINDOWED
 	SettingsManager.set_window_mode(mode)
 
 func _on_animation_speed_selected(index: int) -> void:

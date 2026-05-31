@@ -1,5 +1,11 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
+const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
+const PANEL_DESIGN_RECT := Rect2(260.0, 760.0, 1400.0, 280.0)
+
+@onready var panel: Panel = $Panel
 @onready var speaker_label = $Panel/VBoxContainer/SpeakerLabel
 @onready var content_label = $Panel/VBoxContainer/ContentLabel
 
@@ -12,6 +18,19 @@ const TYPE_SPEED = 0.05
 func _ready():
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	set_process_input(true)
+	if not resized.is_connected(_layout_overlay):
+		resized.connect(_layout_overlay)
+	_layout_overlay()
+	call_deferred("_layout_overlay")
+
+
+func _layout_overlay() -> void:
+	if panel == null:
+		return
+	var rect := DesignScaler.design_to_viewport_rect(PANEL_DESIGN_RECT, get_viewport_rect().size, DESIGN_SIZE, DesignScaler.SCALE_MODE_CONTAIN)
+	panel.set_anchors_preset(Control.PRESET_TOP_LEFT, true)
+	panel.position = rect.position
+	panel.size = rect.size
 
 func start_dialogue(sequence_id: String) -> void:
 	var sm = get_node_or_null("/root/StoryManager")

@@ -178,8 +178,8 @@ shape = SubResource("RectangleShape2D_player")
 [node name="Camera2D" type="Camera2D" parent="Player" unique_id=1135589802]
 enabled = false
 limit_left = 0
-limit_right = 1280
-limit_bottom = 720
+limit_right = 1920
+limit_bottom = 1080
 
 [node name="Interactions" type="Node2D" parent="." unique_id=1940082586]
 visible = false

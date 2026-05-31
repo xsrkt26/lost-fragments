@@ -2,7 +2,7 @@
 class_name BookPageTurnEffect
 extends Control
 
-const PAGE_TURN_SHADER = preload("res://src/ui/transitions/page_turn.gdshader")
+const PAGE_TURN_SHADER_PATH := "res://src/ui/transitions/page_turn.gdshader"
 
 @export var curl_width := 0.26:
 	set(value):
@@ -40,6 +40,7 @@ var _front_tint := Color.WHITE
 var _turn_left_to_right := false
 var _shader_material: ShaderMaterial = null
 var _fallback_texture: Texture2D = null
+var _page_turn_shader: Shader = null
 
 
 func _ready() -> void:
@@ -80,8 +81,12 @@ func _draw() -> void:
 func _ensure_shader_material() -> void:
 	if _shader_material != null:
 		return
+	_page_turn_shader = load(PAGE_TURN_SHADER_PATH) as Shader
+	if _page_turn_shader == null:
+		material = null
+		return
 	_shader_material = ShaderMaterial.new()
-	_shader_material.shader = PAGE_TURN_SHADER
+	_shader_material.shader = _page_turn_shader
 	material = _shader_material
 	_sync_shader_parameters()
 

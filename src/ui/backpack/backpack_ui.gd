@@ -216,20 +216,25 @@ func get_grid_pos_at(global_pos: Vector2) -> Vector2i:
 		return Vector2i(-1, -1)
 	_sync_grid_geometry()
 	grid_container.force_update_transform()
-	var local_pos := grid_container.get_global_transform().affine_inverse() * global_pos
-	var grid_pos := _grid_pos_from_local(local_pos)
+	var grid_pos := _grid_pos_from_canvas_position(global_pos)
 	if grid_pos != Vector2i(-1, -1):
 		return grid_pos
 
-	local_pos = grid_container.get_global_transform_with_canvas().affine_inverse() * global_pos
-	grid_pos = _grid_pos_from_local(local_pos)
+	grid_pos = _grid_pos_from_viewport_position(global_pos)
 	if grid_pos != Vector2i(-1, -1):
 		return grid_pos
 
 	if is_inside_tree():
-		local_pos = grid_container.get_global_transform_with_canvas().affine_inverse() * get_viewport().get_mouse_position()
-		grid_pos = _grid_pos_from_local(local_pos)
+		grid_pos = _grid_pos_from_viewport_position(get_viewport().get_mouse_position())
 	return grid_pos
+
+func _grid_pos_from_canvas_position(canvas_pos: Vector2) -> Vector2i:
+	var local_pos := grid_container.get_global_transform().affine_inverse() * canvas_pos
+	return _grid_pos_from_local(local_pos)
+
+func _grid_pos_from_viewport_position(viewport_pos: Vector2) -> Vector2i:
+	var local_pos := grid_container.get_global_transform_with_canvas().affine_inverse() * viewport_pos
+	return _grid_pos_from_local(local_pos)
 
 func _grid_pos_from_local(local_pos: Vector2) -> Vector2i:
 	if local_pos.x < 0.0 or local_pos.y < 0.0:

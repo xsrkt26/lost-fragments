@@ -1,5 +1,7 @@
 extends Control
 
+const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+
 signal page_changed(page_id: String)
 
 
@@ -539,10 +541,8 @@ func _get_tab_hotspot_global_rect(page_id: String, viewport_size: Vector2) -> Re
 				var tab_rect := tab.get_global_rect()
 				if tab_rect.size.x > 1.0 and tab_rect.size.y > 1.0:
 					return tab_rect
-	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	var origin := (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
 	var fallback_rect := BookBackgroundConfig.get_tab_rect(page_id, current_page_id)
-	return Rect2(origin + fallback_rect.position * scale_factor, fallback_rect.size * scale_factor)
+	return DesignScaler.design_to_viewport_rect(fallback_rect, viewport_size, DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 
 
 func _get_transition_page_tab_rect_as_global(page_id: String, progress: float) -> Rect2:
@@ -559,10 +559,7 @@ func _get_page_transition_rect() -> Rect2:
 
 
 func _get_transition_viewport_size() -> Vector2:
-	var viewport_size := get_viewport_rect().size
-	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
-		return DESIGN_SIZE
-	return viewport_size
+	return DesignScaler.get_valid_viewport_size(get_viewport_rect().size, DESIGN_SIZE)
 
 
 func _get_node_global_scale(node: CanvasItem) -> Vector2:
@@ -1708,10 +1705,7 @@ func _get_tab_texture(page_id: String) -> Texture2D:
 
 
 func _get_design_rect_as_viewport(rect: Rect2) -> Rect2:
-	var viewport_size := _get_transition_viewport_size()
-	var scale_factor := maxf(viewport_size.x / DESIGN_SIZE.x, viewport_size.y / DESIGN_SIZE.y)
-	var origin := (viewport_size - DESIGN_SIZE * scale_factor) * 0.5
-	return Rect2(origin + rect.position * scale_factor, rect.size * scale_factor)
+	return DesignScaler.design_to_viewport_rect(rect, _get_transition_viewport_size(), DESIGN_SIZE, DesignScaler.SCALE_MODE_COVER)
 
 
 func _clear_transition_tab_overlay() -> void:
