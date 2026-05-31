@@ -36,8 +36,8 @@ const LEGACY_ITEM_ID_MAP := {}
 const INITIAL_BACKPACK_ITEMS: Array[Dictionary] = [
 	{
 		"id": ROOT_DREAM_ID,
-		"x": 1,
-		"y": 1,
+		"x": 3,
+		"y": 3,
 		"direction": ItemData.Direction.RIGHT,
 		"shape": [{"x": 0, "y": 0}],
 		"runtime_id": -1,
@@ -812,13 +812,7 @@ func _restore_event_snapshot(snapshot: Dictionary) -> void:
 	save_current_state()
 
 func save_backpack_state(backpack: BackpackManager) -> void:
-	current_backpack_items.clear()
-	if backpack == null:
-		return
-	for instance in backpack.get_all_instances():
-		if _is_derived_item(instance):
-			continue
-		current_backpack_items.append(_serialize_backpack_instance(instance))
+	_sync_current_backpack_items_from_backpack(backpack)
 	save_current_state()
 
 func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
@@ -841,9 +835,21 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 		var runtime_data: ItemData = item_data.duplicate(true)
 		runtime_data.runtime_id = int(entry.get("runtime_id", randi()))
 		runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
-		runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
-		var root_pos = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
-		if not backpack.place_item(runtime_data, root_pos, true):
+		if item_id != ROOT_DREAM_ID:
+			runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
+		var root_pos: Vector2i = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
+		var restore_pos: Vector2i = root_pos
+		var ignore_blocked_cells := item_id != ROOT_DREAM_ID
+		if item_id == ROOT_DREAM_ID:
+			var preferred_pos := _get_preferred_required_backpack_pos(backpack, runtime_data, item_id)
+			if preferred_pos != Vector2i(-1, -1):
+				restore_pos = preferred_pos
+		if not backpack.place_item(runtime_data, restore_pos, ignore_blocked_cells):
+			if item_id == ROOT_DREAM_ID:
+				var fallback_pos := _find_required_backpack_pos(backpack, runtime_data, item_id)
+				if fallback_pos != Vector2i(-1, -1) and backpack.place_item(runtime_data, fallback_pos):
+					push_warning("[RunManager] Repaired root_dream backpack position from %s to %s." % [root_pos, fallback_pos])
+					continue
 			push_warning("[RunManager] Failed to restore backpack item '%s' at %s." % [item_id, root_pos])
 	_ensure_required_backpack_items(backpack, item_db)
 
@@ -856,6 +862,15 @@ func _serialize_backpack_instance(instance: BackpackManager.ItemInstance) -> Dic
 		"shape": _serialize_shape(instance.data.shape),
 		"runtime_id": instance.data.runtime_id
 	}
+
+func _sync_current_backpack_items_from_backpack(backpack: BackpackManager) -> void:
+	current_backpack_items.clear()
+	if backpack == null:
+		return
+	for instance in backpack.get_all_instances():
+		if _is_derived_item(instance):
+			continue
+		current_backpack_items.append(_serialize_backpack_instance(instance))
 
 func _serialize_shape(shape: Array[Vector2i]) -> Array:
 	var result = []
@@ -919,10 +934,30 @@ func _place_required_backpack_item(backpack: BackpackManager, item_db: Node, ent
 	if runtime_data == null:
 		return false
 
-	var first_pos := backpack.find_available_pos(runtime_data)
-	if first_pos != Vector2i(-1, -1):
-		return backpack.place_item(runtime_data, first_pos)
+	var place_pos := _find_required_backpack_pos(backpack, runtime_data, str(entry.get("id", "")))
+	if place_pos != Vector2i(-1, -1):
+		return backpack.place_item(runtime_data, place_pos)
 	return false
+
+func _find_required_backpack_pos(backpack: BackpackManager, runtime_data: ItemData, item_id: String) -> Vector2i:
+	if backpack == null or runtime_data == null:
+		return Vector2i(-1, -1)
+	var preferred_pos := _get_preferred_required_backpack_pos(backpack, runtime_data, item_id)
+	if preferred_pos != Vector2i(-1, -1):
+		return preferred_pos
+	return backpack.find_available_pos(runtime_data)
+
+func _get_preferred_required_backpack_pos(backpack: BackpackManager, runtime_data: ItemData, item_id: String) -> Vector2i:
+	if backpack == null or runtime_data == null:
+		return Vector2i(-1, -1)
+	for entry in INITIAL_BACKPACK_ITEMS:
+		if str(entry.get("id", "")) != item_id:
+			continue
+		var preferred_pos := Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
+		if backpack.can_place_item(runtime_data, preferred_pos, false, false):
+			return preferred_pos
+		break
+	return Vector2i(-1, -1)
 
 func _make_runtime_backpack_item_data(entry: Dictionary, item_db: Node) -> ItemData:
 	var item_id = str(entry.get("id", ""))

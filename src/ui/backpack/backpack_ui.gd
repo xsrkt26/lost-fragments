@@ -255,11 +255,13 @@ func highlight_placement(root_pos: Vector2i, item_data: ItemData):
 
 func get_slot_center_position(grid_pos: Vector2i) -> Vector2:
 	if not manager or grid_pos.x < 0 or grid_pos.y < 0: return Vector2.ZERO
-	grid_container.force_update_transform()
-	var index = grid_pos.y * manager.grid_width + grid_pos.x
-	if index >= grid_container.get_child_count(): return Vector2.ZERO
-	var slot = grid_container.get_child(index) as Control
-	return slot.position + (slot.size / 2.0)
+	if grid_pos.x >= manager.grid_width or grid_pos.y >= manager.grid_height:
+		return Vector2.ZERO
+	_sync_grid_geometry()
+	return grid_container.position + Vector2(
+		(float(grid_pos.x) + 0.5) * grid_step.x,
+		(float(grid_pos.y) + 0.5) * grid_step.y
+	)
 
 func get_grid_pos_at(global_pos: Vector2) -> Vector2i:
 	if not manager:
@@ -321,8 +323,10 @@ func add_item_visual(item_ui: Control, grid_pos: Vector2i):
 	var index = grid_pos.y * manager.grid_width + grid_pos.x
 	if index >= grid_container.get_child_count():
 		return
-	var slot = grid_container.get_child(index) as Control
-	item_ui.position = slot.position + Vector2(min_offset.x * grid_step.x, min_offset.y * grid_step.y)
+	item_ui.position = grid_container.position + Vector2(
+		float(grid_pos.x + min_offset.x) * grid_step.x,
+		float(grid_pos.y + min_offset.y) * grid_step.y
+	)
 
 ## 同步最新的映射关系（当 Data 被克隆后调用）
 func update_item_mapping(old_data: ItemData, new_data: ItemData):

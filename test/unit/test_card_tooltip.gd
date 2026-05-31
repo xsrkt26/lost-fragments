@@ -221,6 +221,32 @@ func test_backpack_add_item_visual_positions_immediately_from_grid_coordinates()
 	assert_eq(backpack.get_grid_cell_size(), Vector2(100.0, 70.0))
 	assert_eq(ui.position, Vector2(200.0, 210.0))
 
+func test_backpack_add_item_visual_does_not_depend_on_slot_layout_position():
+	var backpack = add_child_autofree(BackpackUIScene.instantiate())
+	backpack.custom_minimum_size = Vector2(700.0, 490.0)
+	backpack.size = Vector2(700.0, 490.0)
+	await get_tree().process_frame
+
+	var manager = autofree(BackpackManager.new())
+	manager.setup_grid(7, 7, 7, 7)
+	backpack.manager = manager
+	backpack._refresh_grid()
+	var grid = backpack.get_node("GridContainer") as GridContainer
+	for slot in grid.get_children():
+		if slot is Control:
+			slot.position = Vector2.ZERO
+
+	var item = _make_item_data()
+	item.runtime_id = 43
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	backpack.add_item_visual(ui, Vector2i(3, 3))
+
+	assert_eq(ui.position, Vector2(300.0, 210.0))
+	assert_eq(backpack.get_slot_center_position(Vector2i(3, 3)), Vector2(350.0, 245.0))
+
 func test_global_tooltip_shows_dynamic_pollution_status():
 	var item = _make_item_data()
 	var instance = BackpackManager.ItemInstance.new(item, Vector2i(0, 0))
