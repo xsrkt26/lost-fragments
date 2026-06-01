@@ -1,4 +1,4 @@
-﻿class_name ItemUI
+class_name ItemUI
 extends Control
 
 @export var item_data: ItemData
@@ -352,4 +352,3 @@ func _process(_delta):
 	if _is_dragging:
 		global_position = get_global_mouse_position() - _drag_offset
 		drag_moved.emit(self, get_global_mouse_position(), _held_pivot_offset)
-

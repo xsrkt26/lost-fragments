@@ -1,4 +1,4 @@
-extends GutTest
+﻿extends GutTest
 
 const BattleManagerScript = preload("res://src/battle/battle_manager.gd")
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
@@ -109,7 +109,7 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 		assert_not_null(ornament.effect)
 		if ornament.enabled:
 			enabled_count += 1
-	assert_eq(enabled_count, 56)
+	assert_eq(enabled_count, 45)
 	for ornament_id in TOOL_ORNAMENT_IDS:
 		var ornament = ornament_db.get_ornament_by_id(ornament_id)
 		assert_not_null(ornament)

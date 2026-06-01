@@ -231,13 +231,14 @@ func test_visual_shop_offer_slots_use_reference_layout_and_product_content():
 	assert_eq(controller._offer_buttons.size(), ShopGeneratorScript.DEFAULT_OFFER_COUNT)
 	for index in range(controller._offer_buttons.size()):
 		var button: Button = controller._offer_buttons[index]
+		var offer: Dictionary = button.get_meta("offer", {})
 		assert_eq(button.text, "")
 		assert_eq(button.tooltip_text, "")
 		assert_not_null(button.get_node_or_null("OfferContent/VisualArea"))
 		assert_not_null(button.get_node_or_null("OfferContent/TitleLabel"))
 		var price_label := button.get_node_or_null("OfferContent/PriceLabel") as Label
 		assert_not_null(price_label)
-		assert_true(price_label.text.ends_with("元"))
+		assert_eq(price_label.text.to_int(), int(offer.get("price", 0)))
 		if index < 4:
 			assert_true(button.position.y < 360.0)
 		else:
@@ -273,7 +274,7 @@ func test_visual_shop_offer_content_renders_item_tool_and_ornament_visuals():
 	var ornament_button := Button.new()
 	owner.add_child(ornament_button)
 	ornament_button.size = Vector2(160, 190)
-	controller._build_offer_content(ornament_button, {"type": "ornament", "id": "old_pocket_watch", "title": "旧怀表", "rarity": "普通", "price": 10}, item_db, tool_db, rm)
+	controller._build_offer_content(ornament_button, {"type": "ornament", "id": "old_pocket_watch", "title": "Fehu", "rarity": "普通", "price": 10}, item_db, tool_db, rm)
 	controller._layout_offer_content(ornament_button)
 	assert_not_null(ornament_button.get_node_or_null("OfferContent/VisualArea/OfferOrnamentTag"))
 
@@ -294,7 +295,7 @@ func test_hub_shop_offers_use_card_tooltips_for_all_types():
 
 	controller._show_offer_tooltip({"type": "ornament", "id": "old_pocket_watch"}, item_db, ornament_db, tool_db)
 	await get_tree().create_timer(0.25).timeout
-	assert_eq(title_label.text, "旧怀表")
+	assert_eq(title_label.text, "Fehu")
 
 	controller._show_offer_tooltip({"type": "tool", "id": "small_patch"}, item_db, ornament_db, tool_db)
 	await get_tree().create_timer(0.25).timeout

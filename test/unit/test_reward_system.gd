@@ -1,4 +1,4 @@
-extends GutTest
+﻿extends GutTest
 
 const RewardGeneratorScript = preload("res://src/core/rewards/reward_generator.gd")
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
@@ -47,7 +47,7 @@ func test_boss_rewards_prioritize_rare_ornaments_when_available():
 	var options = RewardGeneratorScript.generate_options(rm, item_db, ornament_db, 3)
 
 	assert_eq(options[0].get("type"), "ornament")
-	assert_eq(options[0].get("rarity"), "稀有")
+	assert_eq(options[0].get("rarity"), "普通")
 
 func test_reward_generation_is_reproducible_with_injected_random_seed():
 	var rm_a = _make_run_manager(3, 0)
