@@ -124,6 +124,11 @@ var _default_room_texture: Texture2D = null
 var _default_room_position := Vector2.ZERO
 var _default_room_scale := Vector2.ONE
 var _default_room_display_size := Vector2.ZERO
+var _default_dreamcatcher_net_position := Vector2.ZERO
+var _default_dreamcatcher_net_scale := Vector2.ONE
+var _default_dreamcatcher_net_rotation := 0.0
+var _default_dreamcatcher_net_offset := Vector2.ZERO
+var _default_dreamcatcher_net_centered := true
 var _dreamcatcher_button_source_position := Vector2.ZERO
 var _dreamcatcher_button_source_size := Vector2.ZERO
 var _hub_background_textures: Dictionary = {}
@@ -274,6 +279,7 @@ func _on_route_changed(_current_act: int, _route_index: int, _current_node: Dict
 	_configure_hub_dreamcatcher_swing_pivot()
 	_capture_hub_dreamcatcher_pose()
 	_reset_hub_plush_transition()
+	_layout_canvas_design_root()
 	_sync_xiaomi_anchor_for_current_act()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
@@ -292,6 +298,12 @@ func _capture_default_hub_room_art() -> void:
 
 func _cache_layout_source_data() -> void:
 	_hub_source_size = BookBackgroundConfig.DESIGN_SIZE
+	if dreamcatcher_net != null:
+		_default_dreamcatcher_net_position = dreamcatcher_net.position
+		_default_dreamcatcher_net_scale = dreamcatcher_net.scale
+		_default_dreamcatcher_net_rotation = dreamcatcher_net.rotation
+		_default_dreamcatcher_net_offset = dreamcatcher_net.offset
+		_default_dreamcatcher_net_centered = dreamcatcher_net.centered
 	if dreamcatcher_button != null:
 		_dreamcatcher_button_source_position = dreamcatcher_button.position
 		_dreamcatcher_button_source_size = dreamcatcher_button.size
@@ -495,6 +507,53 @@ func _apply_hub_dreamcatcher_stage_visual() -> void:
 	var texture := _load_texture_from_path(texture_path)
 	if texture != null:
 		dreamcatcher_net.texture = texture
+	var configured_rect := _rect_from_variant(visual.get("hub_dreamcatcher_rect", visual.get("dreamcatcher_rect", null)))
+	if configured_rect.size.x > 0.0 and configured_rect.size.y > 0.0:
+		_apply_hub_dreamcatcher_source_rect(configured_rect, visual)
+	else:
+		_restore_default_hub_dreamcatcher_transform()
+
+
+func _apply_hub_dreamcatcher_source_rect(source_rect: Rect2, visual: Dictionary) -> void:
+	if dreamcatcher_net == null or dreamcatcher_net.texture == null:
+		return
+	var texture_size := dreamcatcher_net.texture.get_size()
+	if texture_size.x <= 0.0 or texture_size.y <= 0.0:
+		return
+	var rotation_degrees := float(visual.get("hub_dreamcatcher_rotation_degrees", visual.get("dreamcatcher_rotation_degrees", 0.0)))
+	dreamcatcher_net.centered = true
+	dreamcatcher_net.offset = Vector2.ZERO
+	dreamcatcher_net.rotation = deg_to_rad(rotation_degrees)
+	dreamcatcher_net.scale = Vector2(source_rect.size.x / texture_size.x, source_rect.size.y / texture_size.y)
+	dreamcatcher_net.position = source_rect.get_center()
+
+
+func _restore_default_hub_dreamcatcher_transform() -> void:
+	if dreamcatcher_net == null:
+		return
+	dreamcatcher_net.centered = _default_dreamcatcher_net_centered
+	dreamcatcher_net.position = _default_dreamcatcher_net_position
+	dreamcatcher_net.scale = _default_dreamcatcher_net_scale
+	dreamcatcher_net.rotation = _default_dreamcatcher_net_rotation
+	dreamcatcher_net.offset = _default_dreamcatcher_net_offset
+
+
+func _rect_from_variant(value) -> Rect2:
+	if value is Rect2:
+		return value
+	if value is Dictionary:
+		var source := value as Dictionary
+		var width = source.get("w", source.get("width", 0.0))
+		var height = source.get("h", source.get("height", 0.0))
+		return Rect2(
+			Vector2(float(source.get("x", 0.0)), float(source.get("y", 0.0))),
+			Vector2(float(width), float(height))
+		)
+	if value is Array:
+		var values := value as Array
+		if values.size() >= 4:
+			return Rect2(Vector2(float(values[0]), float(values[1])), Vector2(float(values[2]), float(values[3])))
+	return Rect2()
 
 
 func _capture_hub_dreamcatcher_pose() -> void:
@@ -1362,6 +1421,7 @@ func _close_shop_visual_state() -> void:
 	if _interaction_flow_controller != null:
 		_interaction_flow_controller.mark_idle()
 	GlobalInput.set_context(GlobalInput.Context.WORLD)
+	_try_play_pending_hub_story_on_ready()
 
 
 func _play_shop_intro_overlay(keep_final_frame: bool = false):
@@ -1432,10 +1492,15 @@ func _on_hub_battle_session_closed(target_scene: int) -> void:
 	_return_dreamcatcher_to_ready_state()
 
 	if next_scene == GlobalScene.SceneType.MAIN_MENU:
+		if _story_manager_has_pending_hub_sequences():
+			_layout_scene()
+			_try_play_pending_hub_story_on_ready()
+			return
 		_transition_from_hub(next_scene, false)
 		return
 
 	_layout_scene()
+	_try_play_pending_hub_story_on_ready()
 
 
 func _cleanup_hub_battle_session(do_persist_backpack: bool = true) -> void:
@@ -1820,6 +1885,13 @@ func play_story_book_page(sequence_id: String) -> bool:
 	return bool(book_page_navigator.call("play_story_sequence", sequence_id))
 
 
+func can_play_pending_story_sequence() -> bool:
+	return not _is_hub_battle_session_active \
+		and not _is_shop_visual_state_active \
+		and not _is_shop_intro_sequence_running \
+		and not _merchant_shop_sequence_running
+
+
 func play_story_bubble_dialogue(sequence_id: String) -> bool:
 	if not _should_show_xiaomi_story_actor():
 		return false
@@ -1929,6 +2001,13 @@ func _try_play_pending_hub_story_on_ready() -> void:
 	if story_manager == null or not story_manager.has_method("play_pending_hub_sequences_if_ready"):
 		return
 	story_manager.call("play_pending_hub_sequences_if_ready")
+
+
+func _story_manager_has_pending_hub_sequences() -> bool:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("has_pending_hub_sequences"):
+		return false
+	return bool(story_manager.call("has_pending_hub_sequences"))
 
 
 func _is_book_hub_current() -> bool:

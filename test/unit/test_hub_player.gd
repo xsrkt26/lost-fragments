@@ -148,6 +148,22 @@ func _map_alpha_rect_to_control_rect(control_rect: Rect2, texture_size: Vector2,
 	return Rect2(control_rect.position + alpha_rect.position * scale, alpha_rect.size * scale)
 
 
+func _rect_from_dict(value: Dictionary) -> Rect2:
+	var width = value.get("w", value.get("width", 0.0))
+	var height = value.get("h", value.get("height", 0.0))
+	return Rect2(
+		Vector2(float(value.get("x", 0.0)), float(value.get("y", 0.0))),
+		Vector2(float(width), float(height))
+	)
+
+
+func _assert_rect_almost_eq(actual: Rect2, expected: Rect2, tolerance: float = 0.05) -> void:
+	assert_almost_eq(actual.position.x, expected.position.x, tolerance)
+	assert_almost_eq(actual.position.y, expected.position.y, tolerance)
+	assert_almost_eq(actual.size.x, expected.size.x, tolerance)
+	assert_almost_eq(actual.size.y, expected.size.y, tolerance)
+
+
 func _assert_battle_grid_matches_bag_texture(scene_root: Node) -> void:
 	var playable_bag := scene_root.get_node_or_null("ContentLayer/PlayableBagArt") as TextureRect
 	var grid_panel := scene_root.get_node_or_null("ContentLayer/GridPanel") as Control
@@ -289,6 +305,39 @@ func test_hub_merchant_default_interaction_rect_uses_first_frame_alpha():
 	var expected_rect := _get_png_alpha_rect(AssetPaths.merchant_frame_paths("parents")[0])
 
 	assert_eq(controller.get_interaction_frame_bounds(run), expected_rect)
+
+
+func test_hub_dreamcatcher_uses_stage_reference_rects():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	if rm == null:
+		return
+	rm.is_run_active = true
+	rm.current_act = 2
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	hub.call("_stop_hub_dreamcatcher_idle_swing")
+
+	var net := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/DreamcatcherNet") as Sprite2D
+	assert_not_null(net)
+	if net == null:
+		return
+
+	for act in [2, 3, 4, 5, 6]:
+		rm.current_act = act
+		hub.call("_apply_hub_dreamcatcher_stage_visual")
+		hub.call("_configure_hub_dreamcatcher_swing_pivot")
+		hub.call("_capture_hub_dreamcatcher_pose")
+		net.position = hub.get("_dreamcatcher_net_base_position")
+		net.rotation = hub.get("_dreamcatcher_net_base_rotation")
+		net.offset = hub.get("_dreamcatcher_net_base_offset")
+
+		var visual := StageConfig.get_visual(act)
+		var expected_rect := _rect_from_dict(visual.get("hub_dreamcatcher_rect", {}))
+		var actual_rect: Rect2 = hub.call("_get_hub_dreamcatcher_visual_parent_rect")
+		_assert_rect_almost_eq(actual_rect, expected_rect)
 
 
 func test_mouse_move_target_is_set_and_cleared():

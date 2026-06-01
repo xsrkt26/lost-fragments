@@ -7,6 +7,7 @@ const JSON_PATH: String = AssetPaths.STORY_EVENTS
 const STORY_ENABLED: bool = true
 const DIALOGUE_CANVAS_NAME := "DialogueCanvas"
 const COMPLETION_ACTION_ADVANCE_EVENT_ROUTE := "advance_event_route"
+const COMPLETION_ACTION_RETURN_TO_MAIN_MENU := "return_to_main_menu"
 const FIXED_EVENT_SEQUENCE_BY_ACT: Dictionary = {
 	1: "固定事件1·小咪",
 	2: "固定事件2·小舅",
@@ -58,21 +59,28 @@ func _on_run_started() -> void:
 
 func _on_route_changed(current_act: int, route_index: int, _current_node: Dictionary) -> void:
 	_refresh_played_flags_from_run()
+	var rm: Node = _get_run_manager()
+	if rm != null and not bool(rm.get("is_run_active")):
+		return
 	if route_index != 0:
 		return
-	_queue_act_opening_sequences(current_act)
+	if current_act <= 1:
+		_queue_act_opening_sequences(current_act)
+	else:
+		_queue_completed_act_sequences(current_act - 1)
 	call_deferred("_play_pending_hub_sequences_if_ready")
 
 
 func _on_run_finished(victory: bool) -> void:
 	if not victory:
-		play_sequence("end3")
+		_queue_run_finish_sequence("end3")
 		return
 	var rm: Node = _get_run_manager()
 	var score := 0
 	if rm != null:
 		score = int(rm.get("current_shards"))
-	play_sequence("end1" if score > 50 else "end2")
+	_queue_completed_act_sequences(StageConfig.get_max_act(), false)
+	_queue_run_finish_sequence("end1" if score > 50 else "end2")
 
 
 func _load_json_data() -> void:
@@ -267,10 +275,14 @@ func play_pending_hub_sequences_if_ready() -> void:
 	_play_pending_hub_sequences_if_ready()
 
 
+func has_pending_hub_sequences() -> bool:
+	return current_playing_sequence != "" or not _pending_hub_sequences.is_empty()
+
+
 func _queue_hub_sequence(sequence_id: String, front: bool = false, start_if_ready: bool = true) -> bool:
 	if not _can_accept_sequence(sequence_id):
 		return false
-	if start_if_ready and _is_hub_scene_active() and current_playing_sequence == "":
+	if start_if_ready and _can_start_hub_sequence_now() and current_playing_sequence == "":
 		_start_sequence(sequence_id)
 		return true
 	if _pending_hub_sequences.has(sequence_id):
@@ -290,8 +302,19 @@ func _queue_first_available_hub_sequence(sequence_ids: Array[String], start_if_r
 
 
 func _queue_act_opening_sequences(act: int) -> void:
-	_queue_first_available_hub_sequence(_get_fixed_event_sequence_ids(act), false)
+	if act != 1:
+		return
 	_queue_first_available_hub_sequence(_get_stage_intro_sequence_ids(act), false)
+
+
+func _queue_completed_act_sequences(act: int, start_if_ready: bool = false) -> void:
+	_queue_first_available_hub_sequence(_get_fixed_event_sequence_ids(act), start_if_ready)
+
+
+func _queue_run_finish_sequence(sequence_id: String) -> void:
+	if _queue_hub_sequence(sequence_id, false, false):
+		_completion_actions[sequence_id] = COMPLETION_ACTION_RETURN_TO_MAIN_MENU
+		call_deferred("_play_pending_hub_sequences_if_ready")
 
 
 func _play_first_available_sequence(sequence_ids: Array[String]) -> bool:
@@ -337,6 +360,15 @@ func _can_show_story_book_page_on_current_scene() -> bool:
 	return current_scene != null and current_scene.has_method("play_story_book_page")
 
 
+func _can_start_hub_sequence_now() -> bool:
+	if not _is_hub_scene_active():
+		return false
+	var current_scene := get_tree().current_scene
+	if current_scene != null and current_scene.has_method("can_play_pending_story_sequence"):
+		return bool(current_scene.call("can_play_pending_story_sequence"))
+	return true
+
+
 func _is_standalone_story_book_scene(scene: Node) -> bool:
 	if scene == null or not scene.has_method("is_standalone_story_book_scene"):
 		return false
@@ -350,7 +382,7 @@ func _on_scene_transition_finished(_new_scene: Node) -> void:
 
 
 func _play_pending_hub_sequences_if_ready() -> void:
-	if current_playing_sequence != "" or _pending_hub_sequences.is_empty() or not _is_hub_scene_active():
+	if current_playing_sequence != "" or _pending_hub_sequences.is_empty() or not _can_start_hub_sequence_now():
 		return
 	var next_sequence_id: String = _pending_hub_sequences.pop_front()
 	play_sequence(next_sequence_id)
@@ -362,6 +394,8 @@ func _apply_completion_action(sequence_id: String) -> void:
 	match action:
 		COMPLETION_ACTION_ADVANCE_EVENT_ROUTE:
 			_advance_current_event_route_after_story()
+		COMPLETION_ACTION_RETURN_TO_MAIN_MENU:
+			_return_to_main_menu_after_story()
 
 
 func _advance_current_event_route_after_story() -> void:
@@ -371,6 +405,12 @@ func _advance_current_event_route_after_story() -> void:
 	var scene_mgr: Node = _get_scene_manager()
 	if scene_mgr != null and _get_current_scene_type() == GlobalScene.SceneType.EVENT:
 		scene_mgr.call("transition_to", GlobalScene.SceneType.HUB, false)
+
+
+func _return_to_main_menu_after_story() -> void:
+	var scene_mgr: Node = _get_scene_manager()
+	if scene_mgr != null and scene_mgr.has_method("transition_to"):
+		scene_mgr.call("transition_to", GlobalScene.SceneType.MAIN_MENU, false)
 
 
 func _get_stage_intro_sequence_ids(act: int) -> Array[String]:

@@ -191,7 +191,7 @@ func _has_continue_save() -> bool:
 	return rm != null and rm.saver != null and rm.saver.has_save() and not rm.is_run_complete
 
 func _resolve_dream_entry_scene() -> int:
-	return GlobalScene.SceneType.HUB if _has_continue_save() else GlobalScene.SceneType.STORY_BOOK
+	return GlobalScene.SceneType.STORY_BOOK
 
 func _hide_removed_menu_entries() -> void:
 	for node_name in REMOVED_MENU_ENTRY_NAMES:
@@ -293,12 +293,8 @@ func _is_disabled_button(control: Control) -> bool:
 
 func _on_new_game_button_pressed() -> void:
 	print("[MainMenu] New game pressed.")
-	var target_scene := _resolve_dream_entry_scene()
-	if target_scene == GlobalScene.SceneType.HUB:
-		_transition_to(target_scene)
-		return
 	if _start_new_run():
-		_transition_to(target_scene)
+		_transition_to(_resolve_dream_entry_scene())
 
 func _on_continue_button_pressed() -> void:
 	print("[MainMenu] Continue pressed.")

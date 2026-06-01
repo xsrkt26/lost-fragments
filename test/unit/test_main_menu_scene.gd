@@ -178,7 +178,7 @@ func test_new_game_action_starts_run_without_intermediate_scene() -> void:
 	assert_false(GlobalScene.SCENE_PATHS.values().has("res://src/ui/new_game/new_game_scene.tscn"))
 
 
-func test_enter_dream_prefers_existing_save_and_keeps_continue_button_hidden() -> void:
+func test_new_game_always_starts_beginning_story_and_keeps_continue_button_hidden() -> void:
 	var menu = MainMenuScene.instantiate()
 	var fake_run_manager: FakeRunManager = add_child_autofree(FakeRunManager.new())
 	var fake_scene_manager: FakeSceneManager = add_child_autofree(FakeSceneManager.new())
@@ -193,11 +193,11 @@ func test_enter_dream_prefers_existing_save_and_keeps_continue_button_hidden() -
 	assert_false(continue_button.visible)
 	assert_true(continue_button.disabled)
 	assert_false(continue_disabled_overlay.visible)
-	assert_eq(menu._resolve_dream_entry_scene(), GlobalScene.SceneType.HUB)
+	assert_eq(menu._resolve_dream_entry_scene(), GlobalScene.SceneType.STORY_BOOK)
 	menu._on_new_game_button_pressed()
 	assert_eq(fake_scene_manager.transition_calls.size(), 1)
-	assert_eq(fake_scene_manager.transition_calls[0]["scene_type"], GlobalScene.SceneType.HUB)
-	assert_eq(fake_run_manager.start_new_run_call_count, 0)
+	assert_eq(fake_scene_manager.transition_calls[0]["scene_type"], GlobalScene.SceneType.STORY_BOOK)
+	assert_eq(fake_run_manager.start_new_run_call_count, 1)
 
 	fake_run_manager.saver = FakeSaver.new(false)
 
@@ -205,7 +205,7 @@ func test_enter_dream_prefers_existing_save_and_keeps_continue_button_hidden() -
 	menu._on_new_game_button_pressed()
 	assert_eq(fake_scene_manager.transition_calls.size(), 2)
 	assert_eq(fake_scene_manager.transition_calls[1]["scene_type"], GlobalScene.SceneType.STORY_BOOK)
-	assert_eq(fake_run_manager.start_new_run_call_count, 1)
+	assert_eq(fake_run_manager.start_new_run_call_count, 2)
 
 
 func test_main_menu_f_shortcuts_jump_to_target_act_and_prepare_hub_run() -> void:
