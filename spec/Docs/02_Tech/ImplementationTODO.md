@@ -846,7 +846,7 @@
 
 - 当前仓库没有正式捕梦动画、美术或 CG 资源，因此本轮保留已有轻量捕梦 tween，并把正式素材替换点维持在 `MainGameUI._play_dreamcatcher_animation()`。
 - 翻页先采用 2D shader 而不做 3D 纸页网格，优先保证 UI 场景切换稳定；后续若需要更真实的纸张厚度和投影，可以在同一 `GlobalScene` 转场入口升级。
-- 音效反馈复用已有 `ui_click.wav`；后续若补充 hover、confirm、error 等更细音效，只需要扩展 `AudioManager.SFX_PATHS` 和 `GlobalFeedback` 的按键反馈策略。
+- 音效反馈复用正式按钮音效 `ui_button.wav`；后续若补充 hover、confirm、error 等更细音效，只需要扩展 `AudioManager.SFX_PATHS` 和 `GlobalFeedback` 的按键反馈策略。
 - 视觉统一先以工程行为一致为目标，不在缺少最终 UI 规范和素材时做大规模控件重绘，避免与后续正式美术导入重复返工。
 
 自动化测试：

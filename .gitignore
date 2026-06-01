@@ -30,3 +30,11 @@ transition_result.gif
 # Local release/build scratch space
 /tmp/*
 !/tmp/.gdignore
+
+# Local editor/runtime downloads and visual debug captures
+/Godot_v*-stable_win64*.exe
+/screenshots/
+
+# Archive extraction leftovers inside source art drops
+assets/sourceImage/**/__MACOSX/
+assets/sourceImage/**/._*
