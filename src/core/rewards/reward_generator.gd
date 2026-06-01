@@ -118,7 +118,8 @@ static func _make_tool_reward(tool) -> Dictionary:
 		"type": TYPE_TOOL,
 		"id": tool.id,
 		"title": tool.tool_name,
-		"description": tool.effect_text,
+		"description": "进入待放置区，可拖入背包网格或堆叠到同名道具。\n%s" % tool.effect_text,
+		"item_destination": "staging",
 		"rarity": tool.rarity,
 		"amount": 1,
 	}

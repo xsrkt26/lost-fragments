@@ -9,6 +9,7 @@ class ItemInstance extends RefCounted:
 	var root_pos: Vector2i
 	var is_preserved: bool = false
 	var dream_seed_level: int = 0
+	var stack_count: int = 1
 	var current_pollution: int = 0:
 		set(val):
 			if is_preserved:
@@ -46,6 +47,7 @@ var blocked_cells: Dictionary = {}
 const DREAM_SEED_TAG := "梦境之种"
 const DREAM_SEED_LEGACY_TAG := "梦之种"
 const DERIVED_TAG := "衍生物品"
+const TOOL_TAG := "道具"
 const MAX_DREAM_SEED_STAGE := 4
 
 ## 核心网格字典：Key 是 Vector2i 坐标，Value 是 ItemInstance
@@ -139,6 +141,7 @@ func place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: b
 		unique_data.runtime_id = randi()
 	
 	var instance = ItemInstance.new(unique_data, root_pos)
+	_set_stack_count(instance, _get_stack_count_from_data(unique_data))
 	_initialize_seed_instance(instance)
 	for offset in unique_data.shape:
 		var target_pos = root_pos + offset
@@ -146,6 +149,36 @@ func place_item(item_data: ItemData, root_pos: Vector2i, ignore_blocked_cells: b
 	
 	grid_changed.emit()
 	return true
+
+func can_stack_item(item_data: ItemData, target_pos: Vector2i) -> bool:
+	if not _is_tool_data(item_data) or not grid.has(target_pos):
+		return false
+	var target_instance: ItemInstance = grid[target_pos]
+	return _is_tool_instance(target_instance) and target_instance.data.id == item_data.id
+
+func stack_item_at(item_data: ItemData, target_pos: Vector2i, amount: int = -1) -> bool:
+	if not can_stack_item(item_data, target_pos):
+		return false
+	var target_instance: ItemInstance = grid[target_pos]
+	var added := amount if amount > 0 else _get_stack_count_from_data(item_data)
+	_set_stack_count(target_instance, target_instance.stack_count + max(1, added))
+	grid_changed.emit()
+	return true
+
+func find_stackable_pos(item_data: ItemData) -> Vector2i:
+	if not _is_tool_data(item_data):
+		return Vector2i(-1, -1)
+	for instance in get_all_instances():
+		if _is_tool_instance(instance) and instance.data.id == item_data.id:
+			return instance.root_pos
+	return Vector2i(-1, -1)
+
+func set_instance_stack_count(instance: ItemInstance, count: int) -> void:
+	_set_stack_count(instance, count)
+	grid_changed.emit()
+
+func get_instance_stack_count(instance: ItemInstance) -> int:
+	return max(1, int(instance.stack_count)) if instance != null else 1
 
 ## 替换指定位置物品的数据 (用于变身、进化等逻辑)
 func replace_item_data(pos: Vector2i, new_data: ItemData) -> bool:
@@ -364,6 +397,30 @@ func _is_dream_seed_data(data: ItemData) -> bool:
 	if data == null:
 		return false
 	return data.tags.has(DREAM_SEED_TAG) or data.tags.has(DREAM_SEED_LEGACY_TAG)
+
+func is_tool_instance(instance: ItemInstance) -> bool:
+	return _is_tool_instance(instance)
+
+func is_tool_data(data: ItemData) -> bool:
+	return _is_tool_data(data)
+
+func _is_tool_instance(instance: ItemInstance) -> bool:
+	return instance != null and _is_tool_data(instance.data)
+
+func _is_tool_data(data: ItemData) -> bool:
+	return data != null and (data.tags.has(TOOL_TAG) or bool(data.get_meta("is_tool", false)))
+
+func _get_stack_count_from_data(data: ItemData) -> int:
+	if data != null and data.has_meta("stack_count"):
+		return max(1, int(data.get_meta("stack_count")))
+	return 1
+
+func _set_stack_count(instance: ItemInstance, count: int) -> void:
+	if instance == null:
+		return
+	instance.stack_count = max(1, count)
+	if instance.data != null:
+		instance.data.set_meta("stack_count", instance.stack_count)
 
 func _initialize_seed_instance(instance: ItemInstance) -> void:
 	if instance == null or not _is_dream_seed_data(instance.data):

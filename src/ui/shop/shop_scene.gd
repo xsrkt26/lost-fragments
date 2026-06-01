@@ -150,7 +150,7 @@ func _format_offer_text(offer: Dictionary) -> String:
 		"ornament":
 			return "%s\n%s饰品 | %d 碎片" % [title, str(offer.get("rarity", "")), price]
 		"tool":
-			return "%s\n%s | %d 碎片" % [title, str(offer.get("rarity", "道具")), price]
+			return "%s\n%s/暂存 | %d 碎片" % [title, str(offer.get("rarity", "道具")), price]
 	return "%s\n%d 碎片" % [title, price]
 
 func _format_item_destination(offer: Dictionary) -> String:
@@ -187,7 +187,8 @@ func _get_offer_price(offer: Dictionary) -> int:
 	return int(offer.get("price", 0))
 
 func _show_offer_tooltip(offer: Dictionary) -> void:
-	if str(offer.get("type", "")) != "item":
+	var offer_type := str(offer.get("type", ""))
+	if offer_type != "item" and offer_type != "tool":
 		GlobalTooltip.hide()
 		return
 	var item_db = _get_item_database()

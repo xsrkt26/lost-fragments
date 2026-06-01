@@ -541,6 +541,19 @@ func _total_tool_count(tools: Dictionary) -> int:
 		total += int(count)
 	return total
 
+func _pending_item_count(run_manager, item_id: String) -> int:
+	var total := 0
+	for entry in run_manager.pending_item_rewards:
+		if str(entry.get("id", "")) == item_id:
+			total += max(1, int(entry.get("stack_count", 1)))
+	return total
+
+func _pending_total_item_count(run_manager) -> int:
+	var total := 0
+	for entry in run_manager.pending_item_rewards:
+		total += max(1, int(entry.get("stack_count", 1)))
+	return total
+
 func test_recycling_coupon_discounts_next_item_after_first_item_purchase():
 	var manager = autofree(RunManagerScript.new())
 	manager.current_shards = 100
@@ -624,7 +637,8 @@ func test_universal_toolbox_rewards_once_after_three_target_types():
 
 	manager._apply_ornament_tool_used(tool, {"type": "dreamcatcher"}, {"success": true})
 	assert_eq(gs.current_score, 12)
-	assert_eq(_total_tool_count(rm.current_tools), 1)
+	assert_eq(_pending_total_item_count(rm), 1)
+	assert_eq(_pending_item_count(rm, "small_patch"), 0)
 
 	manager._apply_ornament_tool_used(tool, {"type": "item"}, {"success": true})
 	assert_eq(gs.current_score, 12)

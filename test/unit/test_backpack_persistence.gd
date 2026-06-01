@@ -95,7 +95,7 @@ func test_restore_backpack_moves_root_dream_off_blocked_cell():
 	assert_not_null(root)
 	assert_eq(root.root_pos, Vector2i(3, 3))
 
-func test_restore_backpack_prefers_center_for_legacy_root_dream_position():
+func test_restore_backpack_preserves_saved_root_dream_position():
 	run_manager.current_backpack_items.clear()
 	run_manager.current_backpack_items.append({
 		"id": "root_dream",
@@ -112,7 +112,37 @@ func test_restore_backpack_prefers_center_for_legacy_root_dream_position():
 
 	var root = _find_instance(backpack, "root_dream")
 	assert_not_null(root)
-	assert_eq(root.root_pos, Vector2i(3, 3))
+	assert_eq(root.root_pos, Vector2i(1, 1))
+
+func test_restore_backpack_does_not_move_root_dream_over_center_item():
+	run_manager.current_backpack_items.clear()
+	run_manager.current_backpack_items.append({
+		"id": "root_dream",
+		"x": 1,
+		"y": 1,
+		"direction": ItemData.Direction.RIGHT,
+		"shape": [{"x": 0, "y": 0}],
+		"runtime_id": -1
+	})
+	run_manager.current_backpack_items.append({
+		"id": "paper_ball",
+		"x": 3,
+		"y": 3,
+		"direction": ItemData.Direction.RIGHT,
+		"shape": [{"x": 0, "y": 0}],
+		"runtime_id": 9988
+	})
+	var backpack = autofree(BackpackManager.new())
+	backpack.setup_grid(7, 7, 5, 5)
+
+	run_manager.restore_backpack_state(backpack, item_db)
+
+	var root = _find_instance(backpack, "root_dream")
+	var paper = _find_instance(backpack, "paper_ball")
+	assert_not_null(root)
+	assert_not_null(paper)
+	assert_eq(root.root_pos, Vector2i(1, 1))
+	assert_eq(paper.root_pos, Vector2i(3, 3))
 
 func test_restore_backpack_repairs_root_dream_saved_shape():
 	run_manager.current_backpack_items.clear()

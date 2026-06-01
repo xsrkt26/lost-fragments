@@ -71,7 +71,10 @@ func test_deserialize_run_accepts_legacy_tool_entry_arrays():
 		],
 	})
 
-	assert_eq(run_manager.current_tools, {"small_patch": 3})
+	assert_true(run_manager.current_tools.is_empty())
+	assert_eq(run_manager.pending_item_rewards.size(), 1)
+	assert_eq(str(run_manager.pending_item_rewards[0].get("id", "")), "small_patch")
+	assert_eq(int(run_manager.pending_item_rewards[0].get("stack_count", 0)), 3)
 
 func test_serialize_run_includes_current_schema_version():
 	var serialized = run_manager.serialize_run()

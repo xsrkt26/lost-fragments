@@ -525,7 +525,7 @@ func _on_offer_button_pressed(button: Button, offer: Dictionary, run_manager: No
 	if button == null or run_manager == null or item_db == null:
 		return
 	var purchase_offer: Dictionary = offer.duplicate(true)
-	if str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_ITEM:
+	if str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_ITEM or str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_TOOL:
 		purchase_offer["item_destination"] = "staging"
 		purchase_offer["destination"] = "staging"
 	if run_manager.has_method("buy_shop_offer") and bool(run_manager.buy_shop_offer(purchase_offer, item_db)):
@@ -576,7 +576,7 @@ func _get_offer_kind_text(offer: Dictionary) -> String:
 		ShopGenerator.TYPE_ORNAMENT:
 			return "饰品"
 		ShopGenerator.TYPE_TOOL:
-			return "道具"
+			return "道具/待放置"
 	return "商品"
 
 
@@ -593,7 +593,8 @@ func _is_offer_purchased(run_manager: Node, offer: Dictionary) -> bool:
 
 
 func _show_offer_tooltip(offer: Dictionary, item_db: Node) -> void:
-	if str(offer.get("type", "")) != ShopGenerator.TYPE_ITEM:
+	var offer_type := str(offer.get("type", ""))
+	if offer_type != ShopGenerator.TYPE_ITEM and offer_type != ShopGenerator.TYPE_TOOL:
 		GlobalTooltip.hide()
 		return
 	if item_db == null or not item_db.has_method("get_item_by_id"):

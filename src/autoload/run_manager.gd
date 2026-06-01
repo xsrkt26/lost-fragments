@@ -293,7 +293,8 @@ func sell_backpack_item(runtime_id: int, item_db: Node = null) -> int:
 			return 0
 		var item_data = item_db.get_item_by_id(item_id) if item_db != null and item_db.has_method("get_item_by_id") else null
 		var base_price: int = int(item_data.price) if item_data != null else max(1, int(entry.get("price", 1)))
-		var sell_value: int = EconomyConfig.shop_item_sell_value(base_price, current_act)
+		var stack_count: int = max(1, int(entry.get("stack_count", 1)))
+		var sell_value: int = EconomyConfig.shop_item_sell_value(base_price, current_act) * stack_count
 		current_backpack_items.remove_at(index)
 		current_shards += sell_value
 		shards_changed.emit(current_shards)
@@ -308,8 +309,14 @@ func grant_tool(tool_id: String, amount: int = 1, tool_db: Node = null, _source:
 		tool_db = _get_tool_database()
 	if tool_db != null and tool_db.has_method("get_tool_by_id") and tool_db.get_tool_by_id(tool_id) == null:
 		return false
-	current_tools[tool_id] = max(0, int(current_tools.get(tool_id, 0))) + amount
-	tools_changed.emit(get_current_tools())
+	for existing in pending_item_rewards:
+		if str(existing.get("id", "")) == tool_id:
+			existing["stack_count"] = max(1, int(existing.get("stack_count", 1))) + amount
+			pending_items_changed.emit(get_pending_item_rewards())
+			if save_after:
+				save_current_state()
+			return true
+	_add_pending_item_reward(tool_id, _source, ITEM_DEST_STAGING, false, amount)
 	if save_after:
 		save_current_state()
 	return true
@@ -337,31 +344,7 @@ func get_current_tools() -> Dictionary:
 	return current_tools.duplicate(true)
 
 func get_tool_inventory_entries(tool_db: Node = null) -> Array[Dictionary]:
-	if tool_db == null and is_inside_tree():
-		tool_db = _get_tool_database()
-	var result: Array[Dictionary] = []
-	for tool_id in current_tools.keys():
-		var count = int(current_tools.get(tool_id, 0))
-		if count <= 0:
-			continue
-		var entry: Dictionary = {
-			"id": str(tool_id),
-			"count": count,
-			"title": str(tool_id),
-			"description": "",
-			"rarity": "",
-			"target_type": "",
-		}
-		if tool_db != null and tool_db.has_method("get_tool_by_id"):
-			var tool = tool_db.get_tool_by_id(str(tool_id))
-			if tool != null:
-				entry["title"] = tool.tool_name
-				entry["description"] = tool.effect_text
-				entry["rarity"] = tool.rarity
-				entry["target_type"] = tool.target_type
-		result.append(entry)
-	result.sort_custom(func(a, b): return str(a.get("id", "")) < str(b.get("id", "")))
-	return result
+	return [] as Array[Dictionary]
 
 func grant_item(item_id: String, destination: String = ITEM_DEST_DECK, item_db: Node = null, source: String = "", save_after: bool = true) -> bool:
 	if item_id == "":
@@ -410,7 +393,7 @@ func place_pending_item_in_backpack(uid: int, item_db: Node) -> bool:
 	var entry = _get_pending_item(uid)
 	if entry.is_empty():
 		return false
-	if not _try_add_item_to_backpack_state(str(entry.get("id", "")), item_db):
+	if not _try_add_item_to_backpack_state(str(entry.get("id", "")), item_db, max(1, int(entry.get("stack_count", 1)))):
 		return false
 	return consume_pending_item(uid)
 
@@ -420,13 +403,23 @@ func _get_pending_item(uid: int) -> Dictionary:
 			return entry.duplicate(true)
 	return {}
 
-func _add_pending_item_reward(item_id: String, source: String, preferred_destination: String, save_after: bool = true) -> Dictionary:
+func _add_pending_item_reward(item_id: String, source: String, preferred_destination: String, save_after: bool = true, stack_count: int = 1) -> Dictionary:
+	if _is_tool_id(item_id):
+		for existing in pending_item_rewards:
+			if str(existing.get("id", "")) == item_id:
+				existing["stack_count"] = max(1, int(existing.get("stack_count", 1))) + max(1, stack_count)
+				pending_items_changed.emit(get_pending_item_rewards())
+				if save_after:
+					save_current_state()
+				return existing.duplicate(true)
 	var entry = {
 		"uid": next_pending_item_uid,
 		"id": item_id,
 		"source": source,
 		"preferred_destination": preferred_destination,
 	}
+	if stack_count > 1:
+		entry["stack_count"] = stack_count
 	next_pending_item_uid += 1
 	pending_item_rewards.append(entry)
 	pending_items_changed.emit(get_pending_item_rewards())
@@ -434,17 +427,24 @@ func _add_pending_item_reward(item_id: String, source: String, preferred_destina
 		save_current_state()
 	return entry
 
-func _try_add_item_to_backpack_state(item_id: String, item_db: Node) -> bool:
+func _try_add_item_to_backpack_state(item_id: String, item_db: Node, stack_count: int = 1) -> bool:
 	if item_db == null or not item_db.has_method("get_item_by_id"):
 		return false
 	var item_data = item_db.get_item_by_id(item_id)
 	if item_data == null:
 		return false
+	if stack_count > 1:
+		item_data.set_meta("stack_count", stack_count)
 
 	var backpack = BackpackManager.new()
 	backpack.setup_grid(BACKPACK_GRID_WIDTH, BACKPACK_GRID_HEIGHT, backpack_usable_width, backpack_usable_height)
 	backpack.set_blocked_cells(_to_vector2i_cells(_get_all_blocked_backpack_cells()))
 	restore_backpack_state(backpack, item_db)
+	var stack_pos = backpack.find_stackable_pos(item_data) if backpack.has_method("find_stackable_pos") else Vector2i(-1, -1)
+	if stack_pos != Vector2i(-1, -1) and backpack.stack_item_at(item_data, stack_pos):
+		save_backpack_state(backpack)
+		backpack.free()
+		return true
 	var target_pos = backpack.find_available_pos(item_data)
 	if target_pos == Vector2i(-1, -1):
 		backpack.free()
@@ -837,15 +837,13 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 		var runtime_data: ItemData = item_data.duplicate(true)
 		runtime_data.runtime_id = int(entry.get("runtime_id", randi()))
 		runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
+		if entry.has("stack_count"):
+			runtime_data.set_meta("stack_count", max(1, int(entry.get("stack_count", 1))))
 		if item_id != ROOT_DREAM_ID:
 			runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
 		var root_pos: Vector2i = Vector2i(int(entry.get("x", 0)), int(entry.get("y", 0)))
 		var restore_pos: Vector2i = root_pos
 		var ignore_blocked_cells := item_id != ROOT_DREAM_ID
-		if item_id == ROOT_DREAM_ID:
-			var preferred_pos := _get_preferred_required_backpack_pos(backpack, runtime_data, item_id)
-			if preferred_pos != Vector2i(-1, -1):
-				restore_pos = preferred_pos
 		if not backpack.place_item(runtime_data, restore_pos, ignore_blocked_cells):
 			if item_id == ROOT_DREAM_ID:
 				var fallback_pos := _find_required_backpack_pos(backpack, runtime_data, item_id)
@@ -856,7 +854,7 @@ func restore_backpack_state(backpack: BackpackManager, item_db: Node) -> void:
 	_ensure_required_backpack_items(backpack, item_db)
 
 func _serialize_backpack_instance(instance: BackpackManager.ItemInstance) -> Dictionary:
-	return {
+	var entry := {
 		"id": instance.data.id,
 		"x": instance.root_pos.x,
 		"y": instance.root_pos.y,
@@ -864,6 +862,9 @@ func _serialize_backpack_instance(instance: BackpackManager.ItemInstance) -> Dic
 		"shape": _serialize_shape(instance.data.shape),
 		"runtime_id": instance.data.runtime_id
 	}
+	if instance.stack_count > 1 or instance.data.tags.has("道具") or bool(instance.data.get_meta("is_tool", false)):
+		entry["stack_count"] = max(1, int(instance.stack_count))
+	return entry
 
 func _sync_current_backpack_items_from_backpack(backpack: BackpackManager) -> void:
 	current_backpack_items.clear()
@@ -971,6 +972,8 @@ func _make_runtime_backpack_item_data(entry: Dictionary, item_db: Node) -> ItemD
 	runtime_data.direction = int(entry.get("direction", runtime_data.direction)) as ItemData.Direction
 	runtime_data.shape = _deserialize_shape(Array(entry.get("shape", [])), runtime_data.shape)
 	runtime_data.runtime_id = int(entry.get("runtime_id", runtime_data.runtime_id))
+	if entry.has("stack_count"):
+		runtime_data.set_meta("stack_count", max(1, int(entry.get("stack_count", 1))))
 	return runtime_data
 
 func _get_item_database() -> Node:
@@ -994,6 +997,21 @@ func _get_tool_database() -> Node:
 	if not is_inside_tree():
 		return null
 	return get_node_or_null("/root/ToolDatabase")
+
+func _is_tool_id(item_id: String) -> bool:
+	if item_id == "":
+		return false
+	var tool_db = _get_tool_database()
+	return tool_db != null and tool_db.has_method("get_tool_by_id") and tool_db.get_tool_by_id(item_id) != null
+
+func _migrate_legacy_tools_to_pending_items() -> void:
+	if current_tools.is_empty():
+		return
+	for tool_id in current_tools.keys():
+		var count: int = max(0, int(current_tools.get(tool_id, 0)))
+		if count > 0:
+			_add_pending_item_reward(str(tool_id), "legacy_tool_inventory", ITEM_DEST_STAGING, false, count)
+	current_tools.clear()
 
 func _is_derived_item(instance: BackpackManager.ItemInstance) -> bool:
 	return instance != null and instance.data != null and instance.data.tags.has("衍生物品")
@@ -1091,6 +1109,7 @@ func serialize_run() -> Dictionary:
 func deserialize_run(data: Dictionary):
 	if not RunPersistenceCodec.deserialize_into(self, data):
 		return
+	_migrate_legacy_tools_to_pending_items()
 	pending_items_changed.emit(get_pending_item_rewards())
 	tools_changed.emit(get_current_tools())
 	_emit_route_changed()

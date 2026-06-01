@@ -22,6 +22,7 @@ var item_instance: BackpackManager.ItemInstance: # 逻辑实例
 @onready var icon = $Icon
 @onready var pollution_label = $PollutionLabel
 @onready var name_label = $NameLabel
+@onready var stack_label = $StackLabel
 
 # --- 信号 ---
 signal dropped(mouse_global_pos: Vector2, pivot_offset: Vector2i)
@@ -100,6 +101,24 @@ func _sync_visuals():
 		pollution_label.show()
 	else:
 		pollution_label.hide()
+	_update_stack_visual()
+
+func _update_stack_visual() -> void:
+	if stack_label == null:
+		return
+	if not _is_tool_item():
+		stack_label.hide()
+		return
+	var count := 1
+	if item_instance != null:
+		count = max(1, int(item_instance.stack_count))
+	elif item_data != null and item_data.has_meta("stack_count"):
+		count = max(1, int(item_data.get_meta("stack_count")))
+	stack_label.text = "x%d" % count
+	stack_label.show()
+
+func _is_tool_item() -> bool:
+	return item_data != null and (item_data.tags.has("道具") or bool(item_data.get_meta("is_tool", false)))
 
 func _update_direction_visual():
 	if not direction_icon: return
