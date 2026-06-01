@@ -130,6 +130,8 @@ func _restore_scene_smoke_state(state: Dictionary) -> void:
 func _apply_scene_smoke_overrides(root: Node) -> void:
 	if _has_property(root, "play_battle_intro"):
 		root.set("play_battle_intro", false)
+	if _has_property(root, "auto_start_sequence"):
+		root.set("auto_start_sequence", false)
 	for child in root.get_children():
 		_apply_scene_smoke_overrides(child)
 

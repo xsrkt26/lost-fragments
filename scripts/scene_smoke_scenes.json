@@ -6,6 +6,7 @@
     "res://src/ui/settings/audio_settings_ui.tscn",
     "res://src/ui/main_game_ui.tscn",
     "res://src/ui/shop/shop_scene.tscn",
+    "res://src/ui/story/story_book_scene.tscn",
     "res://src/ui/story/cutscene_scene.tscn",
     "res://src/ui/debug/debug_sandbox.tscn",
     "res://src/ui/backpack/backpack_page.tscn",

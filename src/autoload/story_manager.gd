@@ -8,8 +8,8 @@ const STORY_ENABLED: bool = true
 const DIALOGUE_CANVAS_NAME := "DialogueCanvas"
 const COMPLETION_ACTION_ADVANCE_EVENT_ROUTE := "advance_event_route"
 const FIXED_EVENT_SEQUENCE_BY_ACT: Dictionary = {
-	1: "固定事件1·小咭",
-	2: "固定事件2·小舌",
+	1: "固定事件1·小咪",
+	2: "固定事件2·小舅",
 	3: "固定事件3·姥姥",
 	4: "固定事件4·父母",
 	5: "固定事件5·小佳",
@@ -60,7 +60,8 @@ func _on_route_changed(current_act: int, route_index: int, _current_node: Dictio
 	_refresh_played_flags_from_run()
 	if route_index != 0:
 		return
-	_queue_first_available_hub_sequence(_get_stage_intro_sequence_ids(current_act))
+	_queue_act_opening_sequences(current_act)
+	call_deferred("_play_pending_hub_sequences_if_ready")
 
 
 func _on_run_finished(victory: bool) -> void:
@@ -104,7 +105,7 @@ func play_sequence(sequence_id: String) -> bool:
 		_queue_sequence(sequence_id)
 		return true
 	var is_cutscene_sequence := _is_cutscene_sequence(sequence_id)
-	if is_cutscene_sequence and sequence_id == "beginning" and not _is_hub_scene_active():
+	if is_cutscene_sequence and sequence_id == "beginning" and not _can_show_story_book_page_on_current_scene():
 		_queue_hub_sequence(sequence_id, true)
 		return true
 	if is_cutscene_sequence or _can_show_dialogue_overlay_now():
@@ -220,8 +221,6 @@ func _start_sequence(sequence_id: String) -> void:
 
 
 func _try_show_story_book_page(sequence_id: String) -> bool:
-	if not _is_hub_scene_active():
-		return false
 	var current_scene := get_tree().current_scene
 	if current_scene == null or not current_scene.has_method("play_story_book_page"):
 		return false
@@ -268,26 +267,31 @@ func play_pending_hub_sequences_if_ready() -> void:
 	_play_pending_hub_sequences_if_ready()
 
 
-func _queue_hub_sequence(sequence_id: String, front: bool = false) -> void:
+func _queue_hub_sequence(sequence_id: String, front: bool = false, start_if_ready: bool = true) -> bool:
 	if not _can_accept_sequence(sequence_id):
-		return
-	if _is_hub_scene_active() and current_playing_sequence == "":
+		return false
+	if start_if_ready and _is_hub_scene_active() and current_playing_sequence == "":
 		_start_sequence(sequence_id)
-		return
+		return true
 	if _pending_hub_sequences.has(sequence_id):
 		_pending_hub_sequences.erase(sequence_id)
 	if front:
 		_pending_hub_sequences.push_front(sequence_id)
 	else:
 		_pending_hub_sequences.append(sequence_id)
+	return true
 
 
-func _queue_first_available_hub_sequence(sequence_ids: Array[String]) -> bool:
+func _queue_first_available_hub_sequence(sequence_ids: Array[String], start_if_ready: bool = true) -> bool:
 	for sequence_id in sequence_ids:
-		if has_sequence(sequence_id):
-			_queue_hub_sequence(sequence_id)
+		if _queue_hub_sequence(sequence_id, false, start_if_ready):
 			return true
 	return false
+
+
+func _queue_act_opening_sequences(act: int) -> void:
+	_queue_first_available_hub_sequence(_get_fixed_event_sequence_ids(act), false)
+	_queue_first_available_hub_sequence(_get_stage_intro_sequence_ids(act), false)
 
 
 func _play_first_available_sequence(sequence_ids: Array[String]) -> bool:
@@ -323,7 +327,20 @@ func _is_hub_scene_active() -> bool:
 	if _get_current_scene_type() == GlobalScene.SceneType.HUB:
 		return true
 	var current_scene := get_tree().current_scene
+	if _is_standalone_story_book_scene(current_scene):
+		return false
 	return current_scene != null and current_scene.has_method("play_story_book_page")
+
+
+func _can_show_story_book_page_on_current_scene() -> bool:
+	var current_scene := get_tree().current_scene
+	return current_scene != null and current_scene.has_method("play_story_book_page")
+
+
+func _is_standalone_story_book_scene(scene: Node) -> bool:
+	if scene == null or not scene.has_method("is_standalone_story_book_scene"):
+		return false
+	return bool(scene.call("is_standalone_story_book_scene"))
 
 
 func _on_scene_transition_finished(_new_scene: Node) -> void:
@@ -363,12 +380,25 @@ func _get_stage_intro_sequence_ids(act: int) -> Array[String]:
 	]
 
 
+func _get_fixed_event_sequence_ids(act: int) -> Array[String]:
+	var result: Array[String] = [
+		"fixed_event_%d" % act,
+		"固定事件%d" % act,
+	]
+	var mapped: String = str(FIXED_EVENT_SEQUENCE_BY_ACT.get(act, ""))
+	if mapped != "":
+		result.append(mapped)
+	return result
+
+
 func _get_battle_intro_sequence_ids(act: int) -> Array[String]:
-	return [
+	var result: Array[String] = [
 		"enter_battle_%d" % act,
 		"进入局内%d" % act,
-		"进入局内",
 	]
+	if act == 1:
+		result.append("进入局内")
+	return result
 
 
 func _get_event_sequence_ids(act: int, node: Dictionary) -> Array[String]:
@@ -377,11 +407,6 @@ func _get_event_sequence_ids(act: int, node: Dictionary) -> Array[String]:
 	if node_id != "":
 		result.append("event_%s" % node_id)
 		result.append("事件_%s" % node_id)
-	result.append("fixed_event_%d" % act)
-	result.append("固定事件%d" % act)
-	var mapped: String = str(FIXED_EVENT_SEQUENCE_BY_ACT.get(act, ""))
-	if mapped != "":
-		result.append(mapped)
 	return result
 
 

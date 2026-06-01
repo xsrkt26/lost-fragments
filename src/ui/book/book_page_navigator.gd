@@ -34,6 +34,12 @@ const PAGE_SHEET_NODE_NAMES := {
 	PAGE_BACKPACK: "PageBackpackCover",
 	PAGE_SETTINGS: "PageRouteCover",
 }
+const TRANSITION_PAGE_ORDER := [
+	PAGE_HUB,
+	PAGE_GALLERY,
+	PAGE_BACKPACK,
+	PAGE_SETTINGS,
+]
 const BOOK_BASE_ART_NODE_NAMES := [
 	"WoodFloor",
 	"RedBookCover",
@@ -108,6 +114,7 @@ func go_to_page(page_id: String) -> void:
 	if page_id == current_page_id or _is_turning:
 		return
 	_is_turning = true
+	_play_page_turn_sfx()
 	_hide_compressed_page_stack()
 	var previous_page := current_page_id
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
@@ -302,7 +309,7 @@ func finish_story_sequence(sequence_id: String) -> void:
 
 
 func activate_tab_at_position(pointer_global_position: Vector2) -> bool:
-	if not visible or current_page_id == PAGE_HUB or _is_turning:
+	if not visible or current_page_id == PAGE_HUB or current_page_id == PAGE_STORY or _is_turning:
 		return false
 	var target_page := _get_tab_button_page_at_position(pointer_global_position)
 	if target_page == "":
@@ -426,6 +433,12 @@ func _finish_transition(_keep_hub_strip: bool = false) -> void:
 	page_changed.emit(current_page_id)
 
 
+func _play_page_turn_sfx() -> void:
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio and audio.has_method("play_sfx"):
+		audio.play_sfx("page_turn", 0.0)
+
+
 func _setup_turn_visuals() -> void:
 	_turn_effect = get_node_or_null("PageTurnEffect") as BookPageTurnEffect
 	if _turn_effect != null:
@@ -457,7 +470,7 @@ func _sync_tab_buttons() -> void:
 		var button := _tab_buttons[page_id] as Button
 		if button == null:
 			continue
-		var enabled := current_page_id != PAGE_HUB and str(page_id) != current_page_id and not _is_turning
+		var enabled := current_page_id != PAGE_HUB and current_page_id != PAGE_STORY and str(page_id) != current_page_id and not _is_turning
 		button.visible = enabled
 		button.disabled = not enabled
 		button.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
@@ -468,7 +481,7 @@ func _get_tab_button_page_at_position(pointer_global_position: Vector2) -> Strin
 	if viewport_size.x <= 0.0 or viewport_size.y <= 0.0:
 		viewport_size = DESIGN_SIZE
 	for page_id in _tab_buttons.keys():
-		if current_page_id == PAGE_HUB or str(page_id) == current_page_id or _is_turning:
+		if current_page_id == PAGE_HUB or current_page_id == PAGE_STORY or str(page_id) == current_page_id or _is_turning:
 			continue
 		var visual_rect := _get_tab_hotspot_global_rect(str(page_id), viewport_size)
 		if visual_rect.has_point(pointer_global_position):
@@ -663,8 +676,8 @@ func _prepare_transition_page_stack(previous_page_id: String, target_page_id: St
 	var target_index := _get_page_stack_index(target_page_id)
 	if previous_index < 0 or target_index < 0:
 		return
-	for index in range(BookBackgroundConfig.PAGE_ORDER.size() - 1, -1, -1):
-		var page_id := str(BookBackgroundConfig.PAGE_ORDER[index])
+	for index in range(TRANSITION_PAGE_ORDER.size() - 1, -1, -1):
+		var page_id := str(TRANSITION_PAGE_ORDER[index])
 		var start_progress := 1.0 if index < previous_index else 0.0
 		var end_progress := 1.0 if index < target_index else 0.0
 		var page_z_index := _get_transition_page_layer_z_index(index)
@@ -706,14 +719,14 @@ func _create_transition_global_layer_root(parent: Control, layer_name: String, l
 
 
 func _get_transition_page_layer_z_index(stack_index: int) -> int:
-	return (BookBackgroundConfig.PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
+	return (TRANSITION_PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
 
 
 func _create_transition_page_layer(page_id: String, stack_index: int) -> Control:
 	var layer := Control.new()
 	layer.name = "%sTransitionPageLayer" % page_id.capitalize()
 	layer.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	layer.z_index = (BookBackgroundConfig.PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
+	layer.z_index = (TRANSITION_PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
 	layer.z_as_relative = true
 	layer.clip_contents = false
 	_apply_top_left_rect(layer, _get_transition_viewport_size())
@@ -1071,13 +1084,13 @@ func _get_any_transition_book_background() -> Node:
 
 
 func _get_page_stack_index(page_id: String) -> int:
-	return BookBackgroundConfig.PAGE_ORDER.find(BookBackgroundConfig.normalize_page_id(page_id))
+	return TRANSITION_PAGE_ORDER.find(BookBackgroundConfig.normalize_page_id(page_id))
 
 
 func _get_bottom_page_id() -> String:
-	if BookBackgroundConfig.PAGE_ORDER.is_empty():
+	if TRANSITION_PAGE_ORDER.is_empty():
 		return PAGE_SETTINGS
-	return str(BookBackgroundConfig.PAGE_ORDER[BookBackgroundConfig.PAGE_ORDER.size() - 1])
+	return str(TRANSITION_PAGE_ORDER[TRANSITION_PAGE_ORDER.size() - 1])
 
 
 func _clear_transition_stack_root() -> void:
@@ -1137,7 +1150,7 @@ func _sync_compressed_page_stack() -> void:
 	root.visible = true
 	_layout_compressed_stack_root(_get_transition_viewport_size())
 	for index in range(active_index - 1, -1, -1):
-		var page_id := str(BookBackgroundConfig.PAGE_ORDER[index])
+		var page_id := str(TRANSITION_PAGE_ORDER[index])
 		var page_z := (active_index - index) * TRANSITION_PAGE_Z_STEP
 		_add_compressed_page_stack_item(root, page_id, page_z, page_id == PAGE_HUB)
 

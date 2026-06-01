@@ -1,6 +1,9 @@
 extends GutTest
 
 const MainMenuScene = preload("res://src/ui/main_menu/main_menu.tscn")
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
+const RouteConfig = preload("res://src/core/route/route_config.gd")
 const TEXT_BUTTON_NAMES := [
 	"NewGameButton",
 	"ContinueButton",
@@ -14,10 +17,56 @@ class FakeRunManager:
 	var saver = null
 	var is_run_complete := false
 	var current_act := 1
+	var current_route_id: String = RouteConfig.DEFAULT_ROUTE_ID
+	var current_route_index := 0
+	var completed_route_nodes: Array[int] = []
+	var is_run_active := false
+	var debug_hub_page_request := ""
+	var debug_hub_advance_next_node_request := false
 	var start_new_run_call_count := 0
+	var save_current_state_call_count := 0
 
 	func start_new_run() -> void:
 		start_new_run_call_count += 1
+		is_run_active = true
+		is_run_complete = false
+		current_act = 1
+		current_route_id = RouteConfig.DEFAULT_ROUTE_ID
+		current_route_index = 0
+		completed_route_nodes = []
+
+	func save_current_state() -> void:
+		save_current_state_call_count += 1
+
+
+class FakeSaver:
+	var has_save_result := false
+
+	func _init(result: bool) -> void:
+		has_save_result = result
+
+	func has_save() -> bool:
+		return has_save_result
+
+
+class FakeSceneManager:
+	extends Node
+
+	var transition_calls: Array[Dictionary] = []
+
+	func transition_to(scene_type: int, push_to_history: bool = true) -> void:
+		transition_calls.append({
+			"scene_type": scene_type,
+			"push_to_history": push_to_history,
+		})
+
+
+func _press_key(menu: Node, keycode: int) -> void:
+	var event := InputEventKey.new()
+	event.keycode = keycode
+	event.physical_keycode = keycode
+	event.pressed = true
+	menu._input(event)
 
 func test_main_menu_uses_full_background_art_and_click_hotspots() -> void:
 	var menu = MainMenuScene.instantiate()
@@ -85,6 +134,8 @@ func test_main_menu_uses_full_background_art_and_click_hotspots() -> void:
 	assert_null(menu.get_node_or_null("CanvasLayer/SettingsContainer"))
 	assert_true(GlobalScene.SceneType.keys().has("SETTINGS"))
 	assert_eq(GlobalScene.SCENE_PATHS[GlobalScene.SceneType.SETTINGS], "res://src/ui/settings/audio_settings_ui.tscn")
+	assert_true(GlobalScene.SceneType.keys().has("STORY_BOOK"))
+	assert_eq(GlobalScene.SCENE_PATHS[GlobalScene.SceneType.STORY_BOOK], "res://src/ui/story/story_book_scene.tscn")
 
 func test_main_menu_hover_feedback_floats_text_and_lighter() -> void:
 	var menu = add_child_autofree(MainMenuScene.instantiate())
@@ -125,6 +176,85 @@ func test_new_game_action_starts_run_without_intermediate_scene() -> void:
 	assert_eq(fake_run_manager.start_new_run_call_count, 1)
 	assert_false(GlobalScene.SceneType.keys().has("NEW_GAME"))
 	assert_false(GlobalScene.SCENE_PATHS.values().has("res://src/ui/new_game/new_game_scene.tscn"))
+
+
+func test_enter_dream_prefers_existing_save_and_keeps_continue_button_hidden() -> void:
+	var menu = MainMenuScene.instantiate()
+	var fake_run_manager: FakeRunManager = add_child_autofree(FakeRunManager.new())
+	var fake_scene_manager: FakeSceneManager = add_child_autofree(FakeSceneManager.new())
+	fake_run_manager.saver = FakeSaver.new(true)
+	menu.run_manager_override = fake_run_manager
+	menu.scene_manager_override = fake_scene_manager
+	add_child_autofree(menu)
+	await get_tree().process_frame
+
+	var continue_button := menu.get_node("DesignRoot/MenuHotspots/ContinueButton") as Button
+	var continue_disabled_overlay := menu.get_node("DesignRoot/MenuHotspots/ContinueDisabledOverlay") as ColorRect
+	assert_false(continue_button.visible)
+	assert_true(continue_button.disabled)
+	assert_false(continue_disabled_overlay.visible)
+	assert_eq(menu._resolve_dream_entry_scene(), GlobalScene.SceneType.HUB)
+	menu._on_new_game_button_pressed()
+	assert_eq(fake_scene_manager.transition_calls.size(), 1)
+	assert_eq(fake_scene_manager.transition_calls[0]["scene_type"], GlobalScene.SceneType.HUB)
+	assert_eq(fake_run_manager.start_new_run_call_count, 0)
+
+	fake_run_manager.saver = FakeSaver.new(false)
+
+	assert_eq(menu._resolve_dream_entry_scene(), GlobalScene.SceneType.STORY_BOOK)
+	menu._on_new_game_button_pressed()
+	assert_eq(fake_scene_manager.transition_calls.size(), 2)
+	assert_eq(fake_scene_manager.transition_calls[1]["scene_type"], GlobalScene.SceneType.STORY_BOOK)
+	assert_eq(fake_run_manager.start_new_run_call_count, 1)
+
+
+func test_main_menu_f_shortcuts_jump_to_target_act_and_prepare_hub_run() -> void:
+	var menu = add_child_autofree(MainMenuScene.instantiate())
+	var fake_run_manager: FakeRunManager = add_child_autofree(FakeRunManager.new())
+	var fake_scene_manager: FakeSceneManager = add_child_autofree(FakeSceneManager.new())
+	menu.run_manager_override = fake_run_manager
+	menu.scene_manager_override = fake_scene_manager
+
+	for target_act in [1, 4, 6]:
+		var keycode: int = KEY_F1 + (target_act - 1)
+		_press_key(menu, keycode)
+		assert_eq(fake_run_manager.current_act, target_act)
+		assert_eq(fake_run_manager.current_route_index, 0)
+		assert_eq(fake_run_manager.current_route_id, StageConfig.get_route_id_for_act(target_act, RouteConfig.DEFAULT_ROUTE_ID))
+		assert_true(fake_run_manager.is_run_active)
+		assert_false(fake_run_manager.is_run_complete)
+	assert_eq(fake_run_manager.start_new_run_call_count, 3)
+	assert_eq(fake_scene_manager.transition_calls.size(), 3)
+	for call in fake_scene_manager.transition_calls:
+		assert_eq(call["scene_type"], GlobalScene.SceneType.HUB)
+
+
+func test_main_menu_f789f10_shortcuts_forward_hub_requests() -> void:
+	var menu = add_child_autofree(MainMenuScene.instantiate())
+	var fake_run_manager: FakeRunManager = add_child_autofree(FakeRunManager.new())
+	var fake_scene_manager: FakeSceneManager = add_child_autofree(FakeSceneManager.new())
+	menu.run_manager_override = fake_run_manager
+	menu.scene_manager_override = fake_scene_manager
+	fake_run_manager.is_run_active = true
+
+	_press_key(menu, KEY_F7)
+	assert_eq(fake_run_manager.debug_hub_page_request, BookBackgroundConfig.PAGE_BACKPACK)
+	assert_false(fake_run_manager.debug_hub_advance_next_node_request)
+
+	_press_key(menu, KEY_F8)
+	assert_eq(fake_run_manager.debug_hub_page_request, BookBackgroundConfig.PAGE_GALLERY)
+	assert_false(fake_run_manager.debug_hub_advance_next_node_request)
+
+	_press_key(menu, KEY_F9)
+	assert_eq(fake_run_manager.debug_hub_page_request, BookBackgroundConfig.PAGE_SETTINGS)
+	assert_false(fake_run_manager.debug_hub_advance_next_node_request)
+
+	_press_key(menu, KEY_F10)
+	assert_eq(fake_run_manager.debug_hub_page_request, "")
+	assert_true(fake_run_manager.debug_hub_advance_next_node_request)
+	assert_eq(fake_scene_manager.transition_calls.size(), 4)
+	for call in fake_scene_manager.transition_calls:
+		assert_eq(call["scene_type"], GlobalScene.SceneType.HUB)
 
 
 func test_scene_manager_caches_only_whitelisted_scenes() -> void:

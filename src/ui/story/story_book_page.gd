@@ -5,6 +5,12 @@ const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 const TEXT_PANEL_DESIGN_RECT := Rect2(720.0, 210.0, 760.0, 360.0)
 const TYPE_SPEED := 0.035
+const DISABLED_BOOKMARK_PAGE_IDS := [
+	BookBackgroundConfig.PAGE_HUB,
+	BookBackgroundConfig.PAGE_BACKPACK,
+	BookBackgroundConfig.PAGE_GALLERY,
+	BookBackgroundConfig.PAGE_SETTINGS,
+]
 
 @onready var design_root: Control = $DesignRoot
 @onready var text_panel: Control = $DesignRoot/UiLayer/TextPanel
@@ -83,7 +89,22 @@ func _input(event: InputEvent) -> void:
 		var mouse_event := event as InputEventMouseButton
 		if mouse_event.pressed and mouse_event.button_index == MOUSE_BUTTON_LEFT:
 			get_viewport().set_input_as_handled()
+			if _is_disabled_story_bookmark_click(mouse_event.position):
+				return
 			_advance_or_finish_typing()
+
+
+func _is_disabled_story_bookmark_click(global_position: Vector2) -> bool:
+	if design_root == null:
+		return false
+	var design_position := design_root.get_global_transform().affine_inverse() * global_position
+	if BookBackgroundConfig.get_back_tab_rect().has_point(design_position):
+		return true
+	for page_id in DISABLED_BOOKMARK_PAGE_IDS:
+		var tab_rect := BookBackgroundConfig.get_tab_rect(str(page_id), BookBackgroundConfig.PAGE_HUB)
+		if tab_rect.has_point(design_position):
+			return true
+	return false
 
 
 func _advance_or_finish_typing() -> void:

@@ -2,7 +2,6 @@
 class_name BookBackground
 extends Control
 
-
 # Ordered from the top sheet to the bottom sheet.
 const PAGE_SHEET_NAMES := [
 	"StoryPage",
@@ -17,6 +16,14 @@ const TAB_NODE_NAMES := {
 	BookBackgroundConfig.PAGE_BACKPACK: "BackpackTab",
 	BookBackgroundConfig.PAGE_GALLERY: "GalleryTab",
 	BookBackgroundConfig.PAGE_SETTINGS: "SettingsTab",
+}
+const STORY_DISABLED_TAB_PIN_TEXTURE_PATH := "res://assets/ui/backpack/locked_cell_pin.png"
+const STORY_DISABLED_TAB_PIN_Z_INDEX := 50
+const STORY_DISABLED_TAB_PIN_RECTS := {
+	BookBackgroundConfig.PAGE_HUB: Rect2(41.0, 216.0, 74.0, 85.0),
+	BookBackgroundConfig.PAGE_BACKPACK: Rect2(54.0, 328.0, 74.0, 85.0),
+	BookBackgroundConfig.PAGE_GALLERY: Rect2(60.0, 440.0, 74.0, 85.0),
+	BookBackgroundConfig.PAGE_SETTINGS: Rect2(54.0, 536.0, 74.0, 85.0),
 }
 
 @export_enum("story", "hub", "gallery", "backpack", "settings") var active_page_id: String = BookBackgroundConfig.PAGE_HUB:
@@ -37,6 +44,7 @@ const TAB_NODE_NAMES := {
 
 var _scene_suppressed_tab_page_ids: Dictionary = {}
 var _runtime_suppressed_tab_page_ids: Dictionary = {}
+var _story_disabled_tab_pins: Dictionary = {}
 var _transition_tabs_hidden := false
 
 
@@ -92,6 +100,7 @@ func _refresh_book_background() -> void:
 	_refresh_page_sheets()
 	_refresh_tabs()
 	_refresh_back_tab()
+	_refresh_story_disabled_tab_pins()
 
 
 func _refresh_page_sheets() -> void:
@@ -104,15 +113,6 @@ func _refresh_page_sheets() -> void:
 
 
 func _refresh_tabs() -> void:
-	if active_page_id == BookBackgroundConfig.PAGE_STORY:
-		for story_hidden_page_id in TAB_NODE_NAMES.keys():
-			var story_left_tab := get_node_or_null(str(TAB_NODE_NAMES[story_hidden_page_id])) as Control
-			var story_right_tab := get_node_or_null("%sRight" % str(TAB_NODE_NAMES[story_hidden_page_id])) as Control
-			if story_left_tab != null:
-				story_left_tab.visible = false
-			if story_right_tab != null:
-				story_right_tab.visible = false
-		return
 	for page_id in TAB_NODE_NAMES.keys():
 		var left_tab := get_node_or_null(str(TAB_NODE_NAMES[page_id])) as Control
 		var right_tab := get_node_or_null("%sRight" % str(TAB_NODE_NAMES[page_id])) as Control
@@ -167,4 +167,44 @@ func _refresh_back_tab() -> void:
 	if back_tab != null:
 		_apply_tab_rect(back_tab, BookBackgroundConfig.get_back_tab_rect())
 		back_tab.z_index = BookBackgroundConfig.get_back_tab_z_index()
-		back_tab.visible = not _transition_tabs_hidden and active_page_id != BookBackgroundConfig.PAGE_STORY and (show_back_tab_on_hub or active_page_id != BookBackgroundConfig.PAGE_HUB)
+		back_tab.visible = not _transition_tabs_hidden and (show_back_tab_on_hub or active_page_id != BookBackgroundConfig.PAGE_HUB)
+
+
+func _refresh_story_disabled_tab_pins() -> void:
+	var show_pins := active_page_id == BookBackgroundConfig.PAGE_STORY and not _transition_tabs_hidden
+	var pin_texture: Texture2D = null
+	if show_pins:
+		pin_texture = load(STORY_DISABLED_TAB_PIN_TEXTURE_PATH) as Texture2D
+	for page_id in STORY_DISABLED_TAB_PIN_RECTS.keys():
+		var normalized_page_id := BookBackgroundConfig.normalize_page_id(str(page_id))
+		var pin: TextureRect = null
+		if show_pins:
+			pin = _get_or_create_story_disabled_tab_pin(normalized_page_id)
+		else:
+			pin = _story_disabled_tab_pins.get(normalized_page_id, null) as TextureRect
+		if pin == null:
+			continue
+		var pin_rect: Rect2 = STORY_DISABLED_TAB_PIN_RECTS[page_id]
+		_apply_tab_rect(pin, pin_rect)
+		pin.texture = pin_texture
+		pin.z_index = STORY_DISABLED_TAB_PIN_Z_INDEX
+		var tab := get_node_or_null(str(TAB_NODE_NAMES.get(page_id, ""))) as CanvasItem
+		pin.visible = show_pins and pin_texture != null and tab != null and tab.visible
+
+
+func _get_or_create_story_disabled_tab_pin(page_id: String) -> TextureRect:
+	var normalized := BookBackgroundConfig.normalize_page_id(page_id)
+	var existing := _story_disabled_tab_pins.get(normalized, null) as TextureRect
+	if existing != null and is_instance_valid(existing):
+		return existing
+	var tab_node_name := str(TAB_NODE_NAMES.get(normalized, ""))
+	if tab_node_name == "":
+		return null
+	var pin := TextureRect.new()
+	pin.name = "%sDisabledPin" % tab_node_name
+	pin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	pin.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	pin.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	add_child(pin)
+	_story_disabled_tab_pins[normalized] = pin
+	return pin

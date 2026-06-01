@@ -1,6 +1,7 @@
 extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
+const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 ## 主菜单：DesignRoot 中的编辑器布局为唯一布局源，运行时只缩放整层。
 
@@ -33,6 +34,7 @@ const REMOVED_MENU_ENTRY_NAMES := [
 @onready var continue_disabled_overlay: ColorRect = $DesignRoot/MenuHotspots/ContinueDisabledOverlay
 
 var run_manager_override = null
+var scene_manager_override = null
 var _menu_control_base_positions: Dictionary = {}
 var _menu_control_base_scales: Dictionary = {}
 var _menu_control_hovered: Dictionary = {}
@@ -54,27 +56,105 @@ func _ready() -> void:
 func _input(event: InputEvent) -> void:
 	if not _is_debug_shortcut_enabled():
 		return
+	var debug_act := _debug_shortcut_act_from_event(event)
+	if debug_act > 0:
+		if _debug_jump_to_act(debug_act):
+			get_viewport().set_input_as_handled()
+		return
+
 	if not (event is InputEventKey):
 		return
 	var key_event := event as InputEventKey
 	if not key_event.pressed or key_event.echo:
 		return
-	match key_event.keycode:
+	var keycode := key_event.keycode if key_event.keycode != 0 else key_event.physical_keycode
+	match keycode:
+		KEY_F7:
+			if _debug_open_hub_page(BookBackgroundConfig.PAGE_BACKPACK):
+				get_viewport().set_input_as_handled()
+		KEY_F8:
+			if _debug_open_hub_page(BookBackgroundConfig.PAGE_GALLERY):
+				get_viewport().set_input_as_handled()
+		KEY_F9:
+			if _debug_open_hub_page(BookBackgroundConfig.PAGE_SETTINGS):
+				get_viewport().set_input_as_handled()
+		KEY_F10:
+			if _debug_enter_next_route_node_from_menu():
+				get_viewport().set_input_as_handled()
+		KEY_F11:
+			get_viewport().set_input_as_handled()
+			_transition_to(GlobalScene.SceneType.DEBUG)
+
+func _debug_shortcut_act_from_event(event: InputEvent) -> int:
+	if not (event is InputEventKey):
+		return 0
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return 0
+	var keycode := key_event.keycode if key_event.keycode != 0 else key_event.physical_keycode
+	match keycode:
 		KEY_F1:
-			get_viewport().set_input_as_handled()
-			GlobalScene.transition_to(GlobalScene.SceneType.DEBUG)
+			return 1
 		KEY_F2:
-			get_viewport().set_input_as_handled()
-			_debug_enter_hub_after_first_dreamcatcher()
+			return 2
 		KEY_F3:
-			get_viewport().set_input_as_handled()
-			_on_continue_button_pressed()
+			return 3
 		KEY_F4:
-			get_viewport().set_input_as_handled()
-			_on_gallery_button_pressed()
+			return 4
 		KEY_F5:
-			get_viewport().set_input_as_handled()
-			_on_settings_button_pressed()
+			return 5
+		KEY_F6:
+			return 6
+	return 0
+
+func _debug_jump_to_act(act: int) -> bool:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[MainMenu Debug] RunManager is missing; cannot jump to target act.")
+		return false
+	var target_act := clampi(act, 1, StageConfig.get_max_act())
+	rm.start_new_run()
+	rm.current_act = target_act
+	rm.current_route_id = StageConfig.get_route_id_for_act(target_act, RouteConfig.DEFAULT_ROUTE_ID)
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	rm.is_run_active = true
+	rm.is_run_complete = false
+	rm.debug_hub_page_request = ""
+	rm.debug_hub_advance_next_node_request = false
+	if rm.has_method("save_current_state"):
+		rm.save_current_state()
+	_transition_to(GlobalScene.SceneType.HUB)
+	print("[MainMenu Debug] Jumped to act ", target_act, ".")
+	return true
+
+func _debug_open_hub_page(page_id: String) -> bool:
+	var rm = _get_run_manager()
+	if not _ensure_debug_run_ready(rm):
+		return false
+	rm.debug_hub_page_request = page_id
+	rm.debug_hub_advance_next_node_request = false
+	_transition_to(GlobalScene.SceneType.HUB)
+	return true
+
+func _debug_enter_next_route_node_from_menu() -> bool:
+	var rm = _get_run_manager()
+	if not _ensure_debug_run_ready(rm):
+		return false
+	rm.debug_hub_page_request = ""
+	rm.debug_hub_advance_next_node_request = true
+	_transition_to(GlobalScene.SceneType.HUB)
+	return true
+
+func _ensure_debug_run_ready(rm) -> bool:
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[MainMenu Debug] RunManager is missing; cannot prepare debug run.")
+		return false
+	if not bool(rm.get("is_run_active")) or bool(rm.get("is_run_complete")):
+		rm.start_new_run()
+	if rm.has_method("save_current_state"):
+		rm.save_current_state()
+	return true
 
 func _is_debug_shortcut_enabled() -> bool:
 	return OS.is_debug_build() or ENABLE_DEBUG_SHORTCUTS_IN_RELEASE
@@ -96,8 +176,7 @@ func _configure_interactive_feedback() -> void:
 		button.tree_exiting.connect(_clear_menu_control_tween.bind(control), CONNECT_ONE_SHOT)
 
 func _refresh_continue_state() -> void:
-	var rm = _get_run_manager()
-	var has_continue_save: bool = rm != null and rm.saver != null and rm.saver.has_save() and not rm.is_run_complete
+	var has_continue_save := _has_continue_save()
 	continue_button.disabled = not has_continue_save
 	continue_disabled_overlay.visible = not has_continue_save
 	if continue_button.disabled:
@@ -106,6 +185,13 @@ func _refresh_continue_state() -> void:
 		_menu_control_pressed[continue_key] = false
 		_apply_menu_control_state(continue_button, false)
 	_hide_removed_menu_entries()
+
+func _has_continue_save() -> bool:
+	var rm = _get_run_manager()
+	return rm != null and rm.saver != null and rm.saver.has_save() and not rm.is_run_complete
+
+func _resolve_dream_entry_scene() -> int:
+	return GlobalScene.SceneType.HUB if _has_continue_save() else GlobalScene.SceneType.STORY_BOOK
 
 func _hide_removed_menu_entries() -> void:
 	for node_name in REMOVED_MENU_ENTRY_NAMES:
@@ -207,22 +293,23 @@ func _is_disabled_button(control: Control) -> bool:
 
 func _on_new_game_button_pressed() -> void:
 	print("[MainMenu] New game pressed.")
+	var target_scene := _resolve_dream_entry_scene()
+	if target_scene == GlobalScene.SceneType.HUB:
+		_transition_to(target_scene)
+		return
 	if _start_new_run():
-		GlobalScene.transition_to(GlobalScene.SceneType.HUB)
-		var sm = get_node_or_null("/root/StoryManager")
-		if sm != null and sm.has_method("play_sequence"):
-			sm.play_sequence("beginning")
+		_transition_to(target_scene)
 
 func _on_continue_button_pressed() -> void:
 	print("[MainMenu] Continue pressed.")
-	GlobalScene.transition_to(GlobalScene.SceneType.HUB)
+	_transition_to(GlobalScene.SceneType.HUB)
 
 func _on_gallery_button_pressed() -> void:
 	print("[MainMenu] Gallery pressed.")
-	GlobalScene.transition_to(GlobalScene.SceneType.GALLERY)
+	_transition_to(GlobalScene.SceneType.GALLERY)
 
 func _on_settings_button_pressed() -> void:
-	GlobalScene.transition_to(GlobalScene.SceneType.SETTINGS)
+	_transition_to(GlobalScene.SceneType.SETTINGS)
 
 func _on_quit_button_pressed() -> void:
 	get_tree().quit()
@@ -231,6 +318,16 @@ func _get_run_manager():
 	if run_manager_override != null:
 		return run_manager_override
 	return get_node_or_null("/root/RunManager")
+
+func _get_scene_manager():
+	if scene_manager_override != null:
+		return scene_manager_override
+	return get_node_or_null("/root/GlobalScene")
+
+func _transition_to(scene_type: int, push_to_history: bool = true) -> void:
+	var scene_manager = _get_scene_manager()
+	if scene_manager != null and scene_manager.has_method("transition_to"):
+		scene_manager.transition_to(scene_type, push_to_history)
 
 func _start_new_run() -> bool:
 	var rm = _get_run_manager()
@@ -250,7 +347,7 @@ func _debug_enter_hub_after_first_dreamcatcher() -> void:
 	_debug_skip_intro_story()
 	if rm.has_method("get_current_route_node_type") and RouteConfig.is_battle_node_type(str(rm.get_current_route_node_type())):
 		rm.advance_route_node()
-	GlobalScene.transition_to(GlobalScene.SceneType.HUB)
+	_transition_to(GlobalScene.SceneType.HUB)
 
 func _debug_skip_intro_story() -> void:
 	var sm = get_node_or_null("/root/StoryManager")

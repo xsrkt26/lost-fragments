@@ -19,7 +19,8 @@ enum SceneType {
 	GALLERY,
 	SETTINGS,
 	DEBUG,
-	CUTSCENE
+	CUTSCENE,
+	STORY_BOOK
 }
 
 const SCENE_PATHS = {
@@ -31,7 +32,8 @@ const SCENE_PATHS = {
 	SceneType.GALLERY: "res://src/ui/gallery/gallery_scene.tscn",
 	SceneType.SETTINGS: "res://src/ui/settings/audio_settings_ui.tscn",
 	SceneType.DEBUG: "res://src/ui/debug/debug_sandbox.tscn",
-	SceneType.CUTSCENE: "res://src/ui/story/cutscene_scene.tscn"
+	SceneType.CUTSCENE: "res://src/ui/story/cutscene_scene.tscn",
+	SceneType.STORY_BOOK: "res://src/ui/story/story_book_scene.tscn"
 }
 
 const CACHEABLE_SCENES = {
@@ -257,7 +259,7 @@ func _transition_with_zoom_expand(target: SceneType, snapshot_texture: Texture2D
 	_page_material.shader = ZOOM_EXPAND_SHADER
 	_page_material.set_shader_parameter("start_focus", start_focus)
 	_page_material.set_shader_parameter("end_focus", end_focus)
-	_show_page_turn_overlay(snapshot_texture)
+	_show_page_turn_overlay(snapshot_texture, false)
 
 	var packed_scene: PackedScene = await _get_scene_for_transition(target)
 	if packed_scene == null:
@@ -331,13 +333,20 @@ func _transition_with_page_turn(target: SceneType, snapshot_texture: Texture2D) 
 	await tween.finished
 	_clear_page_turn_overlay()
 
-func _show_page_turn_overlay(snapshot_texture: Texture2D) -> void:
+func _show_page_turn_overlay(snapshot_texture: Texture2D, play_sound: bool = true) -> void:
+	if play_sound:
+		_play_page_turn_sfx()
 	_page_texture_rect.texture = snapshot_texture
 	_page_texture_rect.visible = true
 	_page_texture_rect.mouse_filter = Control.MOUSE_FILTER_STOP
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	_overlay.color = Color(0, 0, 0, 0)
 	_set_page_turn_progress(0.0)
+
+func _play_page_turn_sfx() -> void:
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio and audio.has_method("play_sfx"):
+		audio.play_sfx("page_turn", 0.0)
 
 func _start_page_turn_tween() -> Tween:
 	var tween: Tween = create_tween()
