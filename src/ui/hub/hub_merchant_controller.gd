@@ -14,6 +14,16 @@ const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
 const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
 const MERCHANT_HOVER_SCALE := 1.04
 const MERCHANT_CLICK_HIT_PADDING := Vector4(16.0, 18.0, 16.0, 18.0)
+const MERCHANT_ALPHA_THRESHOLD := 0.03
+const DEFAULT_MERCHANT_ANIMATION_KEY := "stage"
+const MERCHANT_ACT_ANIMATION_KEYS := {
+	1: "cat",
+	2: "stage",
+	3: "grandma",
+	4: "parents",
+	5: "xiaojia",
+	6: "shiyi",
+}
 
 var merchant_sprite: AnimatedSprite2D = null
 var merchant_button: Button = null
@@ -23,6 +33,8 @@ var is_player_at_merchant := false
 var shop_click_ready := false
 
 var _frames_cache: Dictionary = {}
+var _frame_bounds_cache: Dictionary = {}
+var _frame_canvas_size_cache: Dictionary = {}
 var _default_room_position := Vector2.ZERO
 var _source_to_viewport: Callable = Callable()
 var _get_player_half_width: Callable = Callable()
@@ -114,14 +126,11 @@ func complete_interaction(run_manager: Node, played_arrival: bool) -> void:
 			merchant_button.tooltip_text = "点击进入商店"
 
 func get_animation_key(run_manager: Node) -> String:
+	var configured_key := _get_configured_animation_key(run_manager)
+	if configured_key != "":
+		return configured_key
 	var act := int(run_manager.get("current_act")) if run_manager != null else 1
-	match act:
-		1:
-			return "cat"
-		2:
-			return "grandma"
-		_:
-			return "stage"
+	return str(MERCHANT_ACT_ANIMATION_KEYS.get(act, DEFAULT_MERCHANT_ANIMATION_KEY))
 
 func apply_animation(animation_key: String) -> void:
 	if merchant_sprite == null:
@@ -138,10 +147,11 @@ func apply_animation(animation_key: String) -> void:
 
 func layout(source_offset: Vector2) -> void:
 	if merchant_sprite != null and room_art != null:
+		var animation_key := get_animation_key(_get_run_manager())
 		_base_sprite_position = room_art.position
-		merchant_sprite.position = _get_hover_target_position()
-		_base_sprite_scale = room_art.scale
+		_base_sprite_scale = _get_merchant_canvas_scale(animation_key)
 		merchant_sprite.scale = _get_hover_target_scale()
+		merchant_sprite.position = _get_hover_target_position()
 	if merchant_button == null:
 		return
 	var target := get_click_source_rect()
@@ -184,9 +194,10 @@ func get_interaction_target_x() -> float:
 	return get_interaction_viewport_rect().get_center().x
 
 func get_interaction_source_rect() -> Rect2:
-	var animation_key := get_animation_key(_get_run_manager())
-	var frame_bounds: Rect2 = MERCHANT_FRAME_BOUNDS.get(animation_key, MERCHANT_FRAME_BOUNDS["stage"])
-	var room_scale := room_art.scale if room_art != null else Vector2.ONE
+	var run_manager := _get_run_manager()
+	var animation_key := get_animation_key(run_manager)
+	var frame_bounds := get_interaction_frame_bounds(run_manager)
+	var room_scale := _get_merchant_canvas_scale(animation_key)
 	var room_position := room_art.position if room_art != null else _default_room_position
 	var source_rect := Rect2(
 		room_position + frame_bounds.position * room_scale,
@@ -196,15 +207,23 @@ func get_interaction_source_rect() -> Rect2:
 	return source_rect
 
 func get_click_source_rect() -> Rect2:
-	var animation_key := get_animation_key(_get_run_manager())
-	var frame_bounds: Rect2 = MERCHANT_FRAME_BOUNDS.get(animation_key, MERCHANT_FRAME_BOUNDS["stage"])
-	var room_scale := room_art.scale if room_art != null else Vector2.ONE
+	var run_manager := _get_run_manager()
+	var animation_key := get_animation_key(run_manager)
+	var frame_bounds := get_interaction_frame_bounds(run_manager)
+	var room_scale := _get_merchant_canvas_scale(animation_key)
 	var room_position := room_art.position if room_art != null else _default_room_position
 	var padding := MERCHANT_CLICK_HIT_PADDING
 	return Rect2(
 		room_position + Vector2(frame_bounds.position.x - padding.x, frame_bounds.position.y - padding.y) * room_scale,
 		Vector2(frame_bounds.size.x + padding.x + padding.z, frame_bounds.size.y + padding.y + padding.w) * room_scale
 	)
+
+func get_interaction_frame_bounds(run_manager: Node = null) -> Rect2:
+	var resolved_run_manager := run_manager if run_manager != null else _get_run_manager()
+	var configured_rect := _get_configured_interaction_rect(resolved_run_manager)
+	if configured_rect.size.x > 0.0 and configured_rect.size.y > 0.0:
+		return configured_rect
+	return _get_default_frame_bounds(get_animation_key(resolved_run_manager))
 
 func get_interaction_viewport_rect() -> Rect2:
 	if _source_to_viewport.is_valid():
@@ -312,6 +331,99 @@ func _get_last_frame() -> int:
 	if not merchant_sprite.sprite_frames.has_animation("idle"):
 		return 0
 	return maxi(0, merchant_sprite.sprite_frames.get_frame_count("idle") - 1)
+
+func _get_configured_animation_key(run_manager: Node) -> String:
+	var visual := _get_stage_visual(run_manager)
+	var animation_key := str(visual.get("merchant_animation_key", ""))
+	if animation_key != "" and AssetPaths.MERCHANT_FRAME_SPECS.has(animation_key):
+		return animation_key
+	return ""
+
+func _get_configured_interaction_rect(run_manager: Node) -> Rect2:
+	var visual := _get_stage_visual(run_manager)
+	var rect_value = visual.get("merchant_interaction_rect", visual.get("merchant_frame_bounds", null))
+	return _rect_from_variant(rect_value)
+
+func _get_stage_visual(run_manager: Node) -> Dictionary:
+	if run_manager == null or not run_manager.has_method("get_current_stage_visual"):
+		return {}
+	var visual = run_manager.get_current_stage_visual()
+	return Dictionary(visual).duplicate(true) if visual is Dictionary else {}
+
+func _rect_from_variant(value) -> Rect2:
+	if value is Rect2:
+		return value
+	if value is Dictionary:
+		var source := value as Dictionary
+		var width = source.get("w", source.get("width", 0.0))
+		var height = source.get("h", source.get("height", 0.0))
+		return Rect2(
+			Vector2(float(source.get("x", 0.0)), float(source.get("y", 0.0))),
+			Vector2(float(width), float(height))
+		)
+	if value is Array:
+		var values := value as Array
+		if values.size() >= 4:
+			return Rect2(Vector2(float(values[0]), float(values[1])), Vector2(float(values[2]), float(values[3])))
+	return Rect2()
+
+func _get_default_frame_bounds(animation_key: String) -> Rect2:
+	if _frame_bounds_cache.has(animation_key):
+		return _frame_bounds_cache[animation_key] as Rect2
+	var rect := _scan_first_frame_alpha_bounds(animation_key)
+	if rect.size.x <= 0.0 or rect.size.y <= 0.0:
+		rect = MERCHANT_FRAME_BOUNDS.get(animation_key, MERCHANT_FRAME_BOUNDS[DEFAULT_MERCHANT_ANIMATION_KEY]) as Rect2
+	_frame_bounds_cache[animation_key] = rect
+	return rect
+
+func _scan_first_frame_alpha_bounds(animation_key: String) -> Rect2:
+	var texture := _get_first_frame_texture(animation_key)
+	if texture == null:
+		return Rect2()
+	var image := texture.get_image()
+	if image == null or image.get_width() <= 0 or image.get_height() <= 0:
+		return Rect2()
+	var min_x := image.get_width()
+	var min_y := image.get_height()
+	var max_x := -1
+	var max_y := -1
+	for y in range(image.get_height()):
+		for x in range(image.get_width()):
+			if image.get_pixel(x, y).a <= MERCHANT_ALPHA_THRESHOLD:
+				continue
+			min_x = mini(min_x, x)
+			min_y = mini(min_y, y)
+			max_x = maxi(max_x, x)
+			max_y = maxi(max_y, y)
+	if max_x < 0:
+		return Rect2()
+	return Rect2(float(min_x), float(min_y), float(max_x - min_x + 1), float(max_y - min_y + 1))
+
+func _get_merchant_canvas_scale(animation_key: String) -> Vector2:
+	if room_art == null:
+		return Vector2.ONE
+	var room_texture := room_art.texture
+	if room_texture == null:
+		return room_art.scale
+	var canvas_size := _get_first_frame_canvas_size(animation_key)
+	var room_display_size := room_texture.get_size() * room_art.scale.abs()
+	if canvas_size.x <= 0.0 or canvas_size.y <= 0.0 or room_display_size.x <= 0.0 or room_display_size.y <= 0.0:
+		return room_art.scale
+	return Vector2(room_display_size.x / canvas_size.x, room_display_size.y / canvas_size.y)
+
+func _get_first_frame_canvas_size(animation_key: String) -> Vector2:
+	if _frame_canvas_size_cache.has(animation_key):
+		return _frame_canvas_size_cache[animation_key] as Vector2
+	var texture := _get_first_frame_texture(animation_key)
+	var size := texture.get_size() if texture != null else Vector2.ZERO
+	_frame_canvas_size_cache[animation_key] = size
+	return size
+
+func _get_first_frame_texture(animation_key: String) -> Texture2D:
+	var paths := AssetPaths.merchant_frame_paths(animation_key)
+	if paths.is_empty():
+		return null
+	return AssetPaths.load_texture(str(paths[0]))
 
 func _player_overlaps_rect_x(rect: Rect2) -> bool:
 	var player_half_width := 0.0

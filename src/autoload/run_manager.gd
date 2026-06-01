@@ -70,6 +70,8 @@ var current_route_index: int = 0
 var completed_route_nodes: Array[int] = []
 var is_run_active: bool = false
 var is_run_complete: bool = false
+var debug_hub_page_request: String = ""
+var debug_hub_advance_next_node_request: bool = false
 
 var saver: SaveManager = null
 var _route_progress: RunRouteProgress = RunRouteProgress.new()

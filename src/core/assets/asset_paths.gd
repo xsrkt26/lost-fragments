@@ -80,6 +80,7 @@ const HUB_BACKGROUND_PATHS := {
 	"parents": UI_ROOT + "/hub/backgrounds/parents.png",
 	"cardboard": UI_ROOT + "/hub/hub_room.png",
 	"stage": UI_ROOT + "/hub/backgrounds/stage.png",
+	"shiyi": UI_ROOT + "/hub/backgrounds/shiyi.png",
 }
 
 const HUB_FOREGROUND_PATHS := {
@@ -102,6 +103,21 @@ const MERCHANT_FRAME_SPECS := {
 		"directory": CHARACTER_ROOT + "/merchant/stage",
 		"prefix": "stage",
 		"count": 7,
+	},
+	"parents": {
+		"directory": CHARACTER_ROOT + "/merchant/parents",
+		"prefix": "parents",
+		"count": 8,
+	},
+	"xiaojia": {
+		"directory": CHARACTER_ROOT + "/merchant/xiaojia",
+		"prefix": "xiaojia",
+		"count": 5,
+	},
+	"shiyi": {
+		"directory": CHARACTER_ROOT + "/merchant/shiyi",
+		"prefix": "shiyi",
+		"count": 6,
 	},
 }
 

@@ -20,7 +20,10 @@ func get_current_stage_visual(manager) -> Dictionary:
 	return StageConfig.get_visual(manager.current_act)
 
 func get_current_battle_modifiers(manager) -> Dictionary:
-	return StageConfig.get_battle_modifiers(manager.current_act)
+	var modifiers = StageConfig.get_battle_modifiers(manager.current_act)
+	if RouteConfig.is_boss_node_type(get_current_route_node_type(manager)):
+		modifiers = _merge_battle_modifiers(modifiers, StageConfig.get_boss_battle_modifiers(manager.current_act))
+	return modifiers
 
 func get_route_nodes(manager) -> Array:
 	return RouteConfig.get_route_nodes(get_current_stage_route_id(manager))
@@ -126,3 +129,32 @@ func advance_route_node(manager, expected_node_id: String = "") -> Dictionary:
 	manager.save_current_state()
 	manager._emit_route_changed()
 	return current_node
+
+func _merge_battle_modifiers(base: Dictionary, extra: Dictionary) -> Dictionary:
+	var result := base.duplicate(true)
+	result["draw_cost_delta"] = int(base.get("draw_cost_delta", 0)) + int(extra.get("draw_cost_delta", 0))
+	result["pollution_added_bonus"] = int(base.get("pollution_added_bonus", 0)) + int(extra.get("pollution_added_bonus", 0))
+	result["blocked_cells"] = _merge_blocked_cells(base.get("blocked_cells", []), extra.get("blocked_cells", []))
+	return result
+
+func _merge_blocked_cells(base: Variant, extra: Variant) -> Array:
+	var result := []
+	var seen := {}
+	for source in [base, extra]:
+		if not (source is Array):
+			continue
+		for entry in source:
+			var cell = _normalize_blocked_cell(entry)
+			var key = "%d:%d" % [int(cell.get("x", 0)), int(cell.get("y", 0))]
+			if seen.has(key):
+				continue
+			seen[key] = true
+			result.append(cell)
+	return result
+
+func _normalize_blocked_cell(value: Variant) -> Dictionary:
+	if value is Vector2i:
+		return {"x": value.x, "y": value.y}
+	if value is Dictionary:
+		return {"x": int(value.get("x", 0)), "y": int(value.get("y", 0))}
+	return {"x": 0, "y": 0}

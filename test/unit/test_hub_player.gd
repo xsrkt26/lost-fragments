@@ -4,7 +4,12 @@ const HubScene = preload("res://src/ui/hub/hub_scene.tscn")
 const HubBattleLayer = preload("res://src/ui/hub/hub_battle_layer.tscn")
 const MainGameUI = preload("res://src/ui/main_game_ui.tscn")
 const BackpackPage = preload("res://src/ui/backpack/backpack_page.tscn")
+const HubMerchantController = preload("res://src/ui/hub/hub_merchant_controller.gd")
+const HubDialogueBubbleController = preload("res://src/ui/hub/hub_dialogue_bubble_controller.gd")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
+const StageConfig = preload("res://src/core/stage/stage_config.gd")
+const RouteConfig = preload("res://src/core/route/route_config.gd")
+const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BATTLE_BAG_FINAL_FRAME_PATH := "res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png"
 const BATTLE_BAG_SOURCE_SIZE := Vector2(825.0, 1008.0)
 const BATTLE_BAG_GRID_SOURCE_RECT := Rect2(122.0, 380.0, 590.0, 527.0)
@@ -21,16 +26,57 @@ class ReturnNavigatorStub:
 		return_to_main_menu_count += 1
 
 
+class PageNavigatorStub:
+	extends Control
+	var requested_pages: Array[String] = []
+
+	func go_to_page(page_id: String) -> void:
+		requested_pages.append(page_id)
+
+
+class RunActStub:
+	extends Node
+	var current_act := 1
+	var stage_visual := {}
+
+	func get_current_stage_visual() -> Dictionary:
+		return stage_visual
+
+
+class FakeShopVisualController:
+	extends RefCounted
+	var play_intro_calls := 0
+	var close_calls := 0
+
+	func play_intro_overlay(owner_node: Node, _run_manager: Node, _item_db: Node, _ornament_db: Node, _keep_final_frame: bool = true, _frame_rate: float = 30.0, _close_requested_callback: Callable = Callable()):
+		play_intro_calls += 1
+		var canvas := CanvasLayer.new()
+		canvas.name = "FakeShopIntroOverlayCanvas"
+		if owner_node != null:
+			owner_node.add_child(canvas)
+			await owner_node.get_tree().process_frame
+		return canvas
+
+	func close() -> void:
+		close_calls += 1
+
+
 func before_each():
 	player = add_child_autofree(load("res://src/ui/hub/hub_player.gd").new())
 	var rm = get_node_or_null("/root/RunManager")
 	rm_snapshot = rm.serialize_run() if rm else {}
+	if rm:
+		rm.debug_hub_page_request = ""
+		rm.debug_hub_advance_next_node_request = false
 
 
 func after_each():
 	var rm = get_node_or_null("/root/RunManager")
 	if rm and not rm_snapshot.is_empty():
 		rm.deserialize_run(rm_snapshot)
+	if rm:
+		rm.debug_hub_page_request = ""
+		rm.debug_hub_advance_next_node_request = false
 	rm_snapshot = {}
 
 
@@ -135,6 +181,116 @@ func _assert_battle_grid_matches_bag_texture(scene_root: Node) -> void:
 	assert_almost_eq(backpack_ui.size.y, expected_local_grid_rect.size.y, 0.01)
 
 
+func test_hub_merchant_animation_tracks_story_act_order():
+	var controller = HubMerchantController.new()
+	var run = autofree(RunActStub.new())
+
+	run.current_act = 1
+	assert_eq(controller.get_animation_key(run), "cat")
+
+	run.current_act = 2
+	assert_eq(controller.get_animation_key(run), "stage")
+
+	run.current_act = 3
+	assert_eq(controller.get_animation_key(run), "grandma")
+
+	run.current_act = 4
+	assert_eq(controller.get_animation_key(run), "parents")
+
+	run.current_act = 5
+	assert_eq(controller.get_animation_key(run), "xiaojia")
+
+	run.current_act = 6
+	assert_eq(controller.get_animation_key(run), "shiyi")
+
+
+func test_hub_merchant_animation_prefers_stage_visual_config():
+	var controller = HubMerchantController.new()
+	var run = autofree(RunActStub.new())
+	run.current_act = 1
+	run.stage_visual = {"merchant_animation_key": "xiaojia"}
+
+	assert_eq(controller.get_animation_key(run), "xiaojia")
+
+	run.stage_visual = {"merchant_animation_key": "missing"}
+	assert_eq(controller.get_animation_key(run), "cat")
+
+
+func test_hub_xiaomi_actor_is_scoped_to_first_act():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_true(bool(hub.call("_should_show_xiaomi_story_actor")))
+	assert_not_null(hub.get_node_or_null("HubArt/XiaomiDialogueAnchor"))
+
+	rm.current_act = 2
+	hub.call("_sync_xiaomi_anchor_for_current_act")
+
+	assert_false(bool(hub.call("_should_show_xiaomi_story_actor")))
+	assert_null(hub.get_node_or_null("HubArt/XiaomiDialogueAnchor"))
+
+
+func test_hub_rejects_xiaomi_bubble_dialogue_after_first_act():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 2
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_false(hub.play_story_bubble_dialogue("进入场景1"))
+	assert_null(hub.get_node_or_null("HubArt/XiaomiDialogueAnchor"))
+	assert_null(hub.get_node_or_null("CanvasLayer/HubDialogueBubbleController"))
+
+
+func test_hub_story_bubble_unknown_speaker_points_to_player():
+	var controller = add_child_autofree(HubDialogueBubbleController.new())
+	var player_anchor = add_child_autofree(Node2D.new())
+	var xiaomi_anchor = add_child_autofree(Node2D.new())
+	controller.set("_player_anchor", player_anchor)
+	controller.set("_xiaomi_anchor", xiaomi_anchor)
+
+	controller.call("_set_active_speaker", "？？")
+	assert_eq(str(controller.get("_active_speaker_kind")), "player")
+	assert_eq(controller.get("_active_anchor"), player_anchor)
+
+	controller.call("_set_active_speaker", "姥姥")
+	assert_eq(str(controller.get("_active_speaker_kind")), "player")
+	assert_eq(controller.get("_active_anchor"), player_anchor)
+
+	controller.call("_set_active_speaker", "小咪")
+	assert_eq(str(controller.get("_active_speaker_kind")), "xiaomi")
+	assert_eq(controller.get("_active_anchor"), xiaomi_anchor)
+
+
+func test_hub_merchant_interaction_rect_prefers_stage_visual_config():
+	var controller = HubMerchantController.new()
+	var run = autofree(RunActStub.new())
+	run.stage_visual = {
+		"merchant_animation_key": "parents",
+		"merchant_interaction_rect": {"x": 10.0, "y": 20.0, "w": 30.0, "h": 40.0},
+	}
+
+	assert_eq(controller.get_interaction_frame_bounds(run), Rect2(10.0, 20.0, 30.0, 40.0))
+
+
+func test_hub_merchant_default_interaction_rect_uses_first_frame_alpha():
+	var controller = HubMerchantController.new()
+	var run = autofree(RunActStub.new())
+	run.stage_visual = {"merchant_animation_key": "parents"}
+	var expected_rect := _get_png_alpha_rect(AssetPaths.merchant_frame_paths("parents")[0])
+
+	assert_eq(controller.get_interaction_frame_bounds(run), expected_rect)
+
+
 func test_mouse_move_target_is_set_and_cleared():
 	player.move_to_global_x(420.0)
 	assert_true(player.has_move_target)
@@ -202,7 +358,7 @@ func test_main_game_dreamcatcher_net_tracks_current_stage():
 	assert_not_null(net)
 	assert_not_null(net.texture)
 	assert_eq(net.texture.resource_path, "res://assets/ui/battle/dreamcatchers/act_4_parents.png")
-	assert_eq(net.texture.get_size(), Vector2(410.0, 469.0))
+	assert_eq(net.texture.get_size(), Vector2(494.0, 295.0))
 	_assert_dreamcatcher_net_centered_on_cloud(panel, net)
 
 
@@ -295,6 +451,33 @@ func test_main_game_intro_bag_reveal_is_serialized_in_scene():
 	assert_false(intro_bag.visible)
 	assert_not_null(intro_bag.texture)
 	assert_eq(intro_bag.texture.resource_path, "res://assets/ui/battle/intro_bag_reveal/bag_reveal_01.png")
+
+
+func test_main_game_disabled_bookmarks_show_pin_overlays():
+	var ui = autofree(MainGameUI.instantiate())
+	var disabled_pin_names := [
+		"AlbumTabDisabledPin",
+		"BackpackTabDisabledPin",
+		"GalleryTabDisabledPin",
+		"SettingsTabDisabledPin",
+	]
+	var expected_positions := {
+		"AlbumTabDisabledPin": Vector2(117.0, 195.0),
+		"BackpackTabDisabledPin": Vector2(71.0, 317.0),
+		"GalleryTabDisabledPin": Vector2(91.0, 437.0),
+		"SettingsTabDisabledPin": Vector2(59.0, 549.0),
+	}
+	for pin_name in disabled_pin_names:
+		var pin := ui.get_node_or_null("ContentLayer/BattleArt/%s" % pin_name) as TextureRect
+		assert_not_null(pin, "%s should mark an unavailable battle bookmark." % pin_name)
+		assert_true(pin.visible)
+		assert_not_null(pin.texture)
+		assert_eq(pin.texture.resource_path, "res://assets/ui/backpack/locked_cell_pin.png")
+		assert_eq(pin.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+		assert_true(pin.z_index > 0)
+		assert_eq(pin.position, expected_positions[pin_name])
+		assert_eq(pin.size, Vector2(74.0, 85.0))
+	assert_null(ui.get_node_or_null("ContentLayer/BattleArt/BackTabDisabledPin"))
 
 
 func test_battle_backpack_ui_matches_bag_texture_grid_pixels():
@@ -609,13 +792,170 @@ func test_hub_player_uses_character_animation_frames():
 	assert_true(animated_sprite.sprite_frames.has_animation("idle"))
 	assert_true(animated_sprite.sprite_frames.has_animation("walk"))
 	assert_eq(animated_sprite.sprite_frames.get_frame_count("idle"), 4)
-	assert_eq(animated_sprite.sprite_frames.get_frame_count("walk"), 6)
+	assert_eq(animated_sprite.sprite_frames.get_frame_count("walk"), 7)
 	assert_eq(animated_sprite.scale, Vector2(0.42, 0.42))
 	var idle_texture := animated_sprite.sprite_frames.get_frame_texture("idle", 0)
 	assert_not_null(idle_texture)
 	var visual_foot_y := animated_sprite.position.y + float(idle_texture.get_height()) * animated_sprite.scale.y * 0.5
 	assert_almost_eq(visual_foot_y, 59.8, 0.1)
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
+
+
+func test_hub_f_shortcuts_jump_to_target_act():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 4
+	rm.completed_route_nodes = [0, 1, 2, 3] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	for target_act in [1, 3, 6]:
+		var event := InputEventKey.new()
+		var keycode: int = KEY_F1 + (target_act - 1)
+		event.keycode = keycode
+		event.physical_keycode = keycode
+		event.pressed = true
+		hub._input(event)
+		await get_tree().process_frame
+
+		assert_eq(rm.current_act, target_act)
+		assert_eq(rm.current_route_index, 0)
+		assert_true(rm.is_run_active)
+		assert_false(rm.is_run_complete)
+		assert_eq(rm.current_route_id, StageConfig.get_route_id_for_act(target_act, RouteConfig.DEFAULT_ROUTE_ID))
+
+
+func test_hub_f789_shortcuts_open_backpack_gallery_and_settings():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var navigator: PageNavigatorStub = autofree(PageNavigatorStub.new())
+	hub.book_page_navigator = navigator
+
+	var keycodes := [KEY_F7, KEY_F8, KEY_F9]
+	for keycode in keycodes:
+		var event := InputEventKey.new()
+		event.keycode = keycode
+		event.physical_keycode = keycode
+		event.pressed = true
+		hub._input(event)
+
+	assert_eq(
+		navigator.requested_pages,
+		[
+			BookBackgroundConfig.PAGE_BACKPACK,
+			BookBackgroundConfig.PAGE_GALLERY,
+			BookBackgroundConfig.PAGE_SETTINGS,
+		]
+	)
+
+
+func test_hub_f10_shortcut_advances_to_next_route_node():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 2
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var event := InputEventKey.new()
+	event.keycode = KEY_F10
+	event.physical_keycode = KEY_F10
+	event.pressed = true
+	hub._input(event)
+	await get_tree().process_frame
+
+	assert_eq(rm.current_route_index, 3)
+	assert_true(rm.completed_route_nodes.has(2))
+
+
+func test_hub_f10_shortcut_enters_hub_shop_visual_for_next_shop_node():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var fake_shop_visual := FakeShopVisualController.new()
+	hub.set("_shop_visual_controller", fake_shop_visual)
+	var merchant_sprite := hub.get("merchant_sprite") as AnimatedSprite2D
+	if merchant_sprite != null:
+		merchant_sprite.speed_scale = 120.0
+
+	var event := InputEventKey.new()
+	event.keycode = KEY_F10
+	event.physical_keycode = KEY_F10
+	event.pressed = true
+	hub._input(event)
+	await get_tree().create_timer(0.3).timeout
+
+	assert_eq(rm.current_route_index, 1)
+	assert_true(rm.completed_route_nodes.has(0))
+	assert_eq(fake_shop_visual.play_intro_calls, 1)
+	assert_true(bool(hub.get("_is_shop_visual_state_active")))
+	assert_eq(str(hub.get("current_zone")), "shop")
+	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
+
+
+func test_hub_applies_pending_page_shortcut_request_from_menu():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var navigator: PageNavigatorStub = autofree(PageNavigatorStub.new())
+	hub.book_page_navigator = navigator
+	rm.debug_hub_page_request = BookBackgroundConfig.PAGE_SETTINGS
+	rm.debug_hub_advance_next_node_request = false
+	hub.call("_apply_pending_hub_shortcut_request")
+
+	assert_eq(navigator.requested_pages, [BookBackgroundConfig.PAGE_SETTINGS])
+	assert_eq(rm.debug_hub_page_request, "")
+	assert_false(rm.debug_hub_advance_next_node_request)
+
+
+func test_hub_applies_pending_next_node_shortcut_request_from_menu():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 2
+	rm.completed_route_nodes = [] as Array[int]
+	rm.debug_hub_page_request = ""
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	rm.debug_hub_advance_next_node_request = true
+	hub.call("_apply_pending_hub_shortcut_request")
+	await get_tree().process_frame
+
+	assert_eq(rm.current_route_index, 3)
+	assert_true(rm.completed_route_nodes.has(2))
+	assert_eq(rm.debug_hub_page_request, "")
+	assert_false(rm.debug_hub_advance_next_node_request)
 
 
 func test_hub_z_shortcut_enters_battle_without_hidden_layer_locking_input():
@@ -717,3 +1057,38 @@ func test_hub_back_tab_is_visible_low_layer_and_returns_to_main_menu():
 	var duplicate_art := button.get_node_or_null("Art") as CanvasItem
 	if duplicate_art != null:
 		assert_false(duplicate_art.visible)
+
+
+func test_hub_battle_disabled_bookmarks_show_pin_overlays():
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var pins_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins") as Control
+	assert_not_null(pins_root)
+	assert_false(pins_root.visible)
+	var expected_positions := {
+		"AlbumTabDisabledPin": Vector2(41.0, 216.0),
+		"BackpackTabDisabledPin": Vector2(54.0, 328.0),
+		"GalleryTabDisabledPin": Vector2(60.0, 440.0),
+		"SettingsTabDisabledPin": Vector2(54.0, 536.0),
+	}
+	for pin_name in [
+		"AlbumTabDisabledPin",
+		"BackpackTabDisabledPin",
+		"GalleryTabDisabledPin",
+		"SettingsTabDisabledPin",
+	]:
+		var pin := pins_root.get_node_or_null(pin_name) as TextureRect
+		assert_not_null(pin, "%s should mark an unavailable hub battle bookmark." % pin_name)
+		assert_true(pin.visible)
+		assert_not_null(pin.texture)
+		assert_eq(pin.texture.resource_path, "res://assets/ui/backpack/locked_cell_pin.png")
+		assert_eq(pin.mouse_filter, Control.MOUSE_FILTER_IGNORE)
+		assert_eq(pin.position, expected_positions[pin_name])
+		assert_eq(pin.size, Vector2(74.0, 85.0))
+
+	hub.call("_set_hub_chrome_visible_for_battle", false)
+	assert_true(pins_root.visible)
+	hub.call("_set_hub_chrome_visible_for_battle", true)
+	assert_false(pins_root.visible)

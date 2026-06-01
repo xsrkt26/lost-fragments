@@ -102,17 +102,13 @@ static func get_visual(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 	return _dictionary_or_empty(get_stage(act, path).get("visual", {}))
 
 static func get_battle_modifiers(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
-	var modifiers = _dictionary_or_empty(get_stage(act, path).get("battle_modifiers", {}))
-	if not modifiers.has("draw_cost_delta"):
-		modifiers["draw_cost_delta"] = 0
-	if not modifiers.has("pollution_added_bonus"):
-		modifiers["pollution_added_bonus"] = 0
-	if not (modifiers.get("blocked_cells", []) is Array):
-		modifiers["blocked_cells"] = []
-	return modifiers
+	return _normalize_battle_modifiers(get_stage(act, path).get("battle_modifiers", {}))
 
 static func get_boss_config(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 	return _dictionary_or_empty(get_stage(act, path).get("boss", {}))
+
+static func get_boss_battle_modifiers(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
+	return _normalize_battle_modifiers(get_boss_config(act, path).get("battle_modifiers", {}))
 
 static func get_boss_score_target_rule(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 	var boss = get_boss_config(act, path)
@@ -209,11 +205,21 @@ static func _normalize_stage(value: Variant, act: int) -> Dictionary:
 	if str(stage.get("name", "")) == "":
 		stage["name"] = "Stage %d" % act
 	stage["visual"] = _dictionary_or_empty(stage.get("visual", {}))
-	stage["battle_modifiers"] = _dictionary_or_empty(stage.get("battle_modifiers", {}))
+	stage["battle_modifiers"] = _normalize_battle_modifiers(stage.get("battle_modifiers", {}))
 	stage["boss"] = _dictionary_or_empty(stage.get("boss", {}))
 	stage["reward_weight_modifiers"] = _normalize_weight_modifiers(stage.get("reward_weight_modifiers", {}))
 	stage["shop_weight_modifiers"] = _normalize_weight_modifiers(stage.get("shop_weight_modifiers", {}))
 	return stage
+
+static func _normalize_battle_modifiers(value: Variant) -> Dictionary:
+	var modifiers = _dictionary_or_empty(value)
+	modifiers["draw_cost_delta"] = int(modifiers.get("draw_cost_delta", 0))
+	modifiers["pollution_added_bonus"] = int(modifiers.get("pollution_added_bonus", 0))
+	if not (modifiers.get("blocked_cells", []) is Array):
+		modifiers["blocked_cells"] = []
+	else:
+		modifiers["blocked_cells"] = Array(modifiers.get("blocked_cells", [])).duplicate(true)
+	return modifiers
 
 static func _normalize_weight_modifiers(value: Variant) -> Dictionary:
 	var source = _dictionary_or_empty(value)

@@ -2,6 +2,7 @@ extends GutTest
 
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const ShopGeneratorScript = preload("res://src/core/rewards/shop_generator.gd")
+const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
 const ShopScene = preload("res://src/ui/shop/shop_scene.tscn")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
@@ -157,6 +158,58 @@ func test_sell_backpack_item_removes_item_and_grants_sell_value():
 	assert_eq(rm.current_shards, 18)
 	assert_eq(rm.current_backpack_items.size(), 1)
 	assert_eq(str(rm.current_backpack_items[0].get("id", "")), RunManagerScript.ROOT_DREAM_ID)
+
+func test_visual_shop_buyback_button_uses_repurchase_copy_and_drag_scale():
+	var owner := Control.new()
+	add_child_autofree(owner)
+	owner.size = BookBackgroundConfig.DESIGN_SIZE
+	var controller = HubShopVisualControllerScript.new()
+	controller._create_offer_overlay(owner)
+	controller._create_buyback_button(owner)
+	controller._last_viewport_size = BookBackgroundConfig.DESIGN_SIZE
+	controller._layout_buyback_button()
+	var button := owner.get_node_or_null("ShopOfferOverlayCanvas/ShopOfferRoot/ShopBuybackButton") as Button
+	assert_not_null(button)
+	assert_eq(button.text, "回购")
+	assert_eq(button.get_theme_color("font_color"), Color.WHITE)
+	assert_true(button.position.y > 700.0)
+	assert_true(controller._is_buyback_drop_position(button.get_global_rect().get_center()))
+
+	var dragged_item := Control.new()
+	dragged_item.size = Vector2(80.0, 80.0)
+	owner.add_child(dragged_item)
+	controller._set_buyback_drag_active(true, dragged_item)
+	await get_tree().create_timer(0.16).timeout
+	assert_almost_eq(button.scale.x, 1.08, 0.02)
+	assert_almost_eq(dragged_item.scale.x, 1.1, 0.02)
+	controller._set_buyback_drag_active(false, dragged_item)
+	await get_tree().create_timer(0.16).timeout
+	assert_almost_eq(button.scale.x, 1.0, 0.02)
+	assert_almost_eq(dragged_item.scale.x, 1.0, 0.02)
+
+
+func test_visual_shop_skull_overlay_matches_reference_pixels():
+	var owner := Control.new()
+	add_child_autofree(owner)
+	owner.size = BookBackgroundConfig.DESIGN_SIZE
+	var controller = HubShopVisualControllerScript.new()
+	controller._last_viewport_size = BookBackgroundConfig.DESIGN_SIZE
+	controller._create_intro_canvas(owner)
+	controller._layout_shop_skull_overlay()
+
+	var expected_rects := [
+		Rect2(Vector2(976.0, 288.0), Vector2(212.0, 189.0)),
+		Rect2(Vector2(1324.0, 339.0), Vector2(281.0, 157.0)),
+		Rect2(Vector2(1565.0, 229.0), Vector2(256.0, 226.0)),
+		Rect2(Vector2(1787.0, 75.0), Vector2(128.0, 186.0)),
+	]
+	for index in range(expected_rects.size()):
+		var skull := owner.get_node_or_null("ShopIntroOverlayCanvas/ShopSkullOverlay/ShopSkull%d" % (index + 1)) as TextureRect
+		assert_not_null(skull)
+		assert_eq(skull.position, expected_rects[index].position)
+		assert_eq(skull.size, expected_rects[index].size)
+		assert_eq(skull.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+
 
 func test_shop_item_offer_uses_card_tooltip():
 	var shop = add_child_autofree(ShopScene.instantiate())

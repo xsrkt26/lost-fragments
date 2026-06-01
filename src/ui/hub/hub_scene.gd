@@ -15,6 +15,7 @@ const HUB_PLUSH_TRANSITION_FRAME_PATHS := [
 	"res://assets/ui/hub/plush_transition/plush_transition_02.png",
 	"res://assets/ui/hub/plush_transition/plush_transition_03.png",
 	"res://assets/ui/hub/plush_transition/plush_transition_04.png",
+	"res://assets/ui/hub/plush_transition/plush_transition_05.png",
 ]
 
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
@@ -71,6 +72,8 @@ const HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME := 0.34
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const SHOP_INTRO_FRAME_RATE := 60.0
+const ENABLE_DEBUG_SHORTCUTS_IN_RELEASE := true
+const XIAOMI_STORY_ACT := 1
 const XIAOMI_ANCHOR_SOURCE_POSITION := Vector2(760.0, 1010.0)
 const XIAOMI_SPRITE_OFFSET := Vector2(-70.5, -170.4)
 const XIAOMI_SPRITE_SCALE := Vector2(0.8, 0.8)
@@ -91,6 +94,7 @@ func _first_existing_node(paths: Array[String]) -> Node:
 @onready var book_canvas_layer: CanvasLayer = $BookCanvasLayer
 @onready var book_design_root: Control = $BookCanvasLayer/BookDesignRoot
 @onready var book_background: Control = $BookCanvasLayer/BookDesignRoot/BookBackground
+@onready var battle_disabled_bookmark_pins: Control = get_node_or_null("BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins") as Control
 @onready var hub_art: Node2D = $HubArt
 @onready var hub_board_viewport: Control = _first_existing_node(["HubArt/BoardViewport"]) as Control
 @onready var hub_board_content: Node = _first_existing_node(["HubArt/BoardViewport/BoardContent", "HubArt"])
@@ -132,6 +136,8 @@ var _dreamcatcher_net_base_position := Vector2.ZERO
 var _dreamcatcher_net_base_rotation := 0.0
 var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _dreamcatcher_idle_tween: Tween = null
+var _hub_to_battle_focus_tween: Tween = null
+var _hub_to_battle_focus_token := 0
 var _hub_plush_transition_max_frame_size := Vector2.ZERO
 var _hub_plush_transition_play_token := 0
 var _hub_battle_manager: BattleManager = null
@@ -207,11 +213,12 @@ func _ready() -> void:
 		book_background.call("set_active_page_id", BookBackgroundConfig.PAGE_HUB)
 	if book_page_navigator != null and book_page_navigator.has_method("configure"):
 		book_page_navigator.configure(self)
-	_ensure_xiaomi_anchor()
+	_sync_xiaomi_anchor_for_current_act()
 	_try_play_pending_hub_story_on_ready()
 	_update_merchant_state()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
+	call_deferred("_apply_pending_hub_shortcut_request")
 
 
 func _process(_delta: float) -> void:
@@ -225,6 +232,7 @@ func _process(_delta: float) -> void:
 
 func _exit_tree() -> void:
 	_stop_hub_dreamcatcher_idle_swing()
+	_cancel_hub_to_battle_focus()
 	_cancel_hub_plush_transition()
 
 
@@ -236,6 +244,12 @@ func _get_stage_bgm_key(key: String, fallback: String) -> String:
 
 func _get_run_manager() -> Node:
 	return get_node_or_null("/root/RunManager")
+
+
+func _play_audio_sfx(sfx_key: String, pitch_range: float = 0.0) -> void:
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio and audio.has_method("play_sfx"):
+		audio.play_sfx(sfx_key, pitch_range)
 
 
 func _get_item_database() -> Node:
@@ -260,6 +274,7 @@ func _on_route_changed(_current_act: int, _route_index: int, _current_node: Dict
 	_configure_hub_dreamcatcher_swing_pivot()
 	_capture_hub_dreamcatcher_pose()
 	_reset_hub_plush_transition()
+	_sync_xiaomi_anchor_for_current_act()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
 	_update_merchant_state()
@@ -554,6 +569,7 @@ func _play_hub_dreamcatcher_start_swing() -> void:
 	dreamcatcher_net.position = _dreamcatcher_net_base_position
 	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
 	dreamcatcher_net.offset = _dreamcatcher_net_base_offset
+	_play_current_dreamcatcher_sfx()
 	var tween := create_tween()
 	tween.set_trans(Tween.TRANS_SINE).set_ease(Tween.EASE_IN_OUT)
 	tween.tween_property(dreamcatcher_net, "rotation", _dreamcatcher_net_base_rotation - 0.08, 0.14)
@@ -566,6 +582,21 @@ func _play_hub_dreamcatcher_start_swing() -> void:
 	dreamcatcher_net.position = _dreamcatcher_net_base_position
 	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
 	dreamcatcher_net.offset = _dreamcatcher_net_base_offset
+
+func _play_current_dreamcatcher_sfx() -> void:
+	var visual := _get_stage_visual()
+	var key := _get_dreamcatcher_sfx_key_from_path(str(visual.get("dreamcatcher_net_path", "")))
+	if key != "":
+		_play_audio_sfx(key)
+
+
+func _get_dreamcatcher_sfx_key_from_path(path: String) -> String:
+	var normalized := path.to_lower()
+	if normalized.contains("uncle") or normalized.contains("act_2"):
+		return "dreamcatcher_uncle"
+	if normalized.contains("xiaomi") or normalized.contains("act_1"):
+		return "dreamcatcher_xiaomi"
+	return ""
 
 
 func _ensure_hub_plush_transition_sprite() -> Sprite2D:
@@ -884,6 +915,9 @@ func _input(event: InputEvent) -> void:
 		return
 	if _is_hub_battle_session_active:
 		return
+	if _handle_hub_debug_shortcuts(event):
+		get_viewport().set_input_as_handled()
+		return
 
 	if not _is_book_hub_current():
 		if event is InputEventMouseButton and event.button_index == MOUSE_BUTTON_LEFT and event.pressed:
@@ -909,6 +943,10 @@ func _input(event: InputEvent) -> void:
 		return
 
 	if GlobalInput.is_context(GlobalInput.Context.WORLD):
+		if _is_next_route_node_shortcut(event):
+			if _advance_to_next_route_node_by_shortcut():
+				get_viewport().set_input_as_handled()
+			return
 		if _is_route_advance_shortcut(event):
 			if _advance_current_route_by_shortcut():
 				get_viewport().set_input_as_handled()
@@ -917,11 +955,137 @@ func _input(event: InputEvent) -> void:
 			get_viewport().set_input_as_handled()
 
 
+func _handle_hub_debug_shortcuts(event: InputEvent) -> bool:
+	if not _is_debug_shortcut_enabled():
+		return false
+	var debug_act := _debug_shortcut_act_from_event(event)
+	if debug_act > 0:
+		return _debug_jump_to_act(debug_act)
+
+	if not (event is InputEventKey):
+		return false
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return false
+	var keycode := key_event.keycode if key_event.keycode != 0 else key_event.physical_keycode
+	match keycode:
+		KEY_F7:
+			_open_book_page(BookPageNavigator.PAGE_BACKPACK)
+			return true
+		KEY_F8:
+			_open_book_page(BookPageNavigator.PAGE_GALLERY)
+			return true
+		KEY_F9:
+			_open_book_page(BookPageNavigator.PAGE_SETTINGS)
+			return true
+		KEY_F11:
+			_transition_from_hub(GlobalScene.SceneType.DEBUG, true)
+			return true
+	return false
+
+
+func _is_debug_shortcut_enabled() -> bool:
+	return OS.is_debug_build() or ENABLE_DEBUG_SHORTCUTS_IN_RELEASE
+
+
+func _debug_shortcut_act_from_event(event: InputEvent) -> int:
+	if not (event is InputEventKey):
+		return 0
+	var key_event := event as InputEventKey
+	if not key_event.pressed or key_event.echo:
+		return 0
+	var shortcut_key := key_event.keycode
+	if shortcut_key == 0:
+		shortcut_key = key_event.physical_keycode
+	match shortcut_key:
+		KEY_F1:
+			return 1
+		KEY_F2:
+			return 2
+		KEY_F3:
+			return 3
+		KEY_F4:
+			return 4
+		KEY_F5:
+			return 5
+		KEY_F6:
+			return 6
+	return 0
+
+
+func _debug_jump_to_act(act: int) -> bool:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("start_new_run"):
+		push_warning("[Hub Debug] RunManager is missing; cannot jump to target act.")
+		return false
+	var target_act := clampi(act, 1, StageConfig.get_max_act())
+	rm.start_new_run()
+	rm.current_act = target_act
+	rm.current_route_id = StageConfig.get_route_id_for_act(target_act, RouteConfig.DEFAULT_ROUTE_ID)
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	rm.is_run_active = true
+	rm.is_run_complete = false
+	if rm.has_method("save_current_state"):
+		rm.save_current_state()
+	if rm.has_method("_emit_route_changed"):
+		rm._emit_route_changed()
+	_clear_pending_auto_interaction()
+	_close_backpack_overlay()
+	_open_book_page(BookPageNavigator.PAGE_HUB)
+	print("[Hub Debug] Jumped to act ", target_act, ".")
+	return true
+
+
+func _is_next_route_node_shortcut(event: InputEvent) -> bool:
+	if not (event is InputEventKey):
+		return false
+	var key_event := event as InputEventKey
+	return key_event.pressed and not key_event.echo and (key_event.keycode == KEY_F10 or key_event.physical_keycode == KEY_F10)
+
+
+func _apply_pending_hub_shortcut_request() -> void:
+	var rm = _get_run_manager()
+	if rm == null:
+		return
+	var requested_page_id := str(rm.get("debug_hub_page_request"))
+	var should_advance_next_node := bool(rm.get("debug_hub_advance_next_node_request"))
+	rm.debug_hub_page_request = ""
+	rm.debug_hub_advance_next_node_request = false
+	if should_advance_next_node:
+		_advance_to_next_route_node_by_shortcut()
+		return
+	if requested_page_id != "":
+		_open_book_page(requested_page_id)
+
+
 func _is_route_advance_shortcut(event: InputEvent) -> bool:
 	if not (event is InputEventKey):
 		return false
 	var key_event := event as InputEventKey
 	return key_event.pressed and not key_event.echo and (key_event.keycode == KEY_Z or key_event.physical_keycode == KEY_Z)
+
+
+func _advance_to_next_route_node_by_shortcut() -> bool:
+	if _has_pending_auto_interaction() or _is_dreamcatcher_transition_pending():
+		return false
+	var rm = _get_run_manager()
+	if rm == null or not bool(rm.get("is_run_active")):
+		return false
+	if rm.has_method("can_enter_current_route_node"):
+		if not rm.can_enter_current_route_node():
+			return false
+	elif not rm.has_method("can_enter_route_node") or not rm.can_enter_route_node(int(rm.get("current_route_index"))):
+		return false
+	if not rm.has_method("advance_route_node"):
+		return false
+	var skipped_node: Dictionary = rm.advance_route_node()
+	if skipped_node.is_empty():
+		return false
+	print("[Hub Debug] Advanced to next route node by shortcut. skipped=", skipped_node.get("id", ""))
+	if bool(rm.get("is_run_active")) and rm.has_method("can_enter_current_route_node") and rm.can_enter_current_route_node():
+		_enter_current_route_node()
+	return true
 
 
 func _advance_current_route_by_shortcut() -> bool:
@@ -1136,9 +1300,10 @@ func _enter_route_node(index: int, use_scene_transition: bool = true) -> void:
 		end_focus = battle_focus_target / target_viewport_size
 
 	var target_scene: int = rm.get_current_node_scene_type()
-	var route_node_type := str(rm.get_current_route_node_type()) if rm.has_method("get_current_route_node_type") else ""
-	var is_battle_route := target_scene == GlobalScene.SceneType.BATTLE or RouteConfig.is_battle_node_type(route_node_type)
-	var target_scene_name := str(target_scene)
+	var route_node_type: String = str(rm.get_current_route_node_type()) if rm.has_method("get_current_route_node_type") else ""
+	var is_battle_route: bool = target_scene == GlobalScene.SceneType.BATTLE or RouteConfig.is_battle_node_type(route_node_type)
+	var is_shop_route: bool = target_scene == GlobalScene.SceneType.SHOP or route_node_type == RouteConfig.NODE_SHOP
+	var target_scene_name: String = str(target_scene)
 	if target_scene >= 0 and target_scene < GlobalScene.SceneType.keys().size():
 		target_scene_name = str(GlobalScene.SceneType.keys()[target_scene])
 	print(
@@ -1149,12 +1314,10 @@ func _enter_route_node(index: int, use_scene_transition: bool = true) -> void:
 	)
 	if is_battle_route:
 		print("[Hub] Battle node: starting battle inside hub scene without scene transition.")
-		await _play_hub_to_battle_focus(dreamcatcher_uv, end_focus)
-		if not is_inside_tree():
-			return
-		_open_hub_battle_session()
-		if _is_hub_battle_session_active:
-			call_deferred("_play_hub_plush_transition_with_battle_intro")
+		_start_hub_to_battle_focus(dreamcatcher_uv, end_focus)
+	elif is_shop_route:
+		print("[Hub] Shop node: starting shop visual inside hub scene.")
+		_enter_current_shop_route_visual()
 	else:
 		print("[Hub] Non-battle node: fallback to SceneManager transition.")
 		if use_scene_transition:
@@ -1163,11 +1326,26 @@ func _enter_route_node(index: int, use_scene_transition: bool = true) -> void:
 			GlobalScene.transition_to_direct(target_scene)
 
 
+func _enter_current_shop_route_visual() -> void:
+	if _is_shop_visual_state_active or _is_shop_intro_sequence_running:
+		return
+	_clear_pending_auto_interaction()
+	if _merchant_controller != null:
+		_update_merchant_state()
+		_merchant_controller.is_player_at_merchant = true
+		_merchant_controller.shop_click_ready = false
+		var played_arrival := _merchant_controller.play_arrival_animation()
+		if played_arrival and merchant_sprite != null and merchant_sprite.is_playing():
+			await merchant_sprite.animation_finished
+	_on_merchant_open_shop_requested()
+
+
 func _enter_shop_visual_state() -> void:
 	_is_shop_visual_state_active = true
 	current_zone = "shop"
 	if _interaction_flow_controller != null:
 		_interaction_flow_controller.mark_idle()
+	_play_audio_sfx("shop_hand")
 	GlobalInput.set_context(GlobalInput.Context.UI)
 
 
@@ -1187,6 +1365,7 @@ func _close_shop_visual_state() -> void:
 
 
 func _play_shop_intro_overlay(keep_final_frame: bool = false):
+	_play_audio_sfx("shop_emerge")
 	return await _shop_visual_controller.play_intro_overlay(
 		self,
 		_get_run_manager(),
@@ -1280,6 +1459,7 @@ func _remove_hub_battle_runtime_children() -> void:
 
 
 func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
+	_set_battle_disabled_bookmark_pins_visible(not chrome_visible)
 	if canvas_design_root != null:
 		canvas_design_root.visible = chrome_visible
 	if player != null:
@@ -1301,6 +1481,11 @@ func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 		_clear_pending_auto_interaction()
 		_stop_hub_dreamcatcher_idle_swing()
 		_update_dreamcatcher_state()
+
+
+func _set_battle_disabled_bookmark_pins_visible(pins_visible: bool) -> void:
+	if battle_disabled_bookmark_pins != null:
+		battle_disabled_bookmark_pins.visible = pins_visible
 
 
 func _return_dreamcatcher_to_ready_state() -> void:
@@ -1336,9 +1521,22 @@ func _clear_overlay_children(do_persist_backpack: bool = true) -> void:
 		child.queue_free()
 
 
-func _play_hub_to_battle_focus(start_focus_uv: Vector2, end_focus_uv: Vector2, duration: float = HUB_TO_BATTLE_FOCUS_DURATION) -> void:
-	if Engine.is_editor_hint() or not is_inside_tree():
+func _start_hub_to_battle_focus(start_focus_uv: Vector2, end_focus_uv: Vector2, duration: float = HUB_TO_BATTLE_FOCUS_DURATION) -> void:
+	var play_token := _begin_hub_to_battle_focus(start_focus_uv, end_focus_uv, duration)
+	if play_token == 0:
 		return
+	if _hub_to_battle_focus_tween == null:
+		_complete_hub_to_battle_focus(play_token)
+		return
+	_hub_to_battle_focus_tween.finished.connect(_complete_hub_to_battle_focus.bind(play_token), CONNECT_ONE_SHOT)
+
+
+func _begin_hub_to_battle_focus(start_focus_uv: Vector2, end_focus_uv: Vector2, duration: float = HUB_TO_BATTLE_FOCUS_DURATION) -> int:
+	if Engine.is_editor_hint() or not is_inside_tree():
+		return 0
+	_cancel_hub_to_battle_focus()
+	_hub_to_battle_focus_token += 1
+	var play_token := _hub_to_battle_focus_token
 	_stop_hub_dreamcatcher_idle_swing()
 	var viewport_size := _validated_layout_viewport_size(get_viewport_rect().size)
 	var start_focus := start_focus_uv * viewport_size
@@ -1349,14 +1547,33 @@ func _play_hub_to_battle_focus(start_focus_uv: Vector2, end_focus_uv: Vector2, d
 	if duration <= 0.0:
 		for node in focus_nodes:
 			_apply_hub_focus_node(node, start_focus, end_focus, focus_scale)
-		return
+		return play_token
 
 	var tween := create_tween()
+	_hub_to_battle_focus_tween = tween
 	tween.set_parallel(true)
 	tween.set_trans(Tween.TRANS_QUART).set_ease(Tween.EASE_IN_OUT)
 	for node in focus_nodes:
 		_tween_hub_focus_node(tween, node, start_focus, end_focus, focus_scale, duration)
-	await tween.finished
+	return play_token
+
+
+func _complete_hub_to_battle_focus(play_token: int) -> void:
+	if play_token != _hub_to_battle_focus_token:
+		return
+	_hub_to_battle_focus_tween = null
+	if not is_inside_tree():
+		return
+	_open_hub_battle_session()
+	if _is_hub_battle_session_active:
+		call_deferred("_play_hub_plush_transition_with_battle_intro")
+
+
+func _cancel_hub_to_battle_focus() -> void:
+	_hub_to_battle_focus_token += 1
+	if _hub_to_battle_focus_tween != null:
+		_hub_to_battle_focus_tween.kill()
+		_hub_to_battle_focus_tween = null
 
 
 func _tween_hub_focus_node(tween: Tween, node: Node, focus_point: Vector2, target_point: Vector2, focus_scale: Vector2, duration: float) -> void:
@@ -1604,6 +1821,8 @@ func play_story_book_page(sequence_id: String) -> bool:
 
 
 func play_story_bubble_dialogue(sequence_id: String) -> bool:
+	if not _should_show_xiaomi_story_actor():
+		return false
 	var controller := _ensure_story_bubble_controller()
 	if controller == null:
 		return false
@@ -1616,9 +1835,22 @@ func play_story_bubble_dialogue(sequence_id: String) -> bool:
 	var frames: Array = Array(raw_frames)
 	if frames.is_empty():
 		return false
-	_ensure_xiaomi_anchor()
+	if _ensure_xiaomi_anchor() == null:
+		return false
 	controller.call("start_dialogue", sequence_id, frames, player, _xiaomi_anchor)
 	return true
+
+
+func _should_show_xiaomi_story_actor() -> bool:
+	var rm = _get_run_manager()
+	return rm != null and bool(rm.get("is_run_active")) and int(rm.get("current_act")) == XIAOMI_STORY_ACT
+
+
+func _sync_xiaomi_anchor_for_current_act() -> void:
+	if _should_show_xiaomi_story_actor():
+		_ensure_xiaomi_anchor()
+	else:
+		_remove_xiaomi_anchor()
 
 
 func _ensure_xiaomi_anchor() -> Node2D:
@@ -1642,6 +1874,15 @@ func _ensure_xiaomi_anchor() -> Node2D:
 	else:
 		add_child(_xiaomi_anchor)
 	return _xiaomi_anchor
+
+
+func _remove_xiaomi_anchor() -> void:
+	if _xiaomi_anchor != null and is_instance_valid(_xiaomi_anchor):
+		var parent := _xiaomi_anchor.get_parent()
+		if parent != null:
+			parent.remove_child(_xiaomi_anchor)
+		_xiaomi_anchor.free()
+	_xiaomi_anchor = null
 
 
 func _load_xiaomi_texture(path: String) -> Texture2D:

@@ -15,6 +15,12 @@ func test_registered_runtime_paths_exist() -> void:
 		assert_true(ResourceLoader.exists(path) or FileAccess.file_exists(path), "Registered asset path should exist: %s" % path)
 
 
+func test_hub_background_textures_are_loadable() -> void:
+	var textures := AssetPaths.load_texture_map(AssetPaths.HUB_BACKGROUND_PATHS)
+	for key in AssetPaths.HUB_BACKGROUND_PATHS.keys():
+		assert_true(textures.has(key), "Hub background texture should load: %s" % key)
+
+
 func test_numbered_sequences_are_generated_from_specs() -> void:
 	var bag_frames := AssetPaths.intro_bag_reveal_frame_paths()
 	assert_eq(bag_frames.size(), 5)
@@ -27,6 +33,21 @@ func test_numbered_sequences_are_generated_from_specs() -> void:
 	assert_eq(cat_frames[1], "res://assets/characters/merchant/cat/cat_0000.png")
 	assert_eq(cat_frames[4], "res://assets/characters/merchant/cat/cat_0004.png")
 	assert_eq(cat_frames[10], "res://assets/characters/merchant/cat/cat_0010.png")
+
+	var parents_frames := AssetPaths.merchant_frame_paths("parents")
+	assert_eq(parents_frames.size(), 8)
+	assert_eq(parents_frames[0], "res://assets/characters/merchant/parents/parents_0000.png")
+	assert_eq(parents_frames[7], "res://assets/characters/merchant/parents/parents_0007.png")
+
+	var xiaojia_frames := AssetPaths.merchant_frame_paths("xiaojia")
+	assert_eq(xiaojia_frames.size(), 5)
+	assert_eq(xiaojia_frames[0], "res://assets/characters/merchant/xiaojia/xiaojia_0000.png")
+	assert_eq(xiaojia_frames[4], "res://assets/characters/merchant/xiaojia/xiaojia_0004.png")
+
+	var shiyi_frames := AssetPaths.merchant_frame_paths("shiyi")
+	assert_eq(shiyi_frames.size(), 6)
+	assert_eq(shiyi_frames[0], "res://assets/characters/merchant/shiyi/shiyi_0000.png")
+	assert_eq(shiyi_frames[5], "res://assets/characters/merchant/shiyi/shiyi_0005.png")
 
 
 func _collect_registered_runtime_paths() -> PackedStringArray:

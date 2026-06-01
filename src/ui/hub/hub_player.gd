@@ -14,6 +14,7 @@ var move_target_x: float = 0.0
 var has_walk_bounds: bool = false
 var walk_min_x: float = 0.0
 var walk_max_x: float = 0.0
+var _walk_sfx_active := false
 
 @onready var animated_sprite := get_node_or_null("AnimatedSprite2D") as AnimatedSprite2D
 @onready var legacy_sprite := get_node_or_null("Sprite2D") as Sprite2D
@@ -21,6 +22,10 @@ var walk_max_x: float = 0.0
 
 func _ready() -> void:
 	_play_animation(ANIM_IDLE)
+
+
+func _exit_tree() -> void:
+	_set_walk_sfx_active(false)
 
 
 func move_to_global_x(target_x: float) -> void:
@@ -49,6 +54,7 @@ func _physics_process(delta: float) -> void:
 		move_and_slide()
 		_apply_walk_bounds()
 		_play_animation(ANIM_IDLE)
+		_set_walk_sfx_active(false)
 		return
 
 	_apply_gravity(delta)
@@ -80,6 +86,7 @@ func _physics_process(delta: float) -> void:
 	move_and_slide()
 	_apply_walk_bounds()
 	_play_animation(ANIM_WALK if is_moving_horizontally else ANIM_IDLE)
+	_set_walk_sfx_active(is_moving_horizontally)
 
 
 func _apply_gravity(delta: float) -> void:
@@ -116,6 +123,19 @@ func _play_animation(animation_name: StringName) -> void:
 		animated_sprite.play(animation_name)
 	elif not animated_sprite.is_playing():
 		animated_sprite.play()
+
+
+func _set_walk_sfx_active(active: bool) -> void:
+	if _walk_sfx_active == active:
+		return
+	_walk_sfx_active = active
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio == null:
+		return
+	if active and audio.has_method("play_loop_sfx"):
+		audio.play_loop_sfx("walk", 0.08)
+	elif not active and audio.has_method("stop_loop_sfx"):
+		audio.stop_loop_sfx("walk", 0.1)
 
 
 func _clamp_to_walk_bounds(value: float) -> float:

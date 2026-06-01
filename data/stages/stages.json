@@ -11,6 +11,7 @@
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
         "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png",
+        "merchant_animation_key": "cat",
         "ui_tint": "#10151d"
       },
       "battle_modifiers": {
@@ -38,9 +39,10 @@
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
-        "hub_background_key": "xiaojia",
-        "hub_foreground_key": "xiaojia",
+        "hub_background_key": "stage",
+        "hub_foreground_key": "stage",
         "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_2_uncle.png",
+        "merchant_animation_key": "stage",
         "ui_tint": "#172018"
       },
       "battle_modifiers": {
@@ -68,8 +70,9 @@
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
-        "hub_background_key": "parents",
+        "hub_background_key": "grandma",
         "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_3_grandma.png",
+        "merchant_animation_key": "grandma",
         "ui_tint": "#15201f"
       },
       "battle_modifiers": {
@@ -97,8 +100,9 @@
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
-        "hub_background_key": "cardboard",
+        "hub_background_key": "parents",
         "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_4_parents.png",
+        "merchant_animation_key": "parents",
         "ui_tint": "#1d1a13"
       },
       "battle_modifiers": {
@@ -126,8 +130,10 @@
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
-        "hub_background_key": "stage",
-        "hub_foreground_key": "stage",
+        "hub_background_key": "xiaojia",
+        "hub_foreground_key": "xiaojia",
+        "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_5_xiaojia.png",
+        "merchant_animation_key": "xiaojia",
         "ui_tint": "#211720"
       },
       "battle_modifiers": {
@@ -137,7 +143,12 @@
       },
       "boss": {
         "mechanics": ["score_target", "locked_cell_pressure"],
-        "score_target": {"enabled": true, "value": 135}
+        "score_target": {"enabled": true, "value": 135},
+        "battle_modifiers": {
+          "draw_cost_delta": 0,
+          "pollution_added_bonus": 0,
+          "blocked_cells": [{"x": 5, "y": 1}, {"x": 1, "y": 5}]
+        }
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.05, "ornament": 1.12, "tool": 1.08},
@@ -155,8 +166,9 @@
       "visual": {
         "battle_bgm_key": "battle",
         "hub_bgm_key": "hub",
-        "hub_background_key": "stage",
-        "hub_foreground_key": "stage",
+        "hub_background_key": "shiyi",
+        "dreamcatcher_net_path": "res://assets/ui/battle/dreamcatchers/act_6_shiyi.png",
+        "merchant_animation_key": "shiyi",
         "ui_tint": "#211313"
       },
       "battle_modifiers": {
@@ -166,7 +178,12 @@
       },
       "boss": {
         "mechanics": ["score_target", "finale_pressure"],
-        "score_target": {"enabled": true, "value": 165}
+        "score_target": {"enabled": true, "value": 165},
+        "battle_modifiers": {
+          "draw_cost_delta": 1,
+          "pollution_added_bonus": 1,
+          "blocked_cells": [{"x": 1, "y": 5}, {"x": 5, "y": 1}, {"x": 3, "y": 1}]
+        }
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.05, "ornament": 1.18, "tool": 1.12},

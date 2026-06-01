@@ -13,6 +13,7 @@
 [ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="17_book_background"]
 [ext_resource type="Script" uid="uid://cc3d4ddxi2wxe" path="res://src/ui/book/book_page_turn_effect.gd" id="18_page_turn"]
 [ext_resource type="PackedScene" path="res://src/ui/hub/hub_battle_layer.tscn" id="30_hub_battle_layer"]
+[ext_resource type="Texture2D" path="res://assets/ui/backpack/locked_cell_pin.png" id="31_locked_pin"]
 
 [sub_resource type="WorldBoundaryShape2D" id="WorldWorldBoundaryShape2D_floor"]
 
@@ -55,6 +56,54 @@ anchor_bottom = 0.0
 offset_right = 1920.0
 offset_bottom = 1080.0
 metadata/_edit_use_anchors_ = true
+
+[node name="BattleDisabledBookmarkPins" type="Control" parent="BookCanvasLayer/BookDesignRoot"]
+visible = false
+z_index = 50
+layout_mode = 0
+offset_right = 1920.0
+offset_bottom = 1080.0
+mouse_filter = 2
+
+[node name="AlbumTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
+layout_mode = 0
+offset_left = 41.0
+offset_top = 216.0
+offset_right = 115.0
+offset_bottom = 301.0
+mouse_filter = 2
+texture = ExtResource("31_locked_pin")
+expand_mode = 1
+
+[node name="BackpackTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
+layout_mode = 0
+offset_left = 54.0
+offset_top = 328.0
+offset_right = 128.0
+offset_bottom = 413.0
+mouse_filter = 2
+texture = ExtResource("31_locked_pin")
+expand_mode = 1
+
+[node name="GalleryTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
+layout_mode = 0
+offset_left = 60.0
+offset_top = 440.0
+offset_right = 134.0
+offset_bottom = 525.0
+mouse_filter = 2
+texture = ExtResource("31_locked_pin")
+expand_mode = 1
+
+[node name="SettingsTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
+layout_mode = 0
+offset_left = 54.0
+offset_top = 536.0
+offset_right = 128.0
+offset_bottom = 621.0
+mouse_filter = 2
+texture = ExtResource("31_locked_pin")
+expand_mode = 1
 
 [node name="HubArt" type="Node2D" parent="." unique_id=1340072637]
 position = Vector2(0, 14)

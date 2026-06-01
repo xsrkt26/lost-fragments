@@ -8,21 +8,36 @@ var context: GameContext
 var battle: BattleManager
 var item_db
 
+
+class IsolatedRunManager:
+	extends Node
+
+	var current_deck: Array[String] = []
+	var current_ornaments: Array[String] = []
+
+	func get_current_battle_modifiers() -> Dictionary:
+		return {}
+
+
 func before_each():
 	gs = autofree(Node.new())
 	gs.set_script(preload("res://src/autoload/game_state.gd"))
 	add_child(gs)
 	gs.reset_game()
 
+	item_db = get_node_or_null("/root/ItemDatabase")
+	var isolated_run_manager: IsolatedRunManager = autofree(IsolatedRunManager.new())
+	add_child(isolated_run_manager)
+
 	battle = autofree(BattleManager.new())
+	battle.game_state_override = gs
+	battle.run_manager_override = isolated_run_manager
 	add_child(battle)
 
 	battle.context.state = gs
 
 	backpack = battle.backpack_manager
 	context = battle.context
-
-	item_db = get_node_or_null("/root/ItemDatabase")
 
 func _make_item_ui(item_data: ItemData, item_instance = null) -> Control:
 	var item_ui = autoqfree(MockItemUI.new())

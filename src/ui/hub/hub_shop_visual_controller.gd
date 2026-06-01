@@ -14,15 +14,18 @@ const BACKPACK_RISE_OFFSET_Y := 620.0
 const BACKPACK_RISE_DURATION := 1.0
 const SHOP_EXIT_DESIGN_RECT := Rect2(Vector2(92.0, 612.0), Vector2(240.0, 86.0))
 const SHOP_EXIT_HOVER_SCALE := 1.08
+const SHOP_BUYBACK_DESIGN_RECT := Rect2(Vector2(44.0, 820.0), Vector2(270.0, 108.0))
+const SHOP_BUYBACK_HOVER_SCALE := 1.08
+const SHOP_BUYBACK_ITEM_HOVER_SCALE := 1.1
 const PLAYABLE_BAG_SOURCE_SIZE := Vector2(806.6115, 1018.74243)
 const PLAYABLE_BAG_GRID_SOURCE_RECT := Rect2(Vector2(119.28073, 384.0497), Vector2(576.8495, 532.6164))
 const SHOP_SKULL_FADE_START_PROGRESS := 0.82
 const SHOP_SKULL_FADE_END_PROGRESS := 0.96
 const SHOP_SKULL_DESIGN_RECTS := [
-	Rect2(Vector2(980.0, 320.0), Vector2(245.0, 218.0)),
-	Rect2(Vector2(1290.0, 320.0), Vector2(330.0, 184.0)),
-	Rect2(Vector2(1515.0, 315.0), Vector2(270.0, 238.0)),
-	Rect2(Vector2(1742.0, 80.0), Vector2(178.0, 259.0)),
+	Rect2(Vector2(976.0, 288.0), Vector2(212.0, 189.0)),
+	Rect2(Vector2(1324.0, 339.0), Vector2(281.0, 157.0)),
+	Rect2(Vector2(1565.0, 229.0), Vector2(256.0, 226.0)),
+	Rect2(Vector2(1787.0, 75.0), Vector2(128.0, 186.0)),
 ]
 const OFFER_DESIGN_RECTS := [
 	Rect2(Vector2(1110.0, 236.0), Vector2(315.0, 112.0)),
@@ -51,12 +54,18 @@ var _pending_item_area: Control = null
 var _offers_canvas: CanvasLayer = null
 var _offers_root: Control = null
 var _exit_button: Button = null
+var _buyback_button: Button = null
 var _offer_buttons: Array[Button] = []
 var _last_viewport_size := DESIGN_SIZE
 var _battle_manager: BattleManager = null
 var _rendered_item_uis: Array[Control] = []
 var _last_drag_root_grid_pos := Vector2i(-999999, -999999)
 var _last_drag_item_id := 0
+var _buyback_drag_active := false
+var _buyback_button_hovered := false
+var _buyback_hover_item: Control = null
+var _buyback_button_tween: Tween = null
+var _buyback_item_tween: Tween = null
 var _is_closing := false
 var _close_requested_callback: Callable = Callable()
 
@@ -97,7 +106,9 @@ func play_intro_overlay(owner_node: Node, run_manager: Node, item_db: Node, orna
 			_intro_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		_set_shop_skull_alpha(1.0)
 		_render_offer_buttons(run_manager, item_db, ornament_db)
+		_create_buyback_button(owner_node)
 		_create_exit_button(owner_node)
+		_layout_buyback_button()
 		_layout_exit_button()
 		return _intro_canvas
 	close()
@@ -119,6 +130,7 @@ func request_close_with_animation(frame_rate: float = 60.0) -> void:
 
 
 func close() -> void:
+	_reset_buyback_feedback(true)
 	if _battle_manager != null and is_instance_valid(_battle_manager):
 		if _battle_manager.has_method("persist_backpack_to_run"):
 			_battle_manager.persist_backpack_to_run()
@@ -144,6 +156,7 @@ func close() -> void:
 	_offers_canvas = null
 	_offers_root = null
 	_exit_button = null
+	_buyback_button = null
 	_battle_manager = null
 	_rendered_item_uis.clear()
 	_reset_drag_highlight_tracking()
@@ -347,6 +360,12 @@ func _clear_backpack_placement_highlight() -> void:
 
 
 func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, pivot_offset: Vector2i) -> void:
+	var over_buyback := _is_buyback_drop_position(mouse_pos)
+	_set_buyback_drag_active(over_buyback and _can_buyback_item(item_ui), item_ui)
+	if over_buyback:
+		_clear_backpack_placement_highlight()
+		_reset_drag_highlight_tracking()
+		return
 	if _backpack_ui == null or not _backpack_ui.has_method("get_grid_pos_at") or not _backpack_ui.has_method("highlight_placement"):
 		return
 	var drag_item_id := _get_drag_item_id(item_ui)
@@ -364,6 +383,10 @@ func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, pivot_offset: Ve
 	_reset_drag_highlight_tracking()
 	if _backpack_ui != null and _backpack_ui.has_method("update_slot_visuals"):
 		_backpack_ui.update_slot_visuals()
+	if _is_buyback_drop_position(mouse_pos) and _try_buyback_item(item_ui):
+		_set_buyback_drag_active(false, item_ui)
+		return
+	_set_buyback_drag_active(false, item_ui)
 	if _battle_manager == null or _backpack_ui == null or not _backpack_ui.has_method("get_grid_pos_at"):
 		return
 	var mouse_grid_pos: Vector2i = _backpack_ui.get_grid_pos_at(mouse_pos)
@@ -393,6 +416,49 @@ func _consume_pending_item_if_placed(item_ui: Control) -> void:
 	if _battle_manager != null and not _battle_manager.managed_item_uis.has(item_ui):
 		_battle_manager.managed_item_uis.append(item_ui)
 	_render_pending_items(run_manager, _get_item_database())
+
+
+func _can_buyback_item(item_ui: Control) -> bool:
+	if item_ui == null or item_ui.has_meta("pending_item_uid"):
+		return false
+	return _get_item_ui_runtime_id(item_ui) != -1
+
+
+func _get_item_ui_runtime_id(item_ui: Control) -> int:
+	if item_ui == null:
+		return -1
+	var item_data := item_ui.get("item_data") as ItemData
+	if item_data != null:
+		return int(item_data.runtime_id)
+	var instance := item_ui.get("item_instance") as BackpackManager.ItemInstance
+	if instance != null and instance.data != null:
+		return int(instance.data.runtime_id)
+	return -1
+
+
+func _try_buyback_item(item_ui: Control) -> bool:
+	if not _can_buyback_item(item_ui):
+		return false
+	var run_manager := _get_run_manager()
+	var item_db := _get_item_database()
+	if run_manager == null or not run_manager.has_method("sell_backpack_item"):
+		return false
+	var runtime_id := _get_item_ui_runtime_id(item_ui)
+	var gained := int(run_manager.sell_backpack_item(runtime_id, item_db))
+	if gained <= 0:
+		return false
+	print("[HubShop] buyback backpack item, gained shards: ", gained)
+	_restore_backpack_from_run(run_manager, item_db)
+	_render_backpack(run_manager, item_db)
+	_refresh_offer_buttons(run_manager)
+	return true
+
+
+func _restore_backpack_from_run(run_manager: Node, item_db: Node) -> void:
+	if _battle_manager == null or _battle_manager.backpack_manager == null:
+		return
+	if run_manager != null and run_manager.has_method("restore_backpack_state"):
+		run_manager.restore_backpack_state(_battle_manager.backpack_manager, item_db)
 
 
 func _persist_backpack() -> void:
@@ -567,6 +633,7 @@ func _layout_all(viewport_size: Vector2, place_backpack_at_start: bool) -> void:
 	_layout_backpack_panel(place_backpack_at_start)
 	_layout_shop_skull_overlay()
 	_layout_offer_buttons()
+	_layout_buyback_button()
 	_layout_exit_button()
 
 
@@ -612,10 +679,122 @@ func _layout_offer_buttons() -> void:
 		button.size = target_rect.size
 
 
+func _create_buyback_button(owner_node: Node) -> void:
+	if _offers_root == null:
+		_create_offer_overlay(owner_node)
+	if _offers_root == null:
+		return
+	if _buyback_button != null and is_instance_valid(_buyback_button):
+		return
+	_buyback_button = Button.new()
+	_buyback_button.name = "ShopBuybackButton"
+	_buyback_button.text = "回购"
+	_buyback_button.flat = true
+	_buyback_button.focus_mode = Control.FOCUS_NONE
+	_buyback_button.mouse_filter = Control.MOUSE_FILTER_STOP
+	_buyback_button.rotation_degrees = -6.0
+	_buyback_button.pivot_offset = SHOP_BUYBACK_DESIGN_RECT.size * 0.5
+	_buyback_button.add_theme_font_size_override("font_size", 40)
+	_buyback_button.add_theme_color_override("font_color", Color.WHITE)
+	_buyback_button.add_theme_color_override("font_hover_color", Color.WHITE)
+	_buyback_button.add_theme_color_override("font_pressed_color", Color.WHITE)
+	_buyback_button.add_theme_color_override("font_disabled_color", Color(1.0, 1.0, 1.0, 0.55))
+	_apply_exit_button_style(_buyback_button)
+	_buyback_button.mouse_entered.connect(_on_buyback_button_mouse_entered)
+	_buyback_button.mouse_exited.connect(_on_buyback_button_mouse_exited)
+	_offers_root.add_child(_buyback_button)
+
+
+func _layout_buyback_button() -> void:
+	if _buyback_button == null or not is_instance_valid(_buyback_button):
+		return
+	var target_rect := _design_rect_to_viewport(SHOP_BUYBACK_DESIGN_RECT)
+	_buyback_button.position = target_rect.position
+	_buyback_button.size = target_rect.size
+	_buyback_button.pivot_offset = target_rect.size * 0.5
+
+
+func _on_buyback_button_mouse_entered() -> void:
+	_buyback_button_hovered = true
+	_update_buyback_button_scale()
+
+
+func _on_buyback_button_mouse_exited() -> void:
+	_buyback_button_hovered = false
+	_update_buyback_button_scale()
+
+
+func _is_buyback_drop_position(mouse_pos: Vector2) -> bool:
+	if _buyback_button == null or not is_instance_valid(_buyback_button):
+		return false
+	return _buyback_button.get_global_rect().has_point(mouse_pos)
+
+
+func _set_buyback_drag_active(active: bool, item_ui: Control = null) -> void:
+	var target_item := item_ui if active else _buyback_hover_item
+	if _buyback_drag_active == active and _buyback_hover_item == target_item:
+		return
+	if _buyback_hover_item != null and _buyback_hover_item != target_item:
+		_tween_buyback_item_scale(_buyback_hover_item, Vector2.ONE)
+	_buyback_drag_active = active
+	_buyback_hover_item = target_item if active else null
+	_update_buyback_button_scale()
+	if target_item != null:
+		_tween_buyback_item_scale(target_item, Vector2.ONE * (SHOP_BUYBACK_ITEM_HOVER_SCALE if active else 1.0))
+
+
+func _update_buyback_button_scale() -> void:
+	var target_scale := SHOP_BUYBACK_HOVER_SCALE if _buyback_drag_active or _buyback_button_hovered else 1.0
+	_tween_buyback_button_scale(Vector2.ONE * target_scale)
+
+
+func _tween_buyback_button_scale(target_scale: Vector2) -> void:
+	if _buyback_button == null or not is_instance_valid(_buyback_button) or _is_closing:
+		return
+	if _buyback_button_tween != null:
+		_buyback_button_tween.kill()
+	_buyback_button_tween = _buyback_button.create_tween()
+	_buyback_button_tween.set_trans(Tween.TRANS_QUAD)
+	_buyback_button_tween.set_ease(Tween.EASE_OUT)
+	_buyback_button_tween.tween_property(_buyback_button, "scale", target_scale, 0.12)
+
+
+func _tween_buyback_item_scale(item_ui: Control, target_scale: Vector2) -> void:
+	if item_ui == null or not is_instance_valid(item_ui):
+		return
+	item_ui.pivot_offset = item_ui.size * 0.5
+	if _buyback_item_tween != null:
+		_buyback_item_tween.kill()
+	_buyback_item_tween = item_ui.create_tween()
+	_buyback_item_tween.set_trans(Tween.TRANS_QUAD)
+	_buyback_item_tween.set_ease(Tween.EASE_OUT)
+	_buyback_item_tween.tween_property(item_ui, "scale", target_scale, 0.12)
+
+
+func _reset_buyback_feedback(immediate: bool = false) -> void:
+	_buyback_drag_active = false
+	_buyback_button_hovered = false
+	if _buyback_button_tween != null:
+		_buyback_button_tween.kill()
+		_buyback_button_tween = null
+	if _buyback_item_tween != null:
+		_buyback_item_tween.kill()
+		_buyback_item_tween = null
+	if _buyback_button != null and is_instance_valid(_buyback_button):
+		_buyback_button.scale = Vector2.ONE
+	if _buyback_hover_item != null and is_instance_valid(_buyback_hover_item):
+		if immediate:
+			_buyback_hover_item.scale = Vector2.ONE
+		else:
+			_tween_buyback_item_scale(_buyback_hover_item, Vector2.ONE)
+	_buyback_hover_item = null
+
+
 func _layout_shop_skull_overlay() -> void:
 	if _shop_skull_root == null or not is_instance_valid(_shop_skull_root):
 		return
-	_shop_skull_root.size = _last_viewport_size
+	if is_equal_approx(_shop_skull_root.anchor_left, _shop_skull_root.anchor_right) and is_equal_approx(_shop_skull_root.anchor_top, _shop_skull_root.anchor_bottom):
+		_shop_skull_root.size = _last_viewport_size
 	for index in range(_shop_skull_nodes.size()):
 		var skull := _shop_skull_nodes[index]
 		if not is_instance_valid(skull) or index >= SHOP_SKULL_DESIGN_RECTS.size():
@@ -805,6 +984,8 @@ func _set_shop_interactable(enabled: bool) -> void:
 			button.disabled = not enabled
 	if _exit_button != null and is_instance_valid(_exit_button):
 		_exit_button.disabled = not enabled
+	if _buyback_button != null and is_instance_valid(_buyback_button):
+		_buyback_button.disabled = not enabled
 	if _backpack_panel != null and is_instance_valid(_backpack_panel):
 		_backpack_panel.mouse_filter = Control.MOUSE_FILTER_STOP if enabled else Control.MOUSE_FILTER_IGNORE
 	if _intro_frame != null and is_instance_valid(_intro_frame):

@@ -42,15 +42,30 @@ func test_stage_config_loads_all_six_acts_and_metadata():
 	assert_eq(StageConfig.get_battle_modifiers(4).pollution_added_bonus, 1)
 	assert_eq(StageConfig.get_visual(4).battle_bgm_key, "battle")
 	assert_false(StageConfig.get_visual(1).has("hub_background_key"))
-	assert_eq(StageConfig.get_visual(4).hub_background_key, "cardboard")
-	assert_eq(
-		StageConfig.get_visual(1).dreamcatcher_net_path,
-		"res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png"
-	)
-	assert_eq(
-		StageConfig.get_visual(4).dreamcatcher_net_path,
-		"res://assets/ui/battle/dreamcatchers/act_4_parents.png"
-	)
+	assert_eq(StageConfig.get_visual(2).hub_background_key, "stage")
+	assert_eq(StageConfig.get_visual(3).hub_background_key, "grandma")
+	assert_eq(StageConfig.get_visual(4).hub_background_key, "parents")
+	assert_eq(StageConfig.get_visual(5).hub_background_key, "xiaojia")
+	assert_eq(StageConfig.get_visual(6).hub_background_key, "shiyi")
+	assert_eq(StageConfig.get_boss_battle_modifiers(5).blocked_cells.size(), 2)
+	assert_eq(StageConfig.get_boss_battle_modifiers(6).draw_cost_delta, 1)
+	assert_eq(StageConfig.get_boss_battle_modifiers(6).pollution_added_bonus, 1)
+	var expected_dreamcatchers := {
+		1: {"path": "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png", "size": Vector2(456.0, 605.0)},
+		2: {"path": "res://assets/ui/battle/dreamcatchers/act_2_uncle.png", "size": Vector2(244.0, 425.0)},
+		3: {"path": "res://assets/ui/battle/dreamcatchers/act_3_grandma.png", "size": Vector2(410.0, 469.0)},
+		4: {"path": "res://assets/ui/battle/dreamcatchers/act_4_parents.png", "size": Vector2(494.0, 295.0)},
+		5: {"path": "res://assets/ui/battle/dreamcatchers/act_5_xiaojia.png", "size": Vector2(278.0, 483.0)},
+		6: {"path": "res://assets/ui/battle/dreamcatchers/act_6_shiyi.png", "size": Vector2(396.0, 574.0)},
+	}
+	for act in expected_dreamcatchers.keys():
+		var expected: Dictionary = expected_dreamcatchers[act]
+		var path := str(expected.get("path", ""))
+		assert_eq(StageConfig.get_visual(int(act)).dreamcatcher_net_path, path)
+		var texture := load(path) as Texture2D
+		assert_not_null(texture)
+		if texture != null:
+			assert_eq(texture.get_size(), expected.get("size", Vector2.ZERO))
 
 func test_stage_routes_point_to_distinct_content_tracks():
 	assert_eq(StageConfig.get_route_id_for_act(1), RouteConfig.DEFAULT_ROUTE_ID)
@@ -152,7 +167,30 @@ func test_run_manager_exposes_stage_battle_config_and_completion():
 	assert_true(config.is_boss)
 	assert_eq(config.target_score, 135)
 	assert_eq(config.battle_modifiers.draw_cost_delta, 1)
-	assert_eq(config.battle_modifiers.blocked_cells.size(), 1)
+	assert_eq(config.battle_modifiers.blocked_cells.size(), 3)
+	assert_true(_cells_have(config.battle_modifiers.blocked_cells, Vector2i(1, 1)))
+	assert_true(_cells_have(config.battle_modifiers.blocked_cells, Vector2i(5, 1)))
+	assert_true(_cells_have(config.battle_modifiers.blocked_cells, Vector2i(1, 5)))
+
+func test_late_act_boss_modifiers_only_apply_on_boss_nodes():
+	var manager = autofree(RunManagerScript.new())
+	manager.is_run_active = true
+	manager.current_act = 6
+	manager.current_route_index = 0
+
+	var normal_config = manager.get_current_battle_config()
+	assert_false(normal_config.is_boss)
+	assert_eq(normal_config.battle_modifiers.draw_cost_delta, 2)
+	assert_eq(normal_config.battle_modifiers.pollution_added_bonus, 1)
+	assert_eq(normal_config.battle_modifiers.blocked_cells.size(), 2)
+
+	manager.current_route_index = 6
+	var boss_config = manager.get_current_battle_config()
+	assert_true(boss_config.is_boss)
+	assert_eq(boss_config.battle_modifiers.draw_cost_delta, 3)
+	assert_eq(boss_config.battle_modifiers.pollution_added_bonus, 2)
+	assert_eq(boss_config.battle_modifiers.blocked_cells.size(), 5)
+	assert_true(_cells_have(boss_config.battle_modifiers.blocked_cells, Vector2i(3, 1)))
 
 func test_stage_battle_modifiers_apply_to_grid_draw_cost_and_pollution():
 	var rm = get_node_or_null("/root/RunManager")
@@ -199,3 +237,11 @@ func _write_stage_table(path: String, table: Dictionary) -> void:
 		return
 	file.store_string(JSON.stringify(table))
 	file.close()
+
+func _cells_have(cells: Array, target: Vector2i) -> bool:
+	for cell in cells:
+		if cell is Vector2i and cell == target:
+			return true
+		if cell is Dictionary and Vector2i(int(cell.get("x", -1)), int(cell.get("y", -1))) == target:
+			return true
+	return false

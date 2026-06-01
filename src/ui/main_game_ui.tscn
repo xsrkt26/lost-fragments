@@ -24,6 +24,7 @@
 [ext_resource type="Texture2D" uid="uid://bm2uemo1uxo1y" path="res://assets/ui/hub/hub_room.png" id="29_hub_room"]
 [ext_resource type="Texture2D" path="res://assets/ui/battle/intro_bag_reveal/bag_reveal_01.png" id="31_intro_bag"]
 [ext_resource type="Texture2D" uid="uid://bag0n3llbn4ch" path="res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png" id="32_playable_bag"]
+[ext_resource type="Texture2D" path="res://assets/ui/backpack/locked_cell_pin.png" id="33_locked_pin"]
 
 [node name="MainGameUI" type="Control" unique_id=471982305]
 layout_mode = 3
@@ -172,6 +173,50 @@ offset_right = 222.0
 offset_bottom = 696.0
 mouse_filter = 2
 texture = ExtResource("18_tab_settings")
+expand_mode = 1
+
+[node name="AlbumTabDisabledPin" type="TextureRect" parent="ContentLayer/BattleArt"]
+z_index = 30
+layout_mode = 0
+offset_left = 117.0
+offset_top = 195.0
+offset_right = 191.0
+offset_bottom = 280.0
+mouse_filter = 2
+texture = ExtResource("33_locked_pin")
+expand_mode = 1
+
+[node name="BackpackTabDisabledPin" type="TextureRect" parent="ContentLayer/BattleArt"]
+z_index = 30
+layout_mode = 0
+offset_left = 71.0
+offset_top = 317.0
+offset_right = 145.0
+offset_bottom = 402.0
+mouse_filter = 2
+texture = ExtResource("33_locked_pin")
+expand_mode = 1
+
+[node name="GalleryTabDisabledPin" type="TextureRect" parent="ContentLayer/BattleArt"]
+z_index = 30
+layout_mode = 0
+offset_left = 91.0
+offset_top = 437.0
+offset_right = 165.0
+offset_bottom = 522.0
+mouse_filter = 2
+texture = ExtResource("33_locked_pin")
+expand_mode = 1
+
+[node name="SettingsTabDisabledPin" type="TextureRect" parent="ContentLayer/BattleArt"]
+z_index = 30
+layout_mode = 0
+offset_left = 59.0
+offset_top = 549.0
+offset_right = 133.0
+offset_bottom = 634.0
+mouse_filter = 2
+texture = ExtResource("33_locked_pin")
 expand_mode = 1
 
 [node name="AlbumPage" type="TextureRect" parent="ContentLayer/BattleArt" unique_id=2010527633]

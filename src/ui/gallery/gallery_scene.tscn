@@ -149,10 +149,12 @@ autowrap_mode = 3
 
 [node name="MemoryPaper" type="TextureRect" parent="DesignRoot/UiLayer" unique_id=1490556943]
 anchors_preset = 0
-offset_left = 296.0
-offset_top = 512.0
-offset_right = 698.0
-offset_bottom = 980.0
+offset_left = 250.0
+offset_top = 548.0
+offset_right = 615.0
+offset_bottom = 973.0
+pivot_offset = Vector2(182.5, 212.5)
+rotation = 0.0523599
 mouse_filter = 2
 texture = ExtResource("14_memory_paper")
 expand_mode = 1
@@ -160,12 +162,14 @@ stretch_mode = 5
 
 [node name="DetailText" type="Label" parent="DesignRoot/UiLayer" unique_id=2043472274]
 layout_mode = 0
-offset_left = 365.0
-offset_top = 595.0
-offset_right = 611.0
-offset_bottom = 920.0
+offset_left = 315.0
+offset_top = 626.0
+offset_right = 558.0
+offset_bottom = 917.0
+pivot_offset = Vector2(121.5, 145.5)
+rotation = 0.0523599
 theme_override_colors/font_color = Color(0.08, 0.05, 0.025, 1)
-theme_override_font_sizes/font_size = 22
+theme_override_font_sizes/font_size = 26
 autowrap_mode = 3
 
 [connection signal="pressed" from="DesignRoot/UiLayer/BackButton" to="." method="_on_back_pressed"]

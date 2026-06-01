@@ -28,6 +28,10 @@ const PLAYER_SPEAKERS := [
 	"主人公",
 	"拾忆",
 	"我",
+	"？？",
+	"？",
+	"??",
+	"???",
 	"player",
 	"protagonist",
 ]
@@ -227,8 +231,8 @@ func _set_active_speaker(speaker: String) -> void:
 		_active_speaker_kind = "xiaomi"
 		_active_anchor = _xiaomi_anchor
 		return
-	_active_speaker_kind = "xiaomi"
-	_active_anchor = _xiaomi_anchor
+	_active_speaker_kind = "player"
+	_active_anchor = _player_anchor
 
 
 func _play_bubble_fade_in() -> void:
