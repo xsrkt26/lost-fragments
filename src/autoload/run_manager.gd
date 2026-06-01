@@ -15,7 +15,7 @@ signal pending_items_changed(pending_items: Array[Dictionary])
 signal tools_changed(current_tools: Dictionary)
 
 # --- 配置项 ---
-const INITIAL_SHARDS = 10000
+const INITIAL_SHARDS = 10
 const MAX_ORNAMENTS := 10
 const INITIAL_DECK: Array[String] = [
 	"baseball", "baseball", "baseball",
