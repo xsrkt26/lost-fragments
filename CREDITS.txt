@@ -1,0 +1,27 @@
+Lost Fragments
+Non-commercial playtest/demo build
+
+Music
+- Music provided by 乌鸦Producer.
+
+Sound Effects
+- flag2.
+- FxProSound / Robinhood76 (Freesound): https://freesound.org/people/Robinhood76/
+
+Art and Animation
+- Produced by the Lost Fragments art team.
+
+Font
+- ChillHuoSong / ChillMovableType by ChillType.
+- Copyright (c) 2023 ChillType, with Reserved Font Name "ChillHuoSong".
+- Licensed under the SIL Open Font License, Version 1.1.
+- Source: https://github.com/Warren2060/ChillMovableType
+
+Engine
+- Godot Engine.
+- Copyright (c) 2014-present Godot Engine contributors.
+- Copyright (c) 2007-2014 Juan Linietsky, Ariel Manzur.
+- Licensed under the MIT License: https://godotengine.org/license/
+
+Code
+- Game code by the Lost Fragments team.

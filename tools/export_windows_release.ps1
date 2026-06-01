@@ -193,6 +193,8 @@ Initialize-IsolatedGodotAppData -IsolatedAppData $godotAppData -OriginalAppData 
 $artifactBase = "$ProductName-$timestamp-$commitShort"
 $outputPath = Join-Path $packageDir "$artifactBase.exe"
 $manifestPath = Join-Path $packageDir "$artifactBase.manifest.json"
+$creditsSourcePath = Join-Path $repoRoot "CREDITS.txt"
+$creditsOutputPath = Join-Path $packageDir "CREDITS.txt"
 
 $results = @()
 if (-not $SkipPrecheck) {
@@ -246,6 +248,11 @@ if (-not $PrecheckOnly) {
     $exportStatus = "passed"
 }
 
+if (-not (Test-Path -LiteralPath $creditsSourcePath)) {
+    throw "CREDITS.txt not found: $creditsSourcePath"
+}
+Copy-Item -LiteralPath $creditsSourcePath -Destination $creditsOutputPath -Force
+
 $manifest = [ordered]@{
     product = "Lost Fragments"
     version = $Version
@@ -257,6 +264,7 @@ $manifest = [ordered]@{
     precheck_only = [bool]$PrecheckOnly
     export_status = $exportStatus
     output_path = $outputPath
+    credits_path = $creditsOutputPath
     manifest_path = $manifestPath
     test_results = $results
 }

@@ -86,10 +86,17 @@ jobs:
           if (-not (Test-Path -LiteralPath $exePath)) {
             throw "Release executable not found: $exePath"
           }
+          $creditsPath = [string]$manifestData.credits_path
+          if ([string]::IsNullOrWhiteSpace($creditsPath)) {
+            $creditsPath = Join-Path (Resolve-Path "package") "CREDITS.txt"
+          }
+          if (-not (Test-Path -LiteralPath $creditsPath)) {
+            throw "Release credits file not found: $creditsPath"
+          }
 
           $tag = "${{ github.ref_name }}"
           $zipPath = Join-Path (Resolve-Path "package") "LostFragments-$tag-windows-x86_64.zip"
-          Compress-Archive -LiteralPath @($exePath, $manifest.FullName) -DestinationPath $zipPath -Force
+          Compress-Archive -LiteralPath @($exePath, $manifest.FullName, $creditsPath) -DestinationPath $zipPath -Force
 
           "RELEASE_ZIP=$zipPath" >> $env:GITHUB_ENV
           "RELEASE_MANIFEST=$($manifest.FullName)" >> $env:GITHUB_ENV
