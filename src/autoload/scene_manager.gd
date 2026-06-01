@@ -51,6 +51,7 @@ var _page_material: ShaderMaterial
 var _is_transitioning := false
 var _page_turn_progress := 0.0
 var _preloaded_scenes: Dictionary = {}
+var _pending_preload_targets: Dictionary = {}
 
 func _ready():
 	_setup_transition_ui()
@@ -58,6 +59,11 @@ func _ready():
 		get_tree().root.size_changed.connect(_sync_transition_ui_to_viewport)
 	# 初始判断当前是哪个场景
 	_detect_initial_scene()
+
+func _exit_tree() -> void:
+	collect_pending_preloads(false)
+	_preloaded_scenes.clear()
+
 
 func _setup_transition_ui():
 	# 创建一个最高层级的画布
@@ -138,17 +144,18 @@ func preload_scene(target: SceneType) -> void:
 		if cached_resource is PackedScene:
 			_cache_scene_if_allowed(target, cached_resource)
 		return
-	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
-	if status == ResourceLoader.THREAD_LOAD_LOADED:
-		var loaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
-		if loaded_resource is PackedScene:
-			_cache_scene_if_allowed(target, loaded_resource)
-		return
-	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		return
+	if _pending_preload_targets.has(target):
+		var pending_resource := _collect_pending_preload(target, true, false)
+		if pending_resource is PackedScene:
+			return
+		if _pending_preload_targets.has(target):
+			return
+		scene_path = SCENE_PATHS[target]
 	var request_error: int = ResourceLoader.load_threaded_request(scene_path, "PackedScene", true)
-	if request_error != OK:
-		push_warning("[SceneManager] Failed to preload scene: %s" % scene_path)
+	if request_error == OK:
+		_pending_preload_targets[target] = scene_path
+		return
+	push_warning("[SceneManager] Failed to preload scene: %s" % scene_path)
 
 ## 核心跳转方法：带有淡入淡出动画
 func transition_to(target: SceneType, push_to_history: bool = true):
@@ -341,15 +348,9 @@ func _get_scene_for_transition(target: SceneType) -> PackedScene:
 	if _should_cache_scene(target) and _preloaded_scenes.has(target) and _preloaded_scenes[target] is PackedScene:
 		return _preloaded_scenes[target] as PackedScene
 	var scene_path: String = SCENE_PATHS[target]
-	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
-	while status == ResourceLoader.THREAD_LOAD_IN_PROGRESS:
-		await get_tree().process_frame
-		status = ResourceLoader.load_threaded_get_status(scene_path)
-	if status == ResourceLoader.THREAD_LOAD_LOADED:
-		var threaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
-		if threaded_resource is PackedScene:
-			_cache_scene_if_allowed(target, threaded_resource)
-			return threaded_resource as PackedScene
+	var threaded_resource := _collect_pending_preload(target, true, true)
+	if threaded_resource is PackedScene:
+		return threaded_resource as PackedScene
 	var loaded_resource: Resource = load(scene_path)
 	if loaded_resource is PackedScene:
 		_cache_scene_if_allowed(target, loaded_resource)
@@ -369,11 +370,35 @@ func _cache_scene_if_allowed(target: SceneType, packed_scene: PackedScene) -> vo
 
 func clear_scene_cache(include_cacheable: bool = false) -> void:
 	if include_cacheable:
+		collect_pending_preloads(false)
 		_preloaded_scenes.clear()
 		return
 	for target in _preloaded_scenes.keys():
 		if not _should_cache_scene(target):
 			_preloaded_scenes.erase(target)
+
+
+func collect_pending_preloads(cache_loaded: bool = true) -> void:
+	for target in _pending_preload_targets.keys():
+		_collect_pending_preload(target, cache_loaded, true)
+
+
+func _collect_pending_preload(target: SceneType, cache_loaded: bool = true, wait_for_completion: bool = true) -> Resource:
+	if not _pending_preload_targets.has(target):
+		return null
+	var scene_path: String = str(_pending_preload_targets[target])
+	var status: int = ResourceLoader.load_threaded_get_status(scene_path)
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS and not wait_for_completion:
+		return null
+	if status == ResourceLoader.THREAD_LOAD_IN_PROGRESS or status == ResourceLoader.THREAD_LOAD_LOADED:
+		var loaded_resource: Resource = ResourceLoader.load_threaded_get(scene_path)
+		_pending_preload_targets.erase(target)
+		if loaded_resource is PackedScene and cache_loaded:
+			_cache_scene_if_allowed(target, loaded_resource)
+		return loaded_resource
+	_pending_preload_targets.erase(target)
+	return null
+
 
 func _transition_with_fade(target: SceneType) -> void:
 	_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
