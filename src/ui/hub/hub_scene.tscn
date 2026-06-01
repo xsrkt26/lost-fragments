@@ -67,46 +67,46 @@ mouse_filter = 2
 
 [node name="AlbumTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
 layout_mode = 0
-offset_left = 41.0
-offset_top = 216.0
-offset_right = 115.0
-offset_bottom = 301.0
+offset_left = 99.0
+offset_top = 221.0
+offset_right = 173.0
+offset_bottom = 306.0
 mouse_filter = 2
 texture = ExtResource("31_locked_pin")
 expand_mode = 1
 
 [node name="BackpackTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
 layout_mode = 0
-offset_left = 54.0
-offset_top = 328.0
-offset_right = 128.0
-offset_bottom = 413.0
+offset_left = 78.0
+offset_top = 348.0
+offset_right = 152.0
+offset_bottom = 433.0
 mouse_filter = 2
 texture = ExtResource("31_locked_pin")
 expand_mode = 1
 
 [node name="GalleryTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
 layout_mode = 0
-offset_left = 60.0
-offset_top = 440.0
-offset_right = 134.0
-offset_bottom = 525.0
+offset_left = 122.0
+offset_top = 467.0
+offset_right = 196.0
+offset_bottom = 552.0
 mouse_filter = 2
 texture = ExtResource("31_locked_pin")
 expand_mode = 1
 
 [node name="SettingsTabDisabledPin" type="TextureRect" parent="BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins"]
 layout_mode = 0
-offset_left = 54.0
-offset_top = 536.0
-offset_right = 128.0
-offset_bottom = 621.0
+offset_left = 80.0
+offset_top = 571.0
+offset_right = 154.0
+offset_bottom = 656.0
 mouse_filter = 2
 texture = ExtResource("31_locked_pin")
 expand_mode = 1
 
 [node name="HubArt" type="Node2D" parent="." unique_id=1340072637]
-position = Vector2(0, 14)
+position = Vector2(0, -30)
 
 [node name="BoardViewport" type="Control" parent="HubArt" unique_id=979254428]
 clip_contents = true

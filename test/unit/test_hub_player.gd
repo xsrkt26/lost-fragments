@@ -1119,10 +1119,10 @@ func test_hub_battle_disabled_bookmarks_show_pin_overlays():
 	assert_not_null(pins_root)
 	assert_false(pins_root.visible)
 	var expected_positions := {
-		"AlbumTabDisabledPin": Vector2(41.0, 216.0),
-		"BackpackTabDisabledPin": Vector2(54.0, 328.0),
-		"GalleryTabDisabledPin": Vector2(60.0, 440.0),
-		"SettingsTabDisabledPin": Vector2(54.0, 536.0),
+		"AlbumTabDisabledPin": Vector2(99.0, 221.0),
+		"BackpackTabDisabledPin": Vector2(78.0, 348.0),
+		"GalleryTabDisabledPin": Vector2(122.0, 467.0),
+		"SettingsTabDisabledPin": Vector2(80.0, 571.0),
 	}
 	for pin_name in [
 		"AlbumTabDisabledPin",

@@ -2,6 +2,7 @@ extends GutTest
 
 const StoryBookPage = preload("res://src/ui/story/story_book_page.tscn")
 const StoryBookScene = preload("res://src/ui/story/story_book_scene.tscn")
+const BookBackgroundScene = preload("res://src/ui/book/book_background.tscn")
 const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
@@ -71,6 +72,12 @@ func test_story_book_page_shows_pinned_disabled_left_bookmarks() -> void:
 	assert_eq(back_tab.size, BookBackgroundConfig.get_back_tab_rect().size)
 	assert_eq(back_tab.z_index, BookBackgroundConfig.get_back_tab_z_index())
 
+	art_layer.set_process(false)
+	var pinned_album_position := (art_layer.get_node("AlbumTab") as TextureRect).position
+	art_layer.call("_set_hovered_bookmark", BookBackgroundConfig.PAGE_HUB)
+	await get_tree().create_timer(0.16).timeout
+	assert_eq((art_layer.get_node("AlbumTab") as TextureRect).position, pinned_album_position)
+
 	var design_root := page.get_node("DesignRoot") as Control
 	var back_tab_global_position := design_root.get_global_transform() * BookBackgroundConfig.get_back_tab_rect().get_center()
 	var album_tab_center := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_HUB).get_center()
@@ -78,6 +85,70 @@ func test_story_book_page_shows_pinned_disabled_left_bookmarks() -> void:
 	assert_true(page.call("_is_disabled_story_bookmark_click", back_tab_global_position))
 	assert_true(page.call("_is_disabled_story_bookmark_click", album_tab_global_position))
 	assert_false(page.call("_is_disabled_story_bookmark_click", design_root.get_global_transform() * Vector2(900.0, 360.0)))
+
+
+func test_bookmark_hover_pulls_visible_tabs_outward() -> void:
+	var background := add_child_autofree(BookBackgroundScene.instantiate()) as Control
+	await get_tree().process_frame
+	background.set_process(false)
+
+	background.call("set_active_page_id", BookBackgroundConfig.PAGE_HUB)
+	var album_tab := background.get_node("AlbumTab") as TextureRect
+	var left_base := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_HUB)
+	background.call("set_hovered_bookmark", BookBackgroundConfig.PAGE_HUB)
+	await get_tree().create_timer(0.16).timeout
+
+	var pull := BookBackgroundConfig.TAB_HOVER_PULL_DISTANCE
+	assert_eq(album_tab.position, left_base.position + Vector2(-pull, 0.0))
+	assert_eq(album_tab.size, left_base.size + Vector2(pull, 0.0))
+
+	background.call("clear_hovered_bookmark")
+	await get_tree().create_timer(0.16).timeout
+	background.call("set_active_page_id", BookBackgroundConfig.PAGE_SETTINGS)
+	var album_tab_right := background.get_node("AlbumTabRight") as TextureRect
+	var right_base := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_SETTINGS)
+	background.call("set_hovered_bookmark", BookBackgroundConfig.PAGE_HUB)
+	await get_tree().create_timer(0.16).timeout
+
+	assert_eq(album_tab_right.position, right_base.position)
+	assert_eq(album_tab_right.size, right_base.size + Vector2(pull, 0.0))
+
+
+func test_book_page_tab_button_hover_pulls_right_bookmark() -> void:
+	var navigator := BookPageNavigator.new() as Control
+	for page_id in [
+		BookBackgroundConfig.PAGE_HUB,
+		BookBackgroundConfig.PAGE_BACKPACK,
+		BookBackgroundConfig.PAGE_GALLERY,
+		BookBackgroundConfig.PAGE_SETTINGS,
+	]:
+		var button := Button.new()
+		button.name = "%sTabButton" % str(page_id).capitalize()
+		navigator.add_child(button)
+	add_child_autofree(navigator)
+
+	var background := add_child_autofree(BookBackgroundScene.instantiate()) as Control
+	background.set_process(false)
+	background.call("set_active_page_id", BookBackgroundConfig.PAGE_SETTINGS)
+	navigator.set("_pages", {BookBackgroundConfig.PAGE_SETTINGS: background})
+	navigator.set("current_page_id", BookBackgroundConfig.PAGE_SETTINGS)
+	await get_tree().process_frame
+
+	var album_tab_right := background.get_node("AlbumTabRight") as TextureRect
+	var right_base := BookBackgroundConfig.get_tab_rect(BookBackgroundConfig.PAGE_HUB, BookBackgroundConfig.PAGE_SETTINGS)
+	var pull := BookBackgroundConfig.TAB_HOVER_PULL_DISTANCE
+
+	navigator.call("_on_tab_button_mouse_entered", BookBackgroundConfig.PAGE_HUB)
+	await get_tree().create_timer(0.16).timeout
+
+	assert_eq(album_tab_right.position, right_base.position)
+	assert_eq(album_tab_right.size, right_base.size + Vector2(pull, 0.0))
+
+	navigator.call("_on_tab_button_mouse_exited", BookBackgroundConfig.PAGE_HUB)
+	await get_tree().create_timer(0.16).timeout
+
+	assert_eq(album_tab_right.position, right_base.position)
+	assert_eq(album_tab_right.size, right_base.size)
 
 
 func test_standalone_story_book_scene_hosts_existing_story_page() -> void:

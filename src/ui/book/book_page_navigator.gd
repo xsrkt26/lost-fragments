@@ -491,7 +491,25 @@ func _setup_tab_hotspots() -> void:
 		var page_callback := Callable(self, "go_to_page").bind(str(page_id))
 		if not button.pressed.is_connected(page_callback):
 			button.pressed.connect(page_callback)
+		var enter_callback := Callable(self, "_on_tab_button_mouse_entered").bind(str(page_id))
+		if not button.mouse_entered.is_connected(enter_callback):
+			button.mouse_entered.connect(enter_callback)
+		var exit_callback := Callable(self, "_on_tab_button_mouse_exited").bind(str(page_id))
+		if not button.mouse_exited.is_connected(exit_callback):
+			button.mouse_exited.connect(exit_callback)
 		_tab_buttons[page_id] = button
+
+
+func _on_tab_button_mouse_entered(page_id: String) -> void:
+	var background := _get_book_background_for_page(current_page_id)
+	if background != null and background.has_method("set_hovered_bookmark"):
+		background.call("set_hovered_bookmark", page_id)
+
+
+func _on_tab_button_mouse_exited(page_id: String) -> void:
+	var background := _get_book_background_for_page(current_page_id)
+	if background != null and background.has_method("clear_hovered_bookmark"):
+		background.call("clear_hovered_bookmark", page_id)
 
 
 func _sync_tab_buttons() -> void:

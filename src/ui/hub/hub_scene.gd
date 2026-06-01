@@ -85,7 +85,7 @@ func _first_existing_node(paths: Array[String]) -> Node:
 	return null
 
 
-@export var hub_art_source_offset := Vector2(0.0, 14.0):
+@export var hub_art_source_offset := Vector2(0.0, -30.0):
 	set(value):
 		hub_art_source_offset = value
 		if Engine.is_editor_hint() and is_node_ready():
