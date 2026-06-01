@@ -16,7 +16,7 @@ var pending_confirm_choice_id := ""
 
 func _ready():
 	GlobalInput.set_context(GlobalInput.Context.UI)
-	GlobalAudio.play_bgm("hub")
+	GlobalAudio.play_bgm("story_event")
 	if not resized.is_connected(_layout_design_root):
 		resized.connect(_layout_design_root)
 	_layout_design_root()

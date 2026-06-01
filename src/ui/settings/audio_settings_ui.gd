@@ -13,6 +13,7 @@ const POPUP_PANEL_COLOR := Color(0.91, 0.79, 0.58, 0.96)
 const POPUP_HOVER_COLOR := Color(0.58, 0.36, 0.18, 0.28)
 const POPUP_BORDER_COLOR := Color(0.16, 0.09, 0.04, 0.0)
 const POPUP_FONT_COLOR := Color(0.05, 0.035, 0.02, 1.0)
+const ZIPPER_SFX_INTERVAL_MS := 320
 
 @onready var design_root: Control = $DesignRoot
 @onready var art_layer: Control = $DesignRoot/ArtLayer
@@ -31,6 +32,7 @@ const POPUP_FONT_COLOR := Color(0.05, 0.035, 0.02, 1.0)
 
 var _is_updating := false
 var _book_page_navigator: Node = null
+var _last_zipper_sfx_msec := -ZIPPER_SFX_INTERVAL_MS
 
 func _ready() -> void:
 	resized.connect(_layout_controls)
@@ -168,18 +170,21 @@ func _update_volume_labels() -> void:
 func _on_master_changed(val: float) -> void:
 	if _is_updating:
 		return
+	_play_zipper_sfx()
 	SettingsManager.set_master_volume(val)
 	_update_volume_labels()
 
 func _on_music_changed(val: float) -> void:
 	if _is_updating:
 		return
+	_play_zipper_sfx()
 	SettingsManager.set_music_volume(val)
 	_update_volume_labels()
 
 func _on_sfx_changed(val: float) -> void:
 	if _is_updating:
 		return
+	_play_zipper_sfx()
 	SettingsManager.set_sfx_volume(val)
 	_update_volume_labels()
 
@@ -191,18 +196,21 @@ func _on_resolution_selected(index: int) -> void:
 	if _is_updating:
 		return
 	if index >= 0 and index < SettingsManager.RESOLUTION_OPTIONS.size():
+		_play_option_sfx()
 		SettingsManager.set_resolution(SettingsManager.RESOLUTION_OPTIONS[index])
 
 func _on_window_mode_selected(index: int) -> void:
 	if _is_updating:
 		return
 	var mode := SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN if index == 1 else SettingsManager.WINDOW_MODE_WINDOWED
+	_play_option_sfx()
 	SettingsManager.set_window_mode(mode)
 
 func _on_animation_speed_selected(index: int) -> void:
 	if _is_updating:
 		return
 	if index >= 0 and index < SPEED_IDS.size():
+		_play_option_sfx()
 		SettingsManager.set_animation_speed(SPEED_IDS[index])
 
 func _on_reset_pressed() -> void:
@@ -220,3 +228,17 @@ func _resolution_index(resolution: Vector2i) -> int:
 		if SettingsManager.RESOLUTION_OPTIONS[i] == resolution:
 			return i
 	return 0
+
+func _play_zipper_sfx() -> void:
+	var now := Time.get_ticks_msec()
+	if now - _last_zipper_sfx_msec < ZIPPER_SFX_INTERVAL_MS:
+		return
+	_last_zipper_sfx_msec = now
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio and audio.has_method("play_sfx"):
+		audio.play_sfx("zipper", 0.0)
+
+func _play_option_sfx() -> void:
+	var audio = get_node_or_null("/root/GlobalAudio")
+	if audio and audio.has_method("play_sfx"):
+		audio.play_sfx("button_alt", 0.0)

@@ -140,15 +140,15 @@ func test_settings_manager_applies_audio_to_real_buses() -> void:
 
 	_restore_settings(previous_audio, SettingsManager.display_settings, SettingsManager.game_settings)
 
-func test_settings_defaults_start_muted() -> void:
+func test_settings_defaults_start_unmuted() -> void:
 	var previous_audio := SettingsManager.audio_settings.duplicate(true)
 	var previous_display := SettingsManager.display_settings.duplicate(true)
 	var previous_game := SettingsManager.game_settings.duplicate(true)
 
 	SettingsManager.reset_to_defaults()
 
-	assert_true(bool(SettingsManager.audio_settings["is_muted"]))
-	assert_true(AudioServer.is_bus_mute(0))
+	assert_false(bool(SettingsManager.audio_settings["is_muted"]))
+	assert_false(AudioServer.is_bus_mute(0))
 	assert_eq(str(SettingsManager.display_settings["window_mode"]), SettingsManager.WINDOW_MODE_BORDERLESS_FULLSCREEN)
 	assert_eq(SettingsManager.display_settings["resolution"], SettingsManager.DEFAULT_RESOLUTION)
 	assert_eq(int(SettingsManager.display_settings["version"]), SettingsManager.DISPLAY_SETTINGS_VERSION)

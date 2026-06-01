@@ -704,18 +704,21 @@ func _kill_trash_bin_tween() -> void:
 	_trash_bin_tween = null
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
-	var rm = _get_run_manager()
-	if rm == null or not rm.has_method("get_current_stage_visual"):
-		return fallback
-	var visual = rm.get_current_stage_visual()
+	var visual := _get_stage_visual()
 	var bgm_key = str(visual.get(key, fallback))
 	return bgm_key if bgm_key != "" else fallback
 
-func _apply_stage_visuals() -> void:
+func _get_stage_visual() -> Dictionary:
 	var rm = _get_run_manager()
 	if rm == null or not rm.has_method("get_current_stage_visual"):
-		return
+		return {}
 	var visual = rm.get_current_stage_visual()
+	return Dictionary(visual).duplicate(true) if visual is Dictionary else {}
+
+func _apply_stage_visuals() -> void:
+	var visual := _get_stage_visual()
+	if visual.is_empty():
+		return
 	var tint = str(visual.get("ui_tint", ""))
 	var background = get_node_or_null("Background")
 	if tint != "" and background is ColorRect:
@@ -825,6 +828,7 @@ func _show_result_popup(is_victory: bool):
 
 	# 禁用背景输入
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	GlobalAudio.play_bgm(_get_result_bgm_key(is_victory), 0.35)
 
 	var popup_scene = load("res://src/ui/battle/result_popup.tscn")
 	var popup = popup_scene.instantiate()
@@ -909,6 +913,17 @@ func _add_reward_choices(popup: Control, reward_options: Array[Dictionary], rm) 
 			_complete_victory_route(rm)
 		)
 		reward_row.add_child(reward_button)
+
+func _get_result_bgm_key(is_victory: bool) -> String:
+	if not is_victory:
+		return "ending_failure"
+	var gs = _get_game_state()
+	var score_rule = _get_current_score_rule()
+	if gs != null and bool(score_rule.get("has_target", false)):
+		var target := int(score_rule.get("target", -1))
+		if target >= 0 and gs.current_score < target + 50:
+			return "ending_low"
+	return "ending_happy"
 
 func _format_reward_button_text(reward: Dictionary) -> String:
 	var title = str(reward.get("title", "奖励"))
@@ -1272,6 +1287,7 @@ func _play_dreamcatcher_animation() -> void:
 	dreamcatcher_net.position = _dreamcatcher_net_base_position
 	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
 	dreamcatcher_net.offset = _dreamcatcher_net_base_offset
+	_play_current_dreamcatcher_sfx()
 
 	var base_position := _dreamcatcher_net_base_position
 	var base_rotation := _dreamcatcher_net_base_rotation
@@ -1287,6 +1303,24 @@ func _play_dreamcatcher_animation() -> void:
 	dreamcatcher_net.position = base_position
 	dreamcatcher_net.rotation = base_rotation
 	dreamcatcher_net.offset = base_offset
+
+func _play_current_dreamcatcher_sfx() -> void:
+	var key := _get_current_dreamcatcher_sfx_key()
+	if key == "":
+		return
+	GlobalAudio.play_sfx(key, 0.0)
+
+func _get_current_dreamcatcher_sfx_key() -> String:
+	var visual := _get_stage_visual()
+	return _get_dreamcatcher_sfx_key_from_path(str(visual.get("dreamcatcher_net_path", "")))
+
+func _get_dreamcatcher_sfx_key_from_path(path: String) -> String:
+	var normalized := path.to_lower()
+	if normalized.contains("uncle") or normalized.contains("act_2"):
+		return "dreamcatcher_uncle"
+	if normalized.contains("xiaomi") or normalized.contains("act_1"):
+		return "dreamcatcher_xiaomi"
+	return ""
 
 func _get_draw_spawn_position(card: Control) -> Vector2:
 	var spawn_center: Vector2

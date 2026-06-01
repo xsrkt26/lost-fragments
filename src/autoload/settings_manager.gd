@@ -28,7 +28,7 @@ var audio_settings = {
 	"master_volume": 0.8,
 	"music_volume": 0.7,
 	"sfx_volume": 0.9,
-	"is_muted": true,
+	"is_muted": false,
 }
 
 var display_settings = {
@@ -163,7 +163,7 @@ func reset_to_defaults() -> void:
 		"master_volume": 0.8,
 		"music_volume": 0.7,
 		"sfx_volume": 0.9,
-		"is_muted": true,
+		"is_muted": false,
 	}
 	display_settings = _default_display_settings()
 	game_settings = {

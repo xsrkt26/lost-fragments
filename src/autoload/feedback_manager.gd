@@ -69,7 +69,7 @@ func _on_button_unhovered(button: BaseButton) -> void:
 func _on_button_pressed(button: BaseButton) -> void:
 	if button == null or button.disabled:
 		return
-	_play_ui_sfx("click")
+	_play_ui_sfx("button")
 
 func _tween_button_scale(button: BaseButton, target_scale: Vector2) -> void:
 	var key = button.get_instance_id()

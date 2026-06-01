@@ -26,18 +26,34 @@ const SHOP_SKULL_PATHS := [
 ]
 
 const BGM_PATHS := {
-	"menu": AUDIO_ROOT + "/bgm/main_menu.wav",
-	"hub": AUDIO_ROOT + "/bgm/hub_theme.wav",
-	"battle": AUDIO_ROOT + "/bgm/battle_theme.wav",
+	"menu": AUDIO_ROOT + "/bgm/title_0618_loop.ogg",
+	"hub": AUDIO_ROOT + "/bgm/scene_red_panda_apple.ogg",
+	"scene": AUDIO_ROOT + "/bgm/scene_red_panda_apple.ogg",
+	"battle": AUDIO_ROOT + "/bgm/scene_red_panda_apple.ogg",
+	"event": AUDIO_ROOT + "/bgm/story_event_si_ren.ogg",
+	"story_event": AUDIO_ROOT + "/bgm/story_event_si_ren.ogg",
+	"ending_low": AUDIO_ROOT + "/bgm/story_event_si_ren.ogg",
+	"ending_failure": AUDIO_ROOT + "/bgm/story_event_si_ren.ogg",
+	"ending_happy": AUDIO_ROOT + "/bgm/ending_happy_ping_feng.ogg",
 }
 
 const SFX_PATHS := {
-	"click": AUDIO_ROOT + "/sfx/ui_click.wav",
-	"draw": AUDIO_ROOT + "/sfx/card_draw.wav",
-	"place": AUDIO_ROOT + "/sfx/card_place.wav",
-	"hit": AUDIO_ROOT + "/sfx/hit_impact.wav",
-	"score": AUDIO_ROOT + "/sfx/score_up.wav",
-	"error": AUDIO_ROOT + "/sfx/ui_error.wav",
+	"click": AUDIO_ROOT + "/sfx/ui_button.wav",
+	"button": AUDIO_ROOT + "/sfx/ui_button.wav",
+	"button_alt": AUDIO_ROOT + "/sfx/ui_button_alt.wav",
+	"page_turn": AUDIO_ROOT + "/sfx/ui_page_turn.wav",
+	"walk": AUDIO_ROOT + "/sfx/walk_loop.ogg",
+	"zipper": AUDIO_ROOT + "/sfx/settings_zipper.wav",
+	"draw": AUDIO_ROOT + "/sfx/battle_draw.wav",
+	"place": AUDIO_ROOT + "/sfx/battle_place.wav",
+	"discard": AUDIO_ROOT + "/sfx/battle_discard.wav",
+	"hit": AUDIO_ROOT + "/sfx/battle_hit.wav",
+	"score": AUDIO_ROOT + "/sfx/battle_score.wav",
+	"error": AUDIO_ROOT + "/sfx/battle_error.wav",
+	"shop_emerge": AUDIO_ROOT + "/sfx/shop_merchant_pop.wav",
+	"shop_hand": AUDIO_ROOT + "/sfx/shop_hand_intro.wav",
+	"dreamcatcher_xiaomi": AUDIO_ROOT + "/sfx/dreamcatcher_xiaomi.wav",
+	"dreamcatcher_uncle": AUDIO_ROOT + "/sfx/dreamcatcher_uncle.wav",
 }
 
 const POTION_STATE_PATHS := [
