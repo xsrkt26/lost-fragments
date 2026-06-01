@@ -10,10 +10,10 @@ config_version=5
 
 [application]
 
-config/name="GoDotGame"
+config/name="Lost Fragments"
 run/main_scene="res://src/ui/main_menu/main_menu.tscn"
 config/features=PackedStringArray("4.6", "Forward Plus")
-config/icon="res://assets/app/icon.svg"
+config/icon="res://assets/app/icon.png"
 
 [autoload]
 
