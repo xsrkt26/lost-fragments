@@ -135,6 +135,15 @@ func win_battle(reward_shards: int):
 	shards_changed.emit(current_shards)
 	save_current_state()
 
+
+func add_shards(amount: int, source: String = "") -> void:
+	if amount <= 0:
+		return
+	current_shards += amount
+	print("[RunManager] 测试增加碎片: ", amount, " | 来源: ", source, " | 当前碎片: ", current_shards)
+	shards_changed.emit(current_shards)
+	save_current_state()
+
 ## 失败结算 (彻底重来)
 func fail_run():
 	print("[RunManager] 梦境惊醒... 运行结束。")

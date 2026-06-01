@@ -72,6 +72,7 @@ const HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME := 0.34
 const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const SHOP_INTRO_FRAME_RATE := 60.0
+const DEBUG_SHARDS_INCREMENT := 10000
 const ENABLE_DEBUG_SHORTCUTS_IN_RELEASE := true
 const XIAOMI_STORY_ACT := 1
 const XIAOMI_ANCHOR_SOURCE_POSITION := Vector2(760.0, 1010.0)
@@ -1074,13 +1075,21 @@ func _handle_hub_debug_shortcuts(event: InputEvent) -> bool:
 			_open_book_page(BookPageNavigator.PAGE_SETTINGS)
 			return true
 		KEY_F11:
-			_transition_from_hub(GlobalScene.SceneType.DEBUG, true)
+			_add_shards_for_testing()
 			return true
 	return false
 
 
 func _is_debug_shortcut_enabled() -> bool:
 	return OS.is_debug_build() or ENABLE_DEBUG_SHORTCUTS_IN_RELEASE
+
+
+func _add_shards_for_testing() -> void:
+	var rm = _get_run_manager()
+	if rm == null or not rm.has_method("add_shards"):
+		push_warning("[Hub] RunManager 缺少 add_shards 方法，无法调试加碎片")
+		return
+	rm.call("add_shards", DEBUG_SHARDS_INCREMENT, "f11_debug")
 
 
 func _debug_shortcut_act_from_event(event: InputEvent) -> int:
