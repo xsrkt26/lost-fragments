@@ -50,7 +50,7 @@ func test_item_ui_uses_configured_grid_cell_size_for_shape_size():
 	assert_eq(ui.size, Vector2(160.0, 144.0))
 
 
-func test_item_ui_direction_badge_uses_top_right_corner_without_label_marker():
+func test_item_ui_direction_marker_uses_solid_thick_line_without_label_marker():
 	var item = _make_item_data()
 	var ui = add_child_autofree(ItemUIScene.instantiate())
 	await get_tree().process_frame
@@ -58,16 +58,37 @@ func test_item_ui_direction_badge_uses_top_right_corner_without_label_marker():
 	ui.setup(item)
 	ui.set_cell_size(Vector2(100.0, 70.0))
 
-	var radius: float = ui.call("_get_direction_badge_radius")
-	var center: Vector2 = ui.call("_get_direction_badge_center", radius)
+	var line_width: float = ui.call("_get_direction_line_width")
 	assert_false(ui.direction_icon.visible)
-	assert_true(center.x > ui.size.x * 0.7)
-	assert_true(center.y < ui.size.y * 0.45)
-	assert_true(center.x + radius > ui.size.x)
-	assert_true(center.y - radius < 1.0)
+	assert_true(line_width >= 2.75)
+	assert_true(line_width <= 4.25)
+
+	ui.set("_is_hovered", true)
+	var active_line_width: float = ui.call("_get_direction_line_width")
+	assert_true(active_line_width > line_width)
+	assert_true(active_line_width <= 4.25)
 
 
-func test_item_ui_direction_badge_flashes_when_direction_changes():
+func test_item_ui_direction_marker_stays_on_top_right_cell_when_direction_changes():
+	var item = _make_item_data()
+	item.shape = [Vector2i(0, 0), Vector2i(0, 1), Vector2i(1, 1)] as Array[Vector2i]
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+	ui.set_cell_size(Vector2(100.0, 70.0))
+
+	var center_before: Vector2 = ui.call("_get_direction_marker_center")
+	item.direction = ItemData.Direction.DOWN
+	ui.call("_sync_visuals")
+	var center_after: Vector2 = ui.call("_get_direction_marker_center")
+
+	assert_eq(center_after, center_before)
+	assert_true(absf(center_after.x - 180.0) < 0.01)
+	assert_true(absf(center_after.y - 19.6) < 0.01)
+
+
+func test_item_ui_direction_line_flashes_when_direction_changes():
 	var item = _make_item_data()
 	var ui = add_child_autofree(ItemUIScene.instantiate())
 	await get_tree().process_frame

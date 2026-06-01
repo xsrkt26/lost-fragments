@@ -3,11 +3,10 @@ extends Control
 
 @export var item_data: ItemData
 
-const DIRECTION_BADGE_MIN_RADIUS := 7.0
-const DIRECTION_BADGE_MAX_RADIUS := 11.0
-const DIRECTION_BADGE_MARGIN := 4.0
-const DIRECTION_BADGE_OVERHANG := 0.42
-const DIRECTION_LINE_MIN_LENGTH := 18.0
+const DIRECTION_LINE_MIN_LENGTH := 14.0
+const DIRECTION_LINE_MAX_LENGTH := 22.0
+const DIRECTION_MARKER_CELL_X := 0.80
+const DIRECTION_MARKER_CELL_Y := 0.28
 
 var cell_size: Vector2 = Vector2.ZERO
 var item_instance: BackpackManager.ItemInstance:
@@ -137,40 +136,7 @@ func _update_direction_visual():
 func _draw() -> void:
 	if item_data == null:
 		return
-	if _is_hovered or _is_dragging:
-		_draw_direction_preview()
-	_draw_direction_badge()
-
-
-func _draw_direction_badge() -> void:
-	var radius := _get_direction_badge_radius()
-	var center := _get_direction_badge_center(radius)
-	var is_active := _is_hovered or _is_dragging
-	var active_amount := 1.0 if is_active else 0.0
-	var opacity := clampf(0.26 + active_amount * 0.22 + _direction_flash * 0.28, 0.0, 0.78)
-	var accent_color := Color(0.58, 0.82, 0.9, opacity)
-	var shadow_color := Color(0.0, 0.0, 0.0, 0.22 + active_amount * 0.08 + _direction_flash * 0.10)
-	if _direction_flash > 0.01:
-		draw_circle(center, radius + 5.0 * _direction_flash, Color(0.48, 0.78, 0.96, 0.12 * _direction_flash))
-	var corner := Vector2(size.x - DIRECTION_BADGE_MARGIN, DIRECTION_BADGE_MARGIN)
-	var corner_arm := radius * 1.5
-	draw_line(corner - Vector2(corner_arm, 0.0) + Vector2(1.0, 1.0), corner + Vector2(1.0, 1.0), shadow_color, 2.0, true)
-	draw_line(corner + Vector2(1.0, 1.0), corner + Vector2(1.0, corner_arm + 1.0), shadow_color, 2.0, true)
-	draw_line(corner - Vector2(corner_arm, 0.0), corner, accent_color, 1.25, true)
-	draw_line(corner, corner + Vector2(0.0, corner_arm), accent_color, 1.25, true)
-	_draw_direction_arrow(center + Vector2(1.0, 1.0), radius * 0.86, shadow_color, 2.8, 1.0)
-	_draw_direction_arrow(center, radius * 0.86, accent_color, 1.65, 1.0)
-
-
-func _draw_direction_arrow(center: Vector2, radius: float, arrow_color: Color, stroke_width: float, arrow_scale: float) -> void:
-	draw_set_transform(center, _get_direction_angle(), Vector2.ONE * arrow_scale)
-	draw_line(Vector2(-radius * 0.56, 0.0), Vector2(radius * 0.22, 0.0), arrow_color, stroke_width, true)
-	draw_colored_polygon(PackedVector2Array([
-		Vector2(radius * 0.08, -radius * 0.36),
-		Vector2(radius * 0.58, 0.0),
-		Vector2(radius * 0.08, radius * 0.36),
-	]), arrow_color)
-	draw_set_transform(Vector2.ZERO, 0.0, Vector2.ONE)
+	_draw_direction_preview()
 
 
 func _draw_direction_preview() -> void:
@@ -178,42 +144,47 @@ func _draw_direction_preview() -> void:
 	if direction == Vector2.ZERO:
 		return
 	var shortest_side := minf(size.x, size.y)
-	var start := size * 0.5 + direction * maxf(8.0, shortest_side * 0.08)
-	var end := size * 0.5 + direction * maxf(DIRECTION_LINE_MIN_LENGTH, shortest_side * 0.38)
-	var inset := _get_direction_badge_radius() + DIRECTION_BADGE_MARGIN + 3.0
-	end.x = clampf(end.x, inset, maxf(inset, size.x - inset))
-	end.y = clampf(end.y, inset, maxf(inset, size.y - inset))
-	var line_width := clampf(shortest_side * 0.04, 2.0, 4.0)
-	draw_line(start + Vector2(1.0, 1.0), end + Vector2(1.0, 1.0), Color(0.0, 0.0, 0.0, 0.26), line_width + 1.5, true)
-	draw_line(start, end, Color(0.58, 0.82, 0.9, 0.34), line_width, true)
+	var center := _get_direction_marker_center()
+	var half_length := clampf(shortest_side * 0.14, DIRECTION_LINE_MIN_LENGTH * 0.5, DIRECTION_LINE_MAX_LENGTH * 0.5)
+	var start := center - direction * half_length
+	var end := center + direction * half_length
+	var line_width := _get_direction_line_width()
+	draw_line(start, end, Color.BLACK, line_width, true)
 	var side := Vector2(-direction.y, direction.x)
-	var head_length := line_width * 2.25
-	var head_width := line_width * 1.45
-	draw_colored_polygon(PackedVector2Array([
-		end + direction * head_length,
-		end - direction * head_length * 0.3 + side * head_width,
-		end - direction * head_length * 0.3 - side * head_width,
-	]), Color(0.68, 0.9, 1.0, 0.38))
+	var head_length := line_width * 1.55
+	var head_width := line_width * 1.05
+	var head_tip := end + direction * head_length
+	var head_base := end - direction * head_length * 0.3
+	draw_line(head_tip, head_base + side * head_width, Color.BLACK, line_width, true)
+	draw_line(head_tip, head_base - side * head_width, Color.BLACK, line_width, true)
 
 
-func _get_direction_badge_radius() -> float:
-	return clampf(minf(size.x, size.y) * 0.17, DIRECTION_BADGE_MIN_RADIUS, DIRECTION_BADGE_MAX_RADIUS)
+func _get_direction_marker_center() -> Vector2:
+	var top_right_cell := _get_top_right_bounding_cell()
+	var rect := item_data.get_bounding_rect()
+	var local_cell := top_right_cell - rect.position
+	return Vector2(
+		(float(local_cell.x) + DIRECTION_MARKER_CELL_X) * cell_size.x,
+		(float(local_cell.y) + DIRECTION_MARKER_CELL_Y) * cell_size.y
+	)
 
 
-func _get_direction_badge_center(radius: float) -> Vector2:
-	var inset := radius * (1.0 - DIRECTION_BADGE_OVERHANG) + DIRECTION_BADGE_MARGIN
-	return Vector2(maxf(radius + DIRECTION_BADGE_MARGIN, size.x - inset), inset)
+func _get_top_right_bounding_cell() -> Vector2i:
+	if item_data == null or item_data.shape.is_empty():
+		return Vector2i.ZERO
+	var rect := item_data.get_bounding_rect()
+	return rect.position + Vector2i(maxi(rect.size.x - 1, 0), 0)
 
 
-func _get_direction_angle() -> float:
-	match item_data.direction:
-		ItemData.Direction.UP:
-			return -PI * 0.5
-		ItemData.Direction.DOWN:
-			return PI * 0.5
-		ItemData.Direction.LEFT:
-			return PI
-	return 0.0
+func _get_direction_line_width() -> float:
+	var shortest_side := minf(size.x, size.y)
+	var width_scale := 0.04
+	if _is_hovered or _is_dragging:
+		width_scale = 0.052
+	var line_width := clampf(shortest_side * width_scale, 2.75, 4.25)
+	if _direction_flash > 0.01:
+		line_width += 0.75 * _direction_flash
+	return line_width
 
 
 func _get_direction_vector() -> Vector2:
