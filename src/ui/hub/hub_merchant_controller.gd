@@ -31,6 +31,8 @@ var player: CharacterBody2D = null
 var room_art: Sprite2D = null
 var is_player_at_merchant := false
 var shop_click_ready := false
+var _complete_interaction_token := 0
+var _complete_interaction_callback: Callable = Callable()
 
 var _frames_cache: Dictionary = {}
 var _frame_bounds_cache: Dictionary = {}
@@ -111,19 +113,48 @@ func interact(run_manager: Node) -> void:
 	var target_x := get_interaction_target_x()
 	move_requested.emit(target_x, can_open_shop(run_manager))
 
-func complete_interaction(run_manager: Node, played_arrival: bool) -> void:
+func complete_interaction(run_manager: Node, played_arrival: bool, on_complete: Callable = Callable()) -> void:
+	_complete_interaction_token += 1
+	var interaction_token := _complete_interaction_token
+	_complete_interaction_callback = on_complete
 	if not is_player_at_merchant:
+		_invoke_complete_interaction_callback(interaction_token)
 		return
 	if not played_arrival:
 		played_arrival = play_arrival_animation()
 	if played_arrival and merchant_sprite != null and merchant_sprite.is_playing():
-		await merchant_sprite.animation_finished
-	if not is_player_at_merchant:
+		merchant_sprite.animation_finished.connect(
+			Callable(self, "_on_complete_interaction_animation_finished").bind(interaction_token, run_manager),
+			Object.CONNECT_ONE_SHOT
+		)
 		return
 	if can_open_shop(run_manager):
 		shop_click_ready = true
 		if merchant_button != null:
 			merchant_button.tooltip_text = "点击进入商店"
+	_invoke_complete_interaction_callback(interaction_token)
+
+
+func _on_complete_interaction_animation_finished(token: int, run_manager: Node, _result = null) -> void:
+	if token != _complete_interaction_token:
+		return
+	if not is_player_at_merchant:
+		_invoke_complete_interaction_callback(token)
+		return
+	if can_open_shop(run_manager):
+		shop_click_ready = true
+		if merchant_button != null:
+			merchant_button.tooltip_text = "点击进入商店"
+	_invoke_complete_interaction_callback(token)
+
+
+func _invoke_complete_interaction_callback(interaction_token: int) -> void:
+	if interaction_token != _complete_interaction_token:
+		return
+	if _complete_interaction_callback.is_valid():
+		var callback := _complete_interaction_callback
+		_complete_interaction_callback = Callable()
+		callback.call()
 
 func get_animation_key(run_manager: Node) -> String:
 	var configured_key := _get_configured_animation_key(run_manager)

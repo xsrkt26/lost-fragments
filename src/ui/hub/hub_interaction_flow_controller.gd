@@ -20,6 +20,8 @@ var merchant_controller = null
 var battle_controller = null
 
 var state: int = State.IDLE
+var _battle_request_token := 0
+var _arrival_request_token := 0
 
 
 func setup(p_player_controller: RefCounted, p_merchant_controller: RefCounted, p_battle_controller: RefCounted) -> void:
@@ -81,14 +83,24 @@ func request_merchant_interaction(run_manager: Node) -> bool:
 	return true
 
 
-func request_battle_start(run_manager: Node, hub_page_visible: bool, play_start_swing: Callable) -> bool:
+func request_battle_start(run_manager: Node, hub_page_visible: bool, play_start_swing: Callable, on_complete: Callable = Callable()) -> bool:
 	if state == State.TRANSITIONING or battle_controller == null:
 		return false
 	state = State.BATTLE_STARTING
-	var accepted_result: Variant = await battle_controller.enter_battle(run_manager, hub_page_visible, play_start_swing)
-	if state == State.BATTLE_STARTING:
+	_battle_request_token += 1
+	var request_token := _battle_request_token
+	var accepted_result := battle_controller.enter_battle(
+		run_manager,
+		hub_page_visible,
+		play_start_swing,
+		Callable(self, "_on_battle_start_request_completed").bind(request_token, on_complete)
+	)
+	if not accepted_result:
 		state = State.IDLE
-	return accepted_result == true
+		if on_complete.is_valid():
+			on_complete.call()
+		return false
+	return true
 
 
 func complete_player_arrival(
@@ -96,7 +108,8 @@ func complete_player_arrival(
 	target_x: float,
 	run_manager: Node,
 	merchant_sprite: AnimatedSprite2D,
-	merchant_contains_x: Callable
+	merchant_contains_x: Callable,
+	on_complete: Callable = Callable()
 ) -> void:
 	var reached_merchant := false
 	if merchant_contains_x.is_valid():
@@ -117,12 +130,40 @@ func complete_player_arrival(
 			request_open_gallery.emit()
 		AUTO_INTERACTION_MERCHANT:
 			if merchant_controller != null:
-				await merchant_controller.complete_interaction(run_manager, played_merchant_arrival)
-			if state != State.TRANSITIONING:
-				state = State.IDLE
+				if state != State.TRANSITIONING:
+					_arrival_request_token += 1
+					var arrival_token := _arrival_request_token
+					merchant_controller.complete_interaction(
+						run_manager,
+						played_merchant_arrival,
+						Callable(self, "_on_player_arrival_complete").bind(arrival_token, on_complete)
+					)
+				else:
+					merchant_controller.complete_interaction(run_manager, played_merchant_arrival)
+			else:
+				if state != State.TRANSITIONING:
+					state = State.IDLE
 		_:
 			if state != State.TRANSITIONING:
 				state = State.IDLE
+
+
+func _on_battle_start_request_completed(request_token: int, on_complete: Callable = Callable()) -> void:
+	if request_token != _battle_request_token:
+		return
+	if state == State.BATTLE_STARTING:
+		state = State.IDLE
+	if on_complete.is_valid():
+		on_complete.call()
+
+
+func _on_player_arrival_complete(token: int, on_complete: Callable = Callable()) -> void:
+	if token != _arrival_request_token:
+		return
+	if state == State.MOVING or state == State.MERCHANT_INTERACTION:
+		state = State.IDLE
+	if on_complete.is_valid():
+		on_complete.call()
 
 
 func _get_state_for_auto_interaction(interaction: String) -> int:
