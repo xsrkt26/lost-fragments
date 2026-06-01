@@ -4,7 +4,7 @@
 [ext_resource type="Texture2D" uid="uid://ybwfuo60u314" path="res://assets/ui/gallery/magnifier.png" id="11_magnifier"]
 [ext_resource type="Texture2D" uid="uid://8jk6iec3plut" path="res://assets/ui/gallery/forget_me_not.png" id="12_flower"]
 [ext_resource type="Script" uid="uid://b3mnqyl3mmp5f" path="res://src/ui/gallery/rope_grid.gd" id="13_rope_grid"]
-[ext_resource type="Script" uid="uid://chmcnyth1cbxy" path="res://src/ui/gallery/torn_paper.gd" id="14_torn_paper"]
+[ext_resource type="Texture2D" path="res://assets/ui/gallery/gallery_memory_paper.png" id="14_memory_paper"]
 [ext_resource type="PackedScene" path="res://src/ui/book/book_background.tscn" id="15_book_background"]
 [ext_resource type="Script" uid="uid://cktsl0jqpm2t7" path="res://src/ui/gallery/gallery_grid_frame.gd" id="16_grid_frame"]
 
@@ -147,17 +147,16 @@ horizontal_alignment = 1
 vertical_alignment = 1
 autowrap_mode = 3
 
-[node name="MemoryPaper" type="Control" parent="DesignRoot/UiLayer" unique_id=1490556943]
+[node name="MemoryPaper" type="TextureRect" parent="DesignRoot/UiLayer" unique_id=1490556943]
 anchors_preset = 0
-offset_left = 338.0
-offset_top = 540.0
-offset_right = 636.0
-offset_bottom = 940.0
+offset_left = 296.0
+offset_top = 512.0
+offset_right = 698.0
+offset_bottom = 980.0
 mouse_filter = 2
-script = ExtResource("14_torn_paper")
-fill_color = Color(0.43, 0.31, 0.21, 0.9)
-edge_color = Color(0.16, 0.1, 0.06, 0.32)
-grain_color = Color(0.96, 0.84, 0.58, 0.07)
+texture = ExtResource("14_memory_paper")
+expand_mode = 1
+stretch_mode = 5
 
 [node name="DetailText" type="Label" parent="DesignRoot/UiLayer" unique_id=2043472274]
 layout_mode = 0

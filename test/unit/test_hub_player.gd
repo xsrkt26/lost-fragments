@@ -610,8 +610,11 @@ func test_hub_player_uses_character_animation_frames():
 	assert_true(animated_sprite.sprite_frames.has_animation("walk"))
 	assert_eq(animated_sprite.sprite_frames.get_frame_count("idle"), 4)
 	assert_eq(animated_sprite.sprite_frames.get_frame_count("walk"), 6)
-	assert_eq(animated_sprite.scale, Vector2(0.3, 0.3))
-	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("idle", 0))
+	assert_eq(animated_sprite.scale, Vector2(0.42, 0.42))
+	var idle_texture := animated_sprite.sprite_frames.get_frame_texture("idle", 0)
+	assert_not_null(idle_texture)
+	var visual_foot_y := animated_sprite.position.y + float(idle_texture.get_height()) * animated_sprite.scale.y * 0.5
+	assert_almost_eq(visual_foot_y, 59.8, 0.1)
 	assert_not_null(animated_sprite.sprite_frames.get_frame_texture("walk", 0))
 
 

@@ -92,10 +92,12 @@ func test_gallery_scene_uses_split_book_art_and_item_grid() -> void:
 	assert_eq(item_scroll.scroll_vertical, 0)
 
 	var selected_paper := gallery.get_node_or_null("DesignRoot/UiLayer/SelectedPaper") as Control
-	var memory_paper := gallery.get_node_or_null("DesignRoot/UiLayer/MemoryPaper") as Control
+	var memory_paper := gallery.get_node_or_null("DesignRoot/UiLayer/MemoryPaper") as TextureRect
 	assert_not_null(selected_paper)
 	assert_null(selected_paper.get_script(), "Magnifier preview container should not draw a paper background.")
 	assert_not_null(memory_paper)
+	assert_not_null(memory_paper.texture)
+	assert_eq(memory_paper.texture.resource_path, "res://assets/ui/gallery/gallery_memory_paper.png")
 	var selected_icon := selected_paper.get_node_or_null("SelectedIcon") as TextureRect
 	assert_not_null(selected_icon)
 	assert_true(selected_icon.visible)

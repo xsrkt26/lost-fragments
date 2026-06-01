@@ -9,13 +9,7 @@ const HubPlayerController = preload("res://src/ui/hub/hub_player_controller.gd")
 const HubInteractionFlowController = preload("res://src/ui/hub/hub_interaction_flow_controller.gd")
 const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
 const HubDialogueBubbleControllerScript = preload("res://src/ui/hub/hub_dialogue_bubble_controller.gd")
-const XIAOMI_PART_TEXTURE_PATHS := [
-	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_1.png",
-	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_2.png",
-	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_3.png",
-	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_4.png",
-	"res://assets/ui/hub/xiaomi_parts/xiaomi_part_5.png",
-]
+const XIAOMI_TEXTURE_PATH := AssetPaths.XIAOMI_CAT
 const HUB_PLUSH_TRANSITION_FRAME_PATHS := [
 	"res://assets/ui/hub/plush_transition/plush_transition_01.png",
 	"res://assets/ui/hub/plush_transition/plush_transition_02.png",
@@ -78,14 +72,8 @@ const INVALID_HUB_POINT := Vector2(1.0e20, 1.0e20)
 const DEFAULT_SPEECH_TEXT := "你终于醒了！"
 const SHOP_INTRO_FRAME_RATE := 60.0
 const XIAOMI_ANCHOR_SOURCE_POSITION := Vector2(760.0, 1010.0)
-const XIAOMI_PART_OFFSETS := [
-	Vector2(-87.0, -261.0),
-	Vector2(-21.0, -209.0),
-	Vector2(-49.0, -178.0),
-	Vector2(-57.0, -127.0),
-	Vector2(-3.0, -77.0),
-]
-const XIAOMI_PART_SCALE := Vector2(0.9, 0.9)
+const XIAOMI_SPRITE_OFFSET := Vector2(-70.5, -170.4)
+const XIAOMI_SPRITE_SCALE := Vector2(0.8, 0.8)
 func _first_existing_node(paths: Array[String]) -> Node:
 	for path in paths:
 		var node := get_node_or_null(path)
@@ -1639,17 +1627,15 @@ func _ensure_xiaomi_anchor() -> Node2D:
 	_xiaomi_anchor = Node2D.new()
 	_xiaomi_anchor.name = "XiaomiDialogueAnchor"
 	_xiaomi_anchor.position = XIAOMI_ANCHOR_SOURCE_POSITION
-	for index in range(XIAOMI_PART_TEXTURE_PATHS.size()):
-		var texture := _load_xiaomi_part_texture(str(XIAOMI_PART_TEXTURE_PATHS[index]))
-		if texture == null:
-			continue
+	var texture := _load_xiaomi_texture(XIAOMI_TEXTURE_PATH)
+	if texture != null:
 		var sprite := Sprite2D.new()
-		sprite.name = "XiaomiPart%d" % (index + 1)
+		sprite.name = "XiaomiSprite"
 		sprite.texture = texture
 		sprite.centered = false
-		sprite.position = XIAOMI_PART_OFFSETS[index]
-		sprite.scale = XIAOMI_PART_SCALE
-		sprite.z_index = 16 + index
+		sprite.position = XIAOMI_SPRITE_OFFSET
+		sprite.scale = XIAOMI_SPRITE_SCALE
+		sprite.z_index = 16
 		_xiaomi_anchor.add_child(sprite)
 	if hub_art != null:
 		hub_art.add_child(_xiaomi_anchor)
@@ -1658,14 +1644,14 @@ func _ensure_xiaomi_anchor() -> Node2D:
 	return _xiaomi_anchor
 
 
-func _load_xiaomi_part_texture(path: String) -> Texture2D:
+func _load_xiaomi_texture(path: String) -> Texture2D:
 	var loaded := load(path) as Texture2D
 	if loaded != null:
 		return loaded
 	var image := Image.new()
 	var error := image.load(ProjectSettings.globalize_path(path))
 	if error != OK:
-		push_warning("[Hub] Failed to load Xiaomi part texture: %s" % path)
+		push_warning("[Hub] Failed to load Xiaomi texture: %s" % path)
 		return null
 	return ImageTexture.create_from_image(image)
 

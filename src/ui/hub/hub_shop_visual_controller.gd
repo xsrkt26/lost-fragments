@@ -16,6 +16,14 @@ const SHOP_EXIT_DESIGN_RECT := Rect2(Vector2(92.0, 612.0), Vector2(240.0, 86.0))
 const SHOP_EXIT_HOVER_SCALE := 1.08
 const PLAYABLE_BAG_SOURCE_SIZE := Vector2(806.6115, 1018.74243)
 const PLAYABLE_BAG_GRID_SOURCE_RECT := Rect2(Vector2(119.28073, 384.0497), Vector2(576.8495, 532.6164))
+const SHOP_SKULL_FADE_START_PROGRESS := 0.82
+const SHOP_SKULL_FADE_END_PROGRESS := 0.96
+const SHOP_SKULL_DESIGN_RECTS := [
+	Rect2(Vector2(980.0, 320.0), Vector2(245.0, 218.0)),
+	Rect2(Vector2(1290.0, 320.0), Vector2(330.0, 184.0)),
+	Rect2(Vector2(1515.0, 315.0), Vector2(270.0, 238.0)),
+	Rect2(Vector2(1742.0, 80.0), Vector2(178.0, 259.0)),
+]
 const OFFER_DESIGN_RECTS := [
 	Rect2(Vector2(1110.0, 236.0), Vector2(315.0, 112.0)),
 	Rect2(Vector2(1465.0, 236.0), Vector2(315.0, 112.0)),
@@ -30,6 +38,8 @@ const OFFER_DESIGN_RECTS := [
 var _owner_node: Node = null
 var _intro_canvas: CanvasLayer = null
 var _intro_frame: TextureRect = null
+var _shop_skull_root: Control = null
+var _shop_skull_nodes: Array[TextureRect] = []
 var _backpack_canvas: CanvasLayer = null
 var _backpack_root: Control = null
 var _backpack_panel: Control = null
@@ -69,7 +79,9 @@ func play_intro_overlay(owner_node: Node, run_manager: Node, item_db: Node, orna
 
 	var frame_paths: Array = AssetPaths.shop_intro_frame_paths()
 	var frame_delay := 1.0 / maxf(frame_rate, 1.0)
-	for frame_path in frame_paths:
+	_set_shop_skull_alpha(0.0)
+	for frame_index in range(frame_paths.size()):
+		var frame_path = frame_paths[frame_index]
 		if owner_node == null or not owner_node.is_inside_tree():
 			break
 		var texture: Texture2D = AssetPaths.load_texture(str(frame_path)) as Texture2D
@@ -77,11 +89,13 @@ func play_intro_overlay(owner_node: Node, run_manager: Node, item_db: Node, orna
 			continue
 		if _intro_frame != null and is_instance_valid(_intro_frame):
 			_intro_frame.texture = texture
+		_update_shop_skull_fade(frame_index, frame_paths.size())
 		await owner_node.get_tree().create_timer(frame_delay).timeout
 
 	if keep_final_frame:
 		if _intro_frame != null and is_instance_valid(_intro_frame):
 			_intro_frame.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_set_shop_skull_alpha(1.0)
 		_render_offer_buttons(run_manager, item_db, ornament_db)
 		_create_exit_button(owner_node)
 		_layout_exit_button()
@@ -117,6 +131,8 @@ func close() -> void:
 		_offers_canvas.queue_free()
 	_intro_canvas = null
 	_intro_frame = null
+	_shop_skull_root = null
+	_shop_skull_nodes.clear()
 	_backpack_canvas = null
 	_backpack_root = null
 	_backpack_panel = null
@@ -154,6 +170,34 @@ func _create_intro_canvas(owner_node: Node) -> void:
 	_intro_frame.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 	_intro_canvas.add_child(_intro_frame)
 	_intro_frame.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+
+	_create_shop_skull_overlay()
+
+
+func _create_shop_skull_overlay() -> void:
+	if _intro_canvas == null:
+		return
+	_shop_skull_root = Control.new()
+	_shop_skull_root.name = "ShopSkullOverlay"
+	_shop_skull_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_shop_skull_root.modulate.a = 0.0
+	_intro_canvas.add_child(_shop_skull_root)
+	_shop_skull_root.set_anchors_preset(Control.PRESET_FULL_RECT, true)
+
+	_shop_skull_nodes.clear()
+	var paths := AssetPaths.SHOP_SKULL_PATHS
+	for index in range(mini(paths.size(), SHOP_SKULL_DESIGN_RECTS.size())):
+		var texture := AssetPaths.load_texture(str(paths[index]))
+		if texture == null:
+			continue
+		var skull := TextureRect.new()
+		skull.name = "ShopSkull%d" % (index + 1)
+		skull.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		skull.texture = texture
+		skull.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		skull.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		_shop_skull_root.add_child(skull)
+		_shop_skull_nodes.append(skull)
 
 
 func _create_backpack_overlay(owner_node: Node) -> void:
@@ -521,6 +565,7 @@ func _layout_all(viewport_size: Vector2, place_backpack_at_start: bool) -> void:
 	if _offers_root != null and is_instance_valid(_offers_root):
 		_offers_root.size = viewport_size
 	_layout_backpack_panel(place_backpack_at_start)
+	_layout_shop_skull_overlay()
 	_layout_offer_buttons()
 	_layout_exit_button()
 
@@ -567,6 +612,35 @@ func _layout_offer_buttons() -> void:
 		button.size = target_rect.size
 
 
+func _layout_shop_skull_overlay() -> void:
+	if _shop_skull_root == null or not is_instance_valid(_shop_skull_root):
+		return
+	_shop_skull_root.size = _last_viewport_size
+	for index in range(_shop_skull_nodes.size()):
+		var skull := _shop_skull_nodes[index]
+		if not is_instance_valid(skull) or index >= SHOP_SKULL_DESIGN_RECTS.size():
+			continue
+		var target_rect := _design_rect_to_viewport(SHOP_SKULL_DESIGN_RECTS[index])
+		skull.position = target_rect.position
+		skull.size = target_rect.size
+
+
+func _update_shop_skull_fade(frame_index: int, frame_count: int) -> void:
+	if frame_count <= 0:
+		_set_shop_skull_alpha(1.0)
+		return
+	var progress := float(frame_index + 1) / float(frame_count)
+	var fade_range := maxf(0.001, SHOP_SKULL_FADE_END_PROGRESS - SHOP_SKULL_FADE_START_PROGRESS)
+	var alpha := clampf((progress - SHOP_SKULL_FADE_START_PROGRESS) / fade_range, 0.0, 1.0)
+	_set_shop_skull_alpha(alpha * alpha * (3.0 - 2.0 * alpha))
+
+
+func _set_shop_skull_alpha(alpha: float) -> void:
+	if _shop_skull_root == null or not is_instance_valid(_shop_skull_root):
+		return
+	_shop_skull_root.modulate.a = clampf(alpha, 0.0, 1.0)
+
+
 func _animate_backpack_in() -> void:
 	if _backpack_panel == null or not is_instance_valid(_backpack_panel):
 		return
@@ -596,7 +670,8 @@ func _play_close_animation(frame_rate: float) -> void:
 	frame_paths.reverse()
 	var frame_delay := 1.0 / maxf(frame_rate, 1.0)
 	_animate_backpack_out(float(frame_paths.size()) * frame_delay)
-	for frame_path in frame_paths:
+	for frame_index in range(frame_paths.size()):
+		var frame_path = frame_paths[frame_index]
 		if owner_node == null or not owner_node.is_inside_tree():
 			break
 		var texture: Texture2D = AssetPaths.load_texture(str(frame_path)) as Texture2D
@@ -604,6 +679,7 @@ func _play_close_animation(frame_rate: float) -> void:
 			continue
 		if _intro_frame != null and is_instance_valid(_intro_frame):
 			_intro_frame.texture = texture
+		_update_shop_skull_fade(frame_paths.size() - frame_index - 1, frame_paths.size())
 		await owner_node.get_tree().create_timer(frame_delay).timeout
 
 

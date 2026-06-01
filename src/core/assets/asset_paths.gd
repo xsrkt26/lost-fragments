@@ -15,6 +15,15 @@ const FONT_DISPLAY := FONT_ROOT + "/chill_huosong_f_ex_bold.otf"
 const STORY_EVENTS := STORY_ROOT + "/story_events.json"
 
 const PHOTO_CORNER := UI_ROOT + "/gallery/photo_corner.png"
+const GALLERY_MEMORY_PAPER := UI_ROOT + "/gallery/gallery_memory_paper.png"
+const XIAOMI_CAT := UI_ROOT + "/hub/xiaomi_cat.png"
+
+const SHOP_SKULL_PATHS := [
+	UI_ROOT + "/shop/merchant_skull_1.png",
+	UI_ROOT + "/shop/merchant_skull_2.png",
+	UI_ROOT + "/shop/merchant_skull_3.png",
+	UI_ROOT + "/shop/merchant_skull_4.png",
+]
 
 const BGM_PATHS := {
 	"menu": AUDIO_ROOT + "/bgm/main_menu.wav",

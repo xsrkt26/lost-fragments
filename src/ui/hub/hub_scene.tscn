@@ -171,8 +171,8 @@ position = Vector2(548, 950)
 script = ExtResource("2_player")
 
 [node name="AnimatedSprite2D" type="AnimatedSprite2D" parent="Player" unique_id=1414334915]
-position = Vector2(0, -68)
-scale = Vector2(0.3, 0.3)
+position = Vector2(0, -119.12)
+scale = Vector2(0.42, 0.42)
 sprite_frames = ExtResource("3_player_frames")
 animation = &"idle"
 autoplay = "idle"
