@@ -72,10 +72,11 @@ Set-ChildProcessErrorMode
 
 # Run Godot and capture BOTH output and errors to temporary files
 $tempRoot = if ($env:TEMP) { $env:TEMP } elseif ($env:TMPDIR) { $env:TMPDIR } else { [System.IO.Path]::GetTempPath() }
-$tempImportLog = Join-Path $tempRoot "go_dot_game_gut_import_stdout.tmp"
-$tempImportErr = Join-Path $tempRoot "go_dot_game_gut_import_stderr.tmp"
-$tempLog = Join-Path $tempRoot "go_dot_game_gut_stdout.tmp"
-$tempErr = Join-Path $tempRoot "go_dot_game_gut_stderr.tmp"
+$tempRunId = [System.Guid]::NewGuid().ToString("N")
+$tempImportLog = Join-Path $tempRoot "go_dot_game_gut_import_stdout_$tempRunId.tmp"
+$tempImportErr = Join-Path $tempRoot "go_dot_game_gut_import_stderr_$tempRunId.tmp"
+$tempLog = Join-Path $tempRoot "go_dot_game_gut_stdout_$tempRunId.tmp"
+$tempErr = Join-Path $tempRoot "go_dot_game_gut_stderr_$tempRunId.tmp"
 $godotAppData = Join-Path $tempRoot ("go_dot_game_gut_appdata_" + [System.Guid]::NewGuid().ToString("N"))
 $originalAppData = $env:APPDATA
 New-Item -ItemType Directory -Force -Path $godotAppData | Out-Null

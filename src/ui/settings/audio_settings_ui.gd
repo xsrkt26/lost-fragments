@@ -27,7 +27,6 @@ const POPUP_FONT_COLOR := Color(0.05, 0.035, 0.02, 1.0)
 @onready var window_mode_option: OptionButton = $DesignRoot/UiLayer/WindowModeOption
 @onready var animation_speed_option: OptionButton = $DesignRoot/UiLayer/AnimationSpeedOption
 @onready var reset_button: Button = $DesignRoot/UiLayer/ResetButton
-@onready var close_button: Button = $DesignRoot/UiLayer/CloseButton
 @onready var back_button: Button = $DesignRoot/UiLayer/BackButton
 
 var _is_updating := false
@@ -129,7 +128,6 @@ func _connect_controls() -> void:
 	window_mode_option.item_selected.connect(_on_window_mode_selected)
 	animation_speed_option.item_selected.connect(_on_animation_speed_selected)
 	reset_button.pressed.connect(_on_reset_pressed)
-	close_button.pressed.connect(_on_close_pressed)
 	back_button.pressed.connect(_on_close_pressed)
 
 func _update_ui() -> void:

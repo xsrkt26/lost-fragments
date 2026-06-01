@@ -144,7 +144,7 @@ var _dreamcatcher_net_base_position := Vector2.ZERO
 var _dreamcatcher_net_base_rotation := 0.0
 var _dreamcatcher_net_base_offset := Vector2.ZERO
 var _dreamcatcher_idle_tween: Tween = null
-var _hub_plush_transition_textures: Array[Texture2D] = []
+var _hub_plush_transition_max_frame_size := Vector2.ZERO
 var _hub_plush_transition_play_token := 0
 var _hub_battle_manager: BattleManager = null
 var _is_hub_battle_session_active := false
@@ -237,6 +237,7 @@ func _process(_delta: float) -> void:
 
 func _exit_tree() -> void:
 	_stop_hub_dreamcatcher_idle_swing()
+	_cancel_hub_plush_transition()
 
 
 func _get_stage_bgm_key(key: String, fallback: String) -> String:
@@ -594,14 +595,25 @@ func _ensure_hub_plush_transition_sprite() -> Sprite2D:
 	return dreamcatcher_plush_transition
 
 
-func _get_hub_plush_transition_textures() -> Array[Texture2D]:
-	if not _hub_plush_transition_textures.is_empty():
-		return _hub_plush_transition_textures
+func _get_hub_plush_transition_frame_texture(index: int) -> Texture2D:
+	if index < 0 or index >= HUB_PLUSH_TRANSITION_FRAME_PATHS.size():
+		return null
+	return AssetPaths.load_texture(str(HUB_PLUSH_TRANSITION_FRAME_PATHS[index]))
+
+
+func _get_hub_plush_transition_max_frame_size() -> Vector2:
+	if _hub_plush_transition_max_frame_size.x > 0.0 and _hub_plush_transition_max_frame_size.y > 0.0:
+		return _hub_plush_transition_max_frame_size
+	var max_frame_size := Vector2.ZERO
 	for path in HUB_PLUSH_TRANSITION_FRAME_PATHS:
-		var texture := AssetPaths.load_texture(path)
-		if texture != null:
-			_hub_plush_transition_textures.append(texture)
-	return _hub_plush_transition_textures
+		var texture := AssetPaths.load_texture(str(path))
+		if texture == null:
+			continue
+		var texture_size := texture.get_size()
+		max_frame_size.x = maxf(max_frame_size.x, texture_size.x)
+		max_frame_size.y = maxf(max_frame_size.y, texture_size.y)
+	_hub_plush_transition_max_frame_size = max_frame_size
+	return _hub_plush_transition_max_frame_size
 
 
 func _sync_hub_plush_transition_pose() -> void:
@@ -611,13 +623,8 @@ func _sync_hub_plush_transition_pose() -> void:
 	var net_rect := _get_hub_dreamcatcher_visual_parent_rect()
 	if net_rect.size.x <= 0.0 or net_rect.size.y <= 0.0:
 		return
-	var max_frame_width := 0.0
-	var max_frame_height := 0.0
-	for texture in _get_hub_plush_transition_textures():
-		var texture_size := texture.get_size()
-		max_frame_width = maxf(max_frame_width, texture_size.x)
-		max_frame_height = maxf(max_frame_height, texture_size.y)
-	if max_frame_width <= 0.0 or max_frame_height <= 0.0:
+	var max_frame_size := _get_hub_plush_transition_max_frame_size()
+	if max_frame_size.x <= 0.0 or max_frame_size.y <= 0.0:
 		return
 	var base_target_width := clampf(
 		net_rect.size.x * HUB_PLUSH_TRANSITION_TARGET_WIDTH_RATIO,
@@ -625,9 +632,9 @@ func _sync_hub_plush_transition_pose() -> void:
 		HUB_PLUSH_TRANSITION_MAX_WIDTH
 	)
 	var target_width := base_target_width * HUB_PLUSH_TRANSITION_SCALE_MULTIPLIER
-	var plush_scale := target_width / max_frame_width
-	var base_plush_display_height := max_frame_height * (base_target_width / max_frame_width)
-	var plush_display_height := max_frame_height * plush_scale
+	var plush_scale := target_width / max_frame_size.x
+	var base_plush_display_height := max_frame_size.y * (base_target_width / max_frame_size.x)
+	var plush_display_height := max_frame_size.y * plush_scale
 	var plush_top_y := net_rect.position.y + net_rect.size.y * HUB_PLUSH_TRANSITION_BODY_BOTTOM_RATIO + HUB_PLUSH_TRANSITION_VERTICAL_GAP
 	plush_sprite.centered = true
 	plush_sprite.position = Vector2(
@@ -671,27 +678,48 @@ func _reset_hub_plush_transition() -> void:
 	if plush_sprite == null:
 		return
 	_sync_hub_plush_transition_pose()
+	_clear_hub_plush_transition_sprite()
+
+
+func _cancel_hub_plush_transition() -> void:
+	_hub_plush_transition_play_token += 1
+	_clear_hub_plush_transition_sprite()
+
+
+func _clear_hub_plush_transition_sprite() -> void:
+	var plush_sprite := dreamcatcher_plush_transition
+	if plush_sprite == null or not is_instance_valid(plush_sprite):
+		return
 	plush_sprite.texture = null
 	plush_sprite.modulate = Color.WHITE
 	plush_sprite.visible = false
 
 
+func _set_hub_plush_transition_frame(index: int) -> bool:
+	var plush_sprite := _ensure_hub_plush_transition_sprite()
+	var texture := _get_hub_plush_transition_frame_texture(index)
+	if plush_sprite == null or texture == null:
+		return false
+	plush_sprite.texture = texture
+	plush_sprite.visible = true
+	return true
+
+
 func _play_hub_plush_transition_with_battle_intro() -> void:
 	var plush_sprite := _ensure_hub_plush_transition_sprite()
-	var frames := _get_hub_plush_transition_textures()
-	if plush_sprite == null or frames.is_empty():
+	if plush_sprite == null or HUB_PLUSH_TRANSITION_FRAME_PATHS.is_empty():
 		return
 	_hub_plush_transition_play_token += 1
 	var play_token := _hub_plush_transition_play_token
 	_sync_hub_plush_transition_pose()
-	plush_sprite.texture = frames[0]
-	plush_sprite.visible = true
+	if not _set_hub_plush_transition_frame(0):
+		return
 
 	var drop_duration := _get_hub_battle_intro_float("intro_bag_drop_duration", HUB_PLUSH_TRANSITION_FALLBACK_DROP_DURATION)
 	if drop_duration > 0.0:
 		await get_tree().create_timer(drop_duration).timeout
 
-	for index in range(1, frames.size()):
+	for index in range(1, HUB_PLUSH_TRANSITION_FRAME_PATHS.size()):
 		if not _should_continue_hub_plush_transition(play_token):
 			return
 		var frame_time := _get_hub_battle_intro_float("intro_bag_frame_time", HUB_PLUSH_TRANSITION_FALLBACK_FRAME_TIME)
@@ -700,8 +728,8 @@ func _play_hub_plush_transition_with_battle_intro() -> void:
 		if not _should_continue_hub_plush_transition(play_token):
 			return
 		_sync_hub_plush_transition_pose()
-		plush_sprite.texture = frames[index]
-		plush_sprite.visible = true
+		if not _set_hub_plush_transition_frame(index):
+			return
 
 
 func _should_continue_hub_plush_transition(play_token: int) -> bool:

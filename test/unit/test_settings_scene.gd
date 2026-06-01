@@ -49,7 +49,6 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 		"MuteButton",
 		"AnimationSpeedOption",
 		"ResetButton",
-		"CloseButton",
 		"LabelMaster",
 		"LabelWindowMode",
 	]:
@@ -74,12 +73,11 @@ func test_settings_scene_uses_split_book_art_and_controls() -> void:
 
 	var mute_button := ui.get_node("DesignRoot/UiLayer/MuteButton") as Button
 	var reset_button := ui.get_node("DesignRoot/UiLayer/ResetButton") as Button
-	var close_button := ui.get_node("DesignRoot/UiLayer/CloseButton") as Button
 	var master_value := ui.get_node("DesignRoot/UiLayer/MasterValue") as Label
 	assert_almost_eq(mute_button.position.x, master_value.position.x, 0.01)
 	assert_almost_eq(mute_button.position.x + mute_button.size.x, master_value.position.x + master_value.size.x, 0.01)
-	assert_almost_eq(reset_button.position.y, close_button.position.y, 0.01)
-	assert_true(reset_button.position.x < close_button.position.x)
+	assert_true(reset_button.size.x > 0.0)
+	assert_null(ui.get_node_or_null("DesignRoot/UiLayer/CloseButton"))
 
 	var album_tab_right := ui.get_node("DesignRoot/ArtLayer/AlbumTabRight") as TextureRect
 	var backpack_tab_right := ui.get_node("DesignRoot/ArtLayer/BackpackTabRight") as TextureRect

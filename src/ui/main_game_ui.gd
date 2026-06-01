@@ -368,22 +368,31 @@ func _get_control_visual_rect_at_position(control: Control, control_position: Ve
 	return Rect2(control_position, control.size * control.scale)
 
 
-func _animate_intro_bag_drop(bag_rect: TextureRect) -> void:
+func _place_intro_bag_at_target(bag_rect: TextureRect) -> void:
 	if bag_rect == null or not is_instance_valid(bag_rect):
 		return
 	var target_rect := _get_intro_bag_target_rect()
 	if target_rect.size.x <= 0.0 or target_rect.size.y <= 0.0:
 		return
+	bag_rect.position = target_rect.position
+	bag_rect.scale = Vector2.ONE
+	bag_rect.rotation = 0.0
+
+
+func _animate_intro_bag_drop(bag_rect: TextureRect) -> Signal:
+	if bag_rect == null or not is_instance_valid(bag_rect):
+		return get_tree().process_frame
+	var target_rect := _get_intro_bag_target_rect()
+	if target_rect.size.x <= 0.0 or target_rect.size.y <= 0.0:
+		return get_tree().process_frame
 	if intro_bag_drop_duration <= 0.0:
-		bag_rect.position = target_rect.position
-		bag_rect.scale = Vector2.ONE
-		bag_rect.rotation = 0.0
-		return
+		_place_intro_bag_at_target(bag_rect)
+		return get_tree().process_frame
 	var tween := create_tween().set_parallel(true).set_trans(Tween.TRANS_BACK).set_ease(Tween.EASE_OUT)
 	tween.tween_property(bag_rect, "position", target_rect.position, intro_bag_drop_duration)
 	tween.tween_property(bag_rect, "scale", Vector2.ONE, intro_bag_drop_duration)
 	tween.tween_property(bag_rect, "rotation", 0.0, minf(intro_bag_drop_duration, 0.42))
-	await tween.finished
+	return tween.finished
 
 
 func _play_intro_bag_frames(bag_rect: TextureRect) -> void:

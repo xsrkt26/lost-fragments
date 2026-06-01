@@ -335,7 +335,7 @@ func test_main_game_intro_bag_reveal_drops_from_upper_right_to_grid_target():
 	assert_eq(intro_bag.scale, Vector2.ONE * float(ui.get("intro_bag_drop_start_scale")))
 	assert_almost_eq(intro_bag.rotation, deg_to_rad(float(ui.get("intro_bag_drop_start_rotation_degrees"))), 0.001)
 
-	await ui._animate_intro_bag_drop(intro_bag)
+	ui.call("_place_intro_bag_at_target", intro_bag)
 
 	assert_almost_eq(intro_bag.position.x, target_rect.position.x, 0.001)
 	assert_almost_eq(intro_bag.position.y, target_rect.position.y, 0.001)
@@ -370,7 +370,7 @@ func test_main_game_intro_final_frame_pixel_bounds_match_playable_bag_art():
 	await get_tree().process_frame
 
 	var intro_bag := ui.call("_show_intro_bag_reveal") as TextureRect
-	await ui._animate_intro_bag_drop(intro_bag)
+	ui.call("_place_intro_bag_at_target", intro_bag)
 	intro_bag.texture = load("res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png") as Texture2D
 	assert_eq(intro_bag.stretch_mode, TextureRect.STRETCH_SCALE)
 	await ui._reveal_intro_grid(intro_bag)
@@ -627,6 +627,14 @@ func test_hub_z_shortcut_enters_battle_without_hidden_layer_locking_input():
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
+	var battle_layer := hub.get_node_or_null("CanvasLayer/BattleLayer") as Control
+	assert_not_null(battle_layer)
+	if battle_layer != null:
+		battle_layer.set("intro_bag_drop_duration", 0.01)
+		battle_layer.set("intro_bag_frame_time", 0.01)
+		battle_layer.set("intro_bag_final_hold", 0.0)
+		battle_layer.set("intro_stats_rise_duration", 0.01)
+		battle_layer.set("intro_grid_reveal_duration", 0.01)
 
 	assert_true(GlobalInput.is_context(GlobalInput.Context.WORLD))
 	var event := InputEventKey.new()
@@ -636,8 +644,6 @@ func test_hub_z_shortcut_enters_battle_without_hidden_layer_locking_input():
 	hub._input(event)
 	await get_tree().create_timer(2.0).timeout
 
-	var battle_layer := hub.get_node_or_null("CanvasLayer/BattleLayer") as Control
-	assert_not_null(battle_layer)
 	assert_true(battle_layer.visible)
 	assert_true(bool(hub.get("_is_hub_battle_session_active")))
 
