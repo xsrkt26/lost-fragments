@@ -1054,7 +1054,25 @@ func _render_ornaments():
 			continue
 		var slot = Button.new()
 		slot.custom_minimum_size = Vector2(54, 54)
-		slot.text = ornament.ornament_name.substr(0, min(2, ornament.ornament_name.length()))
+		if ornament.icon != null:
+			slot.text = ""
+			var icon := TextureRect.new()
+			icon.name = "OrnamentIcon"
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			icon.texture = ornament.icon
+			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+			icon.anchor_left = 0.0
+			icon.anchor_top = 0.0
+			icon.anchor_right = 1.0
+			icon.anchor_bottom = 1.0
+			icon.offset_left = 4.0
+			icon.offset_top = 4.0
+			icon.offset_right = -4.0
+			icon.offset_bottom = -4.0
+			slot.add_child(icon)
+		else:
+			slot.text = ornament.ornament_name.substr(0, min(2, ornament.ornament_name.length()))
 		slot.tooltip_text = ornament.get_tooltip_text()
 		slot.focus_mode = Control.FOCUS_NONE
 		slot.flat = true

@@ -420,10 +420,7 @@ func _on_merchant_open_shop_requested() -> void:
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
 	_shop_intro_overlay_token += 1
 	var overlay_token := _shop_intro_overlay_token
-	var overlay_state := _play_shop_intro_overlay(true)
-	if overlay_state is GDScriptFunctionState and overlay_state.is_valid():
-		overlay_state.connect("completed", _on_shop_intro_overlay_completed.bind(overlay_token), Object.CONNECT_ONE_SHOT)
-		return
+	var overlay_state := await _play_shop_intro_overlay(true)
 	_on_shop_intro_overlay_completed(overlay_token, overlay_state)
 
 

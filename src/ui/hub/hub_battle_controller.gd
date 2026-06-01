@@ -3,15 +3,15 @@ extends RefCounted
 signal request_enter_battle
 signal request_idle_restart
 
-var dreamcatcher_button: Button = null
-var owner_node: Node = null
+var dreamcatcher_button = null
+var owner_node = null
 var transition_pending := false
-var _active_battle_enter_callback: Callable = Callable()
-var _active_battle_run_manager: Node = null
+var _active_battle_enter_callback = Callable()
+var _active_battle_run_manager = null
 var _active_battle_hub_page_visible := false
 
 
-func setup(p_dreamcatcher_button: Button, p_owner_node: Node = null) -> void:
+func setup(p_dreamcatcher_button, p_owner_node = null) -> void:
 	dreamcatcher_button = p_dreamcatcher_button
 	owner_node = p_owner_node
 
@@ -20,7 +20,7 @@ func is_transition_pending() -> bool:
 	return transition_pending
 
 
-func update_state(run_manager: Node, hub_page_visible: bool) -> void:
+func update_state(run_manager, hub_page_visible: bool) -> void:
 	if dreamcatcher_button == null:
 		return
 	var can_start_game := can_enter_battle(run_manager) and not transition_pending and hub_page_visible
@@ -29,7 +29,7 @@ func update_state(run_manager: Node, hub_page_visible: bool) -> void:
 	dreamcatcher_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if can_start_game else Control.CURSOR_ARROW
 
 
-func can_enter_battle(run_manager: Node) -> bool:
+func can_enter_battle(run_manager) -> bool:
 	if run_manager == null or not bool(run_manager.get("is_run_active")):
 		return false
 	if run_manager.has_method("can_enter_current_battle"):
@@ -41,7 +41,7 @@ func can_enter_battle(run_manager: Node) -> bool:
 	return RouteConfig.is_battle_node_type(run_manager.get_current_route_node_type())
 
 
-func enter_battle(run_manager: Node, hub_page_visible: bool, play_start_swing: Callable, on_complete: Callable = Callable()) -> bool:
+func enter_battle(run_manager, hub_page_visible: bool, play_start_swing: Callable, on_complete: Callable = Callable()) -> bool:
 	if transition_pending or not can_enter_battle(run_manager):
 		if on_complete.is_valid():
 			on_complete.call()
@@ -62,7 +62,7 @@ func enter_battle(run_manager: Node, hub_page_visible: bool, play_start_swing: C
 	return true
 
 
-func return_to_ready_state(run_manager: Node, hub_page_visible: bool) -> void:
+func return_to_ready_state(run_manager, hub_page_visible: bool) -> void:
 	transition_pending = false
 	update_state(run_manager, hub_page_visible)
 
@@ -79,7 +79,7 @@ func _finalize_battle_entry_request() -> void:
 		return_to_ready_state(_active_battle_run_manager, _active_battle_hub_page_visible)
 	_call_battle_start_complete_callback()
 	_clear_battle_start_context()
-		return
+	return
 	if not can_enter_battle(_active_battle_run_manager):
 		return_to_ready_state(_active_battle_run_manager, _active_battle_hub_page_visible)
 		request_idle_restart.emit()

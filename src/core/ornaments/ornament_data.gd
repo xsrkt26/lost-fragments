@@ -5,6 +5,7 @@ extends Resource
 @export var ornament_name: String = ""
 @export var category: String = ""
 @export var rarity: String = ""
+@export var icon: Texture2D
 @export var earliest_act: int = 1
 @export var price: int = 0
 @export var tags: Array[String] = []
@@ -16,8 +17,8 @@ extends Resource
 func get_tooltip_text() -> String:
 	var lines: Array[String] = [
 		ornament_name,
-		"%s / 第%d层" % [rarity, earliest_act],
-		"标签: " + ", ".join(tags),
+		"%s / Act %d" % [rarity, earliest_act],
+		"Tags: " + ", ".join(tags),
 		effect_text
 	]
 	return "\n".join(lines)

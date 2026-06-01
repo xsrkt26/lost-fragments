@@ -524,7 +524,7 @@ func _render_offer_buttons(run_manager: Node, item_db: Node, ornament_db: Node) 
 		button.add_theme_color_override("font_color", OFFER_TEXT_COLOR)
 		button.add_theme_color_override("font_hover_color", Color(0.05, 0.03, 0.01, 1.0))
 		_apply_offer_button_style(button)
-		_build_offer_content(button, offer, item_db, tool_db, run_manager)
+		_build_offer_content(button, offer, item_db, tool_db, ornament_db, run_manager)
 		button.pressed.connect(_on_offer_button_pressed.bind(button, offer, run_manager, item_db))
 		button.mouse_entered.connect(_show_offer_tooltip.bind(offer, item_db, ornament_db, tool_db))
 		button.mouse_exited.connect(_hide_offer_tooltip)
@@ -651,7 +651,7 @@ func _hide_offer_tooltip() -> void:
 	GlobalTooltip.hide()
 
 
-func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool_db: Node, run_manager: Node) -> void:
+func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool_db: Node, ornament_db: Node, run_manager: Node) -> void:
 	var content := Control.new()
 	content.name = "OfferContent"
 	content.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -662,7 +662,7 @@ func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool
 	visual_area.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	content.add_child(visual_area)
 
-	_add_offer_visual(visual_area, offer, item_db, tool_db)
+	_add_offer_visual(visual_area, offer, item_db, tool_db, ornament_db)
 
 	var title_label := _make_offer_label("TitleLabel", str(offer.get("title", "鍟嗗搧")), 18, OFFER_TEXT_COLOR)
 	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -690,14 +690,14 @@ func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool
 	_update_offer_content(button, offer, run_manager, false)
 
 
-func _add_offer_visual(visual_area: Control, offer: Dictionary, item_db: Node, tool_db: Node) -> void:
+func _add_offer_visual(visual_area: Control, offer: Dictionary, item_db: Node, tool_db: Node, ornament_db: Node) -> void:
 	match str(offer.get("type", "")):
 		ShopGenerator.TYPE_ITEM:
 			_add_item_offer_visual(visual_area, offer, item_db)
 		ShopGenerator.TYPE_TOOL:
 			_add_tool_offer_visual(visual_area, offer, tool_db)
 		ShopGenerator.TYPE_ORNAMENT:
-			_add_ornament_offer_visual(visual_area, offer)
+			_add_ornament_offer_visual(visual_area, offer, ornament_db)
 		_:
 			_add_text_offer_visual(visual_area, "?")
 
@@ -730,7 +730,18 @@ func _add_tool_offer_visual(visual_area: Control, offer: Dictionary, tool_db: No
 	visual_area.add_child(icon)
 
 
-func _add_ornament_offer_visual(visual_area: Control, offer: Dictionary) -> void:
+func _add_ornament_offer_visual(visual_area: Control, offer: Dictionary, ornament_db: Node) -> void:
+	var ornament = ornament_db.get_ornament_by_id(str(offer.get("id", ""))) if ornament_db != null and ornament_db.has_method("get_ornament_by_id") else null
+	if ornament != null and ornament.icon != null:
+		var icon := TextureRect.new()
+		icon.name = "OfferOrnamentIcon"
+		icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon.texture = _trim_texture_to_alpha(ornament.icon)
+		icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		visual_area.add_child(icon)
+		return
+
 	var tag := PanelContainer.new()
 	tag.name = "OfferOrnamentTag"
 	tag.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -827,6 +838,10 @@ func _layout_offer_visual_area(visual_area: Control) -> void:
 	if tool_icon != null:
 		tool_icon.position = icon_rect.position
 		tool_icon.size = icon_rect.size
+	var ornament_icon := visual_area.get_node_or_null("OfferOrnamentIcon") as TextureRect
+	if ornament_icon != null:
+		ornament_icon.position = icon_rect.position
+		ornament_icon.size = icon_rect.size
 	var ornament_tag := visual_area.get_node_or_null("OfferOrnamentTag") as Control
 	if ornament_tag != null:
 		var size := Vector2(minf(inset_rect.size.x, inset_rect.size.y * 0.78), inset_rect.size.y)
