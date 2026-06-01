@@ -8,6 +8,8 @@ const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
 @onready var content_label = $MarginContainer/ContentLabel
 @onready var animation_player = $AnimationPlayer
 
+@export var auto_start_sequence := true
+
 var _frames: Array = []
 var _current_frame_idx: int = -1
 
@@ -15,6 +17,9 @@ func _ready() -> void:
 	if not resized.is_connected(_layout_design_root):
 		resized.connect(_layout_design_root)
 	_layout_design_root()
+	if not auto_start_sequence:
+		call_deferred("_layout_design_root")
+		return
 	var sm = get_node_or_null("/root/StoryManager")
 	if sm and sm.current_playing_sequence != "":
 		_frames = sm.get_sequence_frames(sm.current_playing_sequence)
