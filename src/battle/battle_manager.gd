@@ -37,6 +37,7 @@ var backpack_ui: Control: # 保持 Control 以兼容 Mock 测试
 # UI 3.0 尺寸适配 (原始素材像素)
 const GRID_STEP = Vector2(103.2857, 97.7142)
 const SLOT_HALF = Vector2(51.6428, 48.8571)
+const ROTATION_REQUEST_COOLDOWN_MSEC := 180
 
 func _init():
 	print("[BattleManager] 正在初始化逻辑数据...")
@@ -62,6 +63,8 @@ var _next_draw_cost_discount: int = 0
 var _tool_recycling_clip_pending: int = 0
 var _blank_talisman_refreshed_ornaments: Array[String] = []
 var _battle_modifiers: Dictionary = {}
+var _last_rotation_request_frame_by_item_ui: Dictionary = {}
+var _last_rotation_request_msec_by_item_ui: Dictionary = {}
 
 func _ready():
 	print("[BattleManager] 节点就绪")
@@ -317,8 +320,14 @@ func request_use_tool_item(item_ui: Control, target: Dictionary) -> bool:
 
 ## 处理物品在背包内被旋转的逻辑请求
 func request_rotate_item(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i):
+	if item_ui == null:
+		return
 	var item_data = item_ui.get("item_data") as ItemData
 	if not item_data: return
+	if _should_ignore_duplicate_rotation_request(item_ui):
+		return
+	if not item_data.can_rotate:
+		return
 	
 	print("[BattleManager] 收到旋转请求: ", item_data.item_name)
 	
@@ -331,6 +340,8 @@ func request_rotate_item(item_ui: Control, mouse_global_pos: Vector2, pivot_offs
 		backpack_manager.remove_by_runtime_id(item_data.runtime_id)
 	
 	if not is_instance_valid(backpack_ui):
+		if old_pos != Vector2i(-1, -1):
+			backpack_manager.place_item(item_data, old_pos)
 		return
 	if not backpack_ui.has_method("get_grid_pos_at"):
 		if old_pos != Vector2i(-1, -1):
@@ -376,6 +387,21 @@ func request_rotate_item(item_ui: Control, mouse_global_pos: Vector2, pivot_offs
 			
 		print("[BattleManager] 旋转导致碰撞/出界，强制弹出到侧边。")
 		_handle_place_failure(item_ui, Vector2i(-1, -1), [])
+
+
+func _should_ignore_duplicate_rotation_request(item_ui: Control) -> bool:
+	if item_ui == null:
+		return false
+	var ui_id := int(item_ui.get_instance_id())
+	var current_frame := Engine.get_process_frames()
+	if int(_last_rotation_request_frame_by_item_ui.get(ui_id, -1)) == current_frame:
+		return true
+	var now := Time.get_ticks_msec()
+	if now - int(_last_rotation_request_msec_by_item_ui.get(ui_id, -ROTATION_REQUEST_COOLDOWN_MSEC)) < ROTATION_REQUEST_COOLDOWN_MSEC:
+		return true
+	_last_rotation_request_frame_by_item_ui[ui_id] = current_frame
+	_last_rotation_request_msec_by_item_ui[ui_id] = now
+	return false
 
 ## 处理玩家放置物品的逻辑请求
 func request_place_item(item_ui: Control, grid_pos: Vector2i):

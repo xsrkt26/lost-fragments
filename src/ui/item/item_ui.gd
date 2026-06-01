@@ -7,6 +7,7 @@ const DIRECTION_LINE_MIN_LENGTH := 14.0
 const DIRECTION_LINE_MAX_LENGTH := 22.0
 const DIRECTION_MARKER_CELL_X := 0.80
 const DIRECTION_MARKER_CELL_Y := 0.28
+const ROTATION_REQUEST_COOLDOWN_MSEC := 180
 
 var cell_size: Vector2 = Vector2.ZERO
 var item_instance: BackpackManager.ItemInstance:
@@ -26,7 +27,7 @@ var item_instance: BackpackManager.ItemInstance:
 @onready var name_label = $NameLabel
 @onready var stack_label = $StackLabel
 
-signal dropped(mouse_global_pos: Vector2, pivot_offset: Vector2i)
+signal dropped(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i)
 signal drag_moved(item_ui: Control, center_pos: Vector2, pivot_offset: Vector2i)
 signal rotation_requested(item_ui: Control, mouse_global_pos: Vector2, pivot_offset: Vector2i)
 
@@ -41,6 +42,8 @@ var _direction_flash := 0.0:
 var _last_direction: int = -1
 var _has_direction_state := false
 var _direction_feedback_tween: Tween = null
+var _rotation_blocked_tween: Tween = null
+var _last_rotation_emit_msec := -ROTATION_REQUEST_COOLDOWN_MSEC
 
 
 func _ready():
@@ -59,6 +62,8 @@ func _ready():
 func _exit_tree():
 	if _direction_feedback_tween != null and _direction_feedback_tween.is_running():
 		_direction_feedback_tween.kill()
+	if _rotation_blocked_tween != null and _rotation_blocked_tween.is_running():
+		_rotation_blocked_tween.kill()
 	if item_instance and item_instance.pollution_changed.is_connected(_on_item_pollution_changed):
 		item_instance.pollution_changed.disconnect(_on_item_pollution_changed)
 	if _is_hovered:
@@ -250,11 +255,13 @@ func _on_gui_input(event: InputEvent):
 	if event is InputEventMouseButton:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			if event.pressed:
-				_start_drag()
+				_start_drag(event.position, get_global_mouse_position())
 			else:
 				_stop_drag()
+			accept_event()
 		elif event.button_index == MOUSE_BUTTON_RIGHT and event.pressed:
-			_request_rotation()
+			_request_rotation(event.position, get_global_mouse_position())
+			accept_event()
 
 
 func _on_mouse_entered():
@@ -280,16 +287,15 @@ func _refresh_hover_tooltip():
 		GlobalTooltip.show_item(item_data, item_instance)
 
 
-func _start_drag():
+func _start_drag(local_mouse: Vector2 = get_local_mouse_position(), global_mouse_pos: Vector2 = get_global_mouse_position()):
 	_is_dragging = true
 	set_process(true)
-	var local_mouse = get_local_mouse_position()
 	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	_held_pivot_offset = Vector2i(
 		floori(local_mouse.x / safe_cell_size.x),
 		floori(local_mouse.y / safe_cell_size.y)
 	)
-	_drag_offset = get_global_mouse_position() - global_position
+	_drag_offset = global_mouse_pos - global_position
 	z_index = 100
 	GlobalTooltip.hide()
 	queue_redraw()
@@ -302,20 +308,44 @@ func _stop_drag():
 	set_process(false)
 	z_index = 0
 	queue_redraw()
-	dropped.emit(get_global_mouse_position(), _held_pivot_offset)
+	dropped.emit(self, get_global_mouse_position(), _held_pivot_offset)
 
 
-func _request_rotation():
+func _request_rotation(local_mouse: Vector2 = get_local_mouse_position(), mouse_global_pos: Vector2 = get_global_mouse_position()):
 	_is_dragging = false
 	set_process(false)
 	queue_redraw()
-	var local_mouse = get_local_mouse_position()
+	if item_data == null or not item_data.can_rotate:
+		_play_rotation_blocked_feedback()
+		return
+	if _should_ignore_duplicate_rotation_emit():
+		return
 	var safe_cell_size := Vector2(maxf(cell_size.x, 1.0), maxf(cell_size.y, 1.0))
 	var item_pivot_offset = Vector2i(
 		floori(local_mouse.x / safe_cell_size.x),
 		floori(local_mouse.y / safe_cell_size.y)
 	)
-	rotation_requested.emit(self, get_global_mouse_position(), item_pivot_offset)
+	rotation_requested.emit(self, mouse_global_pos, item_pivot_offset)
+
+
+func _should_ignore_duplicate_rotation_emit() -> bool:
+	var now := Time.get_ticks_msec()
+	if now - _last_rotation_emit_msec < ROTATION_REQUEST_COOLDOWN_MSEC:
+		return true
+	_last_rotation_emit_msec = now
+	return false
+
+
+func _play_rotation_blocked_feedback() -> void:
+	GlobalAudio.play_sfx("error")
+	if not is_inside_tree():
+		return
+	if _rotation_blocked_tween != null and _rotation_blocked_tween.is_running():
+		_rotation_blocked_tween.kill()
+	var base_scale := scale
+	_rotation_blocked_tween = create_tween()
+	_rotation_blocked_tween.tween_property(self, "scale", base_scale * 0.94, 0.05)
+	_rotation_blocked_tween.tween_property(self, "scale", base_scale, 0.09)
 
 
 func _process(_delta):

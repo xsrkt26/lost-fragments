@@ -198,6 +198,27 @@ func set_played_flags(flags: Dictionary) -> void:
 	_played_flags = flags.duplicate(true)
 
 
+func suppress_debug_jump_story(target_act: int) -> void:
+	var clamped_act := clampi(target_act, 1, StageConfig.get_max_act())
+	_restore_input_after_story()
+	current_playing_sequence = ""
+	_completion_actions.clear()
+	_sequence_queue.clear()
+	_pending_hub_sequences.clear()
+	_refresh_played_flags_from_run()
+
+	var skipped_flags := _played_flags.duplicate(true)
+	if clamped_act > 1 and has_sequence("beginning"):
+		skipped_flags["beginning"] = true
+	for act in range(1, clamped_act + 1):
+		_mark_existing_sequence_ids_played(skipped_flags, _get_stage_intro_sequence_ids(act))
+		_mark_existing_sequence_ids_played(skipped_flags, _get_battle_intro_sequence_ids(act))
+	for completed_act in range(1, clamped_act):
+		_mark_existing_sequence_ids_played(skipped_flags, _get_fixed_event_sequence_ids(completed_act))
+	_played_flags = skipped_flags
+	_sync_played_flags_to_run()
+
+
 func _can_accept_sequence(sequence_id: String) -> bool:
 	if not STORY_ENABLED:
 		return false
@@ -448,6 +469,12 @@ func _get_event_sequence_ids(act: int, node: Dictionary) -> Array[String]:
 		result.append("event_%s" % node_id)
 		result.append("事件_%s" % node_id)
 	return result
+
+
+func _mark_existing_sequence_ids_played(flags: Dictionary, sequence_ids: Array[String]) -> void:
+	for sequence_id in sequence_ids:
+		if has_sequence(sequence_id):
+			flags[sequence_id] = true
 
 
 func _mark_sequence_played(sequence_id: String) -> void:

@@ -98,6 +98,7 @@ func _first_existing_node(paths: Array[String]) -> Node:
 @onready var hub_art: Node2D = $HubArt
 @onready var hub_board_viewport: Control = _first_existing_node(["HubArt/BoardViewport"]) as Control
 @onready var hub_board_content: Node = _first_existing_node(["HubArt/BoardViewport/BoardContent", "HubArt"])
+@onready var board_dimming_mask: ColorRect = _first_existing_node(["HubArt/BoardViewport/BoardContent/BoardDimmingMask", "HubArt/BoardDimmingMask"]) as ColorRect
 @onready var canvas_design_root: Control = $CanvasLayer/DesignRoot
 @onready var overlay_root: Control = $CanvasLayer/OverlayRoot
 @onready var player: CharacterBody2D = $Player
@@ -1096,11 +1097,19 @@ func _debug_jump_to_act(act: int) -> bool:
 		rm.save_current_state()
 	if rm.has_method("_emit_route_changed"):
 		rm._emit_route_changed()
+	if target_act > 1:
+		_suppress_story_for_debug_jump(target_act)
 	_clear_pending_auto_interaction()
 	_close_backpack_overlay()
 	_open_book_page(BookPageNavigator.PAGE_HUB)
 	print("[Hub Debug] Jumped to act ", target_act, ".")
 	return true
+
+
+func _suppress_story_for_debug_jump(target_act: int) -> void:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager != null and story_manager.has_method("suppress_debug_jump_story"):
+		story_manager.call("suppress_debug_jump_story", target_act)
 
 
 func _is_next_route_node_shortcut(event: InputEvent) -> bool:
@@ -1512,6 +1521,7 @@ func _cleanup_hub_battle_session(do_persist_backpack: bool = true) -> void:
 	_hub_battle_manager = null
 	_remove_hub_battle_runtime_children()
 	_is_hub_battle_session_active = false
+	_set_board_dimming_mask_visible(false)
 	if battle_layer != null:
 		battle_layer.visible = false
 
@@ -1526,6 +1536,7 @@ func _remove_hub_battle_runtime_children() -> void:
 
 func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 	_set_battle_disabled_bookmark_pins_visible(not chrome_visible)
+	_set_board_dimming_mask_visible(not chrome_visible)
 	if canvas_design_root != null:
 		canvas_design_root.visible = chrome_visible
 	if player != null:
@@ -1552,6 +1563,11 @@ func _set_hub_chrome_visible_for_battle(chrome_visible: bool) -> void:
 func _set_battle_disabled_bookmark_pins_visible(pins_visible: bool) -> void:
 	if battle_disabled_bookmark_pins != null:
 		battle_disabled_bookmark_pins.visible = pins_visible
+
+
+func _set_board_dimming_mask_visible(mask_visible: bool) -> void:
+	if board_dimming_mask != null:
+		board_dimming_mask.visible = mask_visible
 
 
 func _return_dreamcatcher_to_ready_state() -> void:

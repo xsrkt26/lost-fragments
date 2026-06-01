@@ -80,6 +80,38 @@ func test_route_change_to_next_act_queues_previous_fixed_event() -> void:
 	assert_eq(pending, ["固定事件1·小咪"])
 
 
+func test_debug_jump_story_suppression_covers_direct_jump_through_f6() -> void:
+	var story_manager = get_node_or_null("/root/StoryManager")
+	var run_manager = get_node_or_null("/root/RunManager")
+	assert_not_null(story_manager)
+	assert_not_null(run_manager)
+	if story_manager == null or run_manager == null:
+		return
+
+	_reset_story_manager_queue(story_manager)
+	var previous_active := bool(run_manager.get("is_run_active"))
+	run_manager.set("is_run_active", true)
+
+	story_manager.call("_on_route_changed", 1, 0, {})
+	story_manager.call("_on_route_changed", 6, 0, {})
+	story_manager.call("suppress_debug_jump_story", 6)
+	run_manager.set("is_run_active", previous_active)
+
+	var pending: Array = story_manager.get("_pending_hub_sequences")
+	var flags: Dictionary = story_manager.call("get_played_flags")
+	var first_stage_ids: Array = story_manager.call("_get_stage_intro_sequence_ids", 1)
+	var first_battle_ids: Array = story_manager.call("_get_battle_intro_sequence_ids", 1)
+	var final_fixed_ids: Array = story_manager.call("_get_fixed_event_sequence_ids", 6)
+	assert_true(pending.is_empty())
+	assert_true(bool(flags.get("beginning", false)))
+	assert_true(_has_any_played_flag(flags, first_stage_ids))
+	assert_true(_has_any_played_flag(flags, first_battle_ids))
+	for completed_act in range(1, 6):
+		var completed_fixed_ids: Array = story_manager.call("_get_fixed_event_sequence_ids", completed_act)
+		assert_true(bool(flags.get(str(completed_fixed_ids.back()), false)))
+	assert_false(bool(flags.get(str(final_fixed_ids.back()), false)))
+
+
 func test_victory_run_finish_queues_final_fixed_event_before_ending() -> void:
 	var story_manager = get_node_or_null("/root/StoryManager")
 	var run_manager = get_node_or_null("/root/RunManager")
@@ -122,3 +154,10 @@ func _reset_story_manager_queue(story_manager: Node) -> void:
 	var run_manager = get_node_or_null("/root/RunManager")
 	if run_manager != null and run_manager.has_method("set_story_played_flags"):
 		run_manager.call("set_story_played_flags", {}, false)
+
+
+func _has_any_played_flag(flags: Dictionary, sequence_ids: Array) -> bool:
+	for sequence_id in sequence_ids:
+		if bool(flags.get(str(sequence_id), false)):
+			return true
+	return false

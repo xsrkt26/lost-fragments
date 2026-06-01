@@ -1167,9 +1167,22 @@ func _is_point_in_tool_panel(point: Vector2) -> bool:
 	return tool_panel != null and tool_panel.visible and tool_panel.get_global_rect().has_point(point)
 
 func _connect_item_ui_signals(card: Control):
-	card.dropped.connect(func(_mouse_pos, _pivot): _handle_item_dropped(card, _mouse_pos, _pivot))
-	card.drag_moved.connect(func(_item_ui, _mouse_pos, _pivot): _handle_item_dragged(_item_ui, _mouse_pos, _pivot))
-	card.rotation_requested.connect(_handle_item_rotation_requested)
+	if card == null or not card.has_signal("dropped") or not card.has_signal("drag_moved") or not card.has_signal("rotation_requested"):
+		return
+	_replace_owned_item_signal_connection(card, "dropped", Callable(self, "_handle_item_dropped"))
+	_replace_owned_item_signal_connection(card, "drag_moved", Callable(self, "_handle_item_dragged"))
+	_replace_owned_item_signal_connection(card, "rotation_requested", Callable(self, "_handle_item_rotation_requested"))
+
+func _replace_owned_item_signal_connection(card: Control, signal_name: StringName, expected_callback: Callable) -> void:
+	var has_expected := false
+	for connection in card.get_signal_connection_list(signal_name):
+		var connected_callback: Callable = connection.get("callable", Callable())
+		if connected_callback == expected_callback:
+			has_expected = true
+		elif connected_callback.is_valid() and connected_callback.get_object() == self:
+			card.disconnect(signal_name, connected_callback)
+	if not has_expected:
+		card.connect(signal_name, expected_callback)
 
 func _handle_item_dragged(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
 	var drag_item_id := _get_drag_item_id(item_ui)

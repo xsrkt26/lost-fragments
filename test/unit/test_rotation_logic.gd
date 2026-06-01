@@ -97,6 +97,33 @@ func test_rotation_success_mid_grid_1x3():
 	assert_not_null(mock_ui.item_instance)
 	assert_eq(manager.backpack_manager.grid[Vector2i(2, 1)].root_pos, Vector2i(2, 1))
 
+
+func test_rapid_duplicate_rotation_requests_rotate_once():
+	var manager = autofree(BattleManager.new())
+	add_child(manager)
+	manager.backpack_manager.setup_grid(7, 7, 5, 5)
+	var mock_bp_ui = autofree(MockBackpackUI.new())
+	add_child(mock_bp_ui)
+	manager.backpack_ui = mock_bp_ui
+
+	var can = ItemData.new(); can.runtime_id = 701
+	can.direction = ItemData.Direction.UP
+	can.shape = [Vector2i(0,0), Vector2i(0,1)] as Array[Vector2i]
+	manager.backpack_manager.place_item(can, Vector2i(2, 2))
+
+	var data = manager.backpack_manager.grid[Vector2i(2, 2)].data
+	var mock_ui = autofree(MockItemUI.new())
+	mock_ui.item_data = data
+	mock_ui.item_instance = manager.backpack_manager.grid[Vector2i(2, 2)]
+
+	manager.request_rotate_item(mock_ui, Vector2(258.2142, 244.2855), Vector2i(0, 0))
+	await get_tree().process_frame
+	manager.request_rotate_item(mock_ui, Vector2(258.2142, 244.2855), Vector2i(0, 0))
+
+	var rotated_instance = manager.backpack_manager.grid[Vector2i(1, 2)]
+	assert_not_null(rotated_instance)
+	assert_eq(rotated_instance.data.direction, ItemData.Direction.RIGHT)
+
 func test_rotation_failure_right_edge():
 	var manager = autofree(BattleManager.new())
 	add_child(manager)

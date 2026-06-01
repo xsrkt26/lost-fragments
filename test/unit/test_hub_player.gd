@@ -1118,6 +1118,10 @@ func test_hub_battle_disabled_bookmarks_show_pin_overlays():
 	var pins_root := hub.get_node_or_null("BookCanvasLayer/BookDesignRoot/BattleDisabledBookmarkPins") as Control
 	assert_not_null(pins_root)
 	assert_false(pins_root.visible)
+	var board_mask := hub.get_node_or_null("HubArt/BoardViewport/BoardContent/BoardDimmingMask") as ColorRect
+	assert_not_null(board_mask)
+	assert_false(board_mask.visible)
+	assert_almost_eq(board_mask.color.a, 0.46, 0.001)
 	var expected_positions := {
 		"AlbumTabDisabledPin": Vector2(99.0, 221.0),
 		"BackpackTabDisabledPin": Vector2(78.0, 348.0),
@@ -1141,5 +1145,10 @@ func test_hub_battle_disabled_bookmarks_show_pin_overlays():
 
 	hub.call("_set_hub_chrome_visible_for_battle", false)
 	assert_true(pins_root.visible)
+	assert_true(board_mask.visible)
 	hub.call("_set_hub_chrome_visible_for_battle", true)
 	assert_false(pins_root.visible)
+	assert_false(board_mask.visible)
+	hub.call("_set_board_dimming_mask_visible", true)
+	hub.call("_cleanup_hub_battle_session", false)
+	assert_false(board_mask.visible)

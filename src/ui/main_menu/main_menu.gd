@@ -122,11 +122,20 @@ func _debug_jump_to_act(act: int) -> bool:
 	rm.is_run_complete = false
 	rm.debug_hub_page_request = ""
 	rm.debug_hub_advance_next_node_request = false
+	if target_act > 1:
+		_suppress_story_for_debug_jump(target_act)
 	if rm.has_method("save_current_state"):
 		rm.save_current_state()
 	_transition_to(GlobalScene.SceneType.HUB)
 	print("[MainMenu Debug] Jumped to act ", target_act, ".")
 	return true
+
+
+func _suppress_story_for_debug_jump(target_act: int) -> void:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager != null and story_manager.has_method("suppress_debug_jump_story"):
+		story_manager.call("suppress_debug_jump_story", target_act)
+
 
 func _debug_open_hub_page(page_id: String) -> bool:
 	var rm = _get_run_manager()

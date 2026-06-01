@@ -161,9 +161,21 @@ func _render_pending_items() -> void:
 func _connect_item_ui_signals(card: Control) -> void:
 	if not card.has_signal("dropped") or not card.has_signal("drag_moved") or not card.has_signal("rotation_requested"):
 		return
-	card.dropped.connect(func(mouse_pos, pivot): _handle_item_dropped(card, mouse_pos, pivot))
-	card.drag_moved.connect(func(item_ui, mouse_pos, pivot): _handle_item_dragged(item_ui, mouse_pos, pivot))
-	card.rotation_requested.connect(_handle_item_rotation_requested)
+	_replace_owned_item_signal_connection(card, "dropped", Callable(self, "_handle_item_dropped"))
+	_replace_owned_item_signal_connection(card, "drag_moved", Callable(self, "_handle_item_dragged"))
+	_replace_owned_item_signal_connection(card, "rotation_requested", Callable(self, "_handle_item_rotation_requested"))
+
+
+func _replace_owned_item_signal_connection(card: Control, signal_name: StringName, expected_callback: Callable) -> void:
+	var has_expected := false
+	for connection in card.get_signal_connection_list(signal_name):
+		var connected_callback: Callable = connection.get("callable", Callable())
+		if connected_callback == expected_callback:
+			has_expected = true
+		elif connected_callback.is_valid() and connected_callback.get_object() == self:
+			card.disconnect(signal_name, connected_callback)
+	if not has_expected:
+		card.connect(signal_name, expected_callback)
 
 
 func _reset_drag_highlight_tracking() -> void:

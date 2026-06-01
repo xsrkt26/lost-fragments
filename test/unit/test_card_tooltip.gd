@@ -2,6 +2,7 @@ extends GutTest
 
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
+const MainGameUIScene = preload("res://src/ui/main_game_ui.tscn")
 
 func after_each():
 	GlobalTooltip.hide()
@@ -123,6 +124,67 @@ func test_item_ui_processes_only_while_dragging():
 	ui._request_rotation()
 
 	assert_false(ui.is_processing())
+
+
+func test_item_ui_drop_signal_includes_source_card():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	var dropped_items: Array[Control] = []
+	ui.dropped.connect(func(item_ui: Control, _mouse_pos: Vector2, _pivot: Vector2i): dropped_items.append(item_ui))
+
+	ui._start_drag(Vector2(5.0, 5.0), Vector2(12.0, 12.0))
+	ui._stop_drag()
+
+	assert_eq(dropped_items.size(), 1)
+	assert_eq(dropped_items[0], ui)
+
+
+func test_item_ui_non_rotatable_card_gives_feedback_without_rotation_request():
+	var item = _make_item_data()
+	item.can_rotate = false
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	var rotation_requests: Array[bool] = []
+	ui.rotation_requested.connect(func(_item_ui: Control, _mouse_pos: Vector2, _pivot: Vector2i): rotation_requests.append(true))
+
+	ui._request_rotation(Vector2(5.0, 5.0), Vector2(12.0, 12.0))
+
+	assert_eq(rotation_requests.size(), 0)
+	assert_not_null(ui.get("_rotation_blocked_tween"))
+
+
+func test_item_ui_coalesces_rapid_rotation_requests():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+	ui.setup(item)
+
+	var rotation_requests: Array[bool] = []
+	ui.rotation_requested.connect(func(_item_ui: Control, _mouse_pos: Vector2, _pivot: Vector2i): rotation_requests.append(true))
+
+	ui._request_rotation(Vector2(5.0, 5.0), Vector2(12.0, 12.0))
+	ui._request_rotation(Vector2(5.0, 5.0), Vector2(12.0, 12.0))
+
+	assert_eq(rotation_requests.size(), 1)
+
+
+func test_main_game_item_signal_connections_are_idempotent():
+	var main_game = autofree(MainGameUIScene.instantiate())
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.rotation_requested.connect(Callable(main_game, "_clear_backpack_placement_highlight"))
+	main_game._connect_item_ui_signals(ui)
+	main_game._connect_item_ui_signals(ui)
+
+	assert_eq(ui.get_signal_connection_list("dropped").size(), 1)
+	assert_eq(ui.get_signal_connection_list("drag_moved").size(), 1)
+	assert_eq(ui.get_signal_connection_list("rotation_requested").size(), 1)
 
 
 func test_item_ui_shows_configured_icon_texture():
