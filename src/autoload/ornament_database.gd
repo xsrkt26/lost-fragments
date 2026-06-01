@@ -4,60 +4,10 @@ const ORNAMENT_DATA_PATH := "res://data/ornaments/ornaments.json"
 const OrnamentDataScript = preload("res://src/core/ornaments/ornament_data.gd")
 const GenericOrnamentEffect = preload("res://src/core/ornaments/effects/generic_ornament_effect.gd")
 
-const FUTHARK_SOURCE_DIR := "res://assets/sourceImage/卢恩符文/卢恩符文"
-const OGHAM_SOURCE_DIR := "res://assets/sourceImage/欧甘树文/欧甘树文"
-const FUTHARK_ORNAMENT_IMAGE_INDEX := {
-	"fehu": 271,
-	"uruz": 272,
-	"thurisaz": 273,
-	"ansuz": 274,
-	"gebo": 277,
-	"wunjo": 278,
-	"hagalaz": 279,
-	"naudiz": 280,
-	"isa": 281,
-	"jera": 282,
-	"eihwaz": 283,
-	"perthro": 284,
-	"algiz": 285,
-	"sowilo": 286,
-	"tiwaz": 287,
-	"berkano": 288,
-	"laguz": 291,
-	"ingwaz": 292,
-	"dagaz": 293,
-	"othala": 294
-}
-
-const OGHAM_ORNAMENT_IMAGE_INDEX := {
-	"beith": 245,
-	"luis": 246,
-	"fearn": 247,
-	"saille": 248,
-	"nion": 249,
-	"uath": 250,
-	"dair": 251,
-	"tinne": 252,
-	"coll": 253,
-	"ceirt": 254,
-	"muin": 255,
-	"gort": 256,
-	"ngeadal": 257,
-	"straif": 258,
-	"ruis": 259,
-	"ailm": 260,
-	"onn": 261,
-	"ur": 262,
-	"eadhadh": 263,
-	"iodhadh": 264,
-	"eabhadh": 265,
-	"or": 266,
-	"uilleann": 267,
-	"ifin": 268,
-	"eamhancholl": 269
-}
+const RUNE_ICON_DIR := "res://assets/ui/ornaments/runes"
 
 var ornaments: Dictionary = {}
+var _rune_icon_path_by_name: Dictionary = {}
 
 
 func _ready() -> void:
@@ -141,22 +91,41 @@ func _create_ornament_data(entry: Dictionary):
 
 func _load_ornament_icon(name: String) -> Texture2D:
 	var image_path := _get_ornament_image_path(name)
-	if image_path == "" or not ResourceLoader.exists(image_path):
+	if image_path == "":
+		return null
+	if not ResourceLoader.exists(image_path) and not FileAccess.file_exists(image_path):
 		return null
 	return load(image_path) as Texture2D
 
 
 func _get_ornament_image_path(name: String) -> String:
-	var key := _normalize_ornament_name(name)
-	if FUTHARK_ORNAMENT_IMAGE_INDEX.has(key):
-		return "%s/图层 %d.png" % [FUTHARK_SOURCE_DIR, FUTHARK_ORNAMENT_IMAGE_INDEX[key]]
-	if OGHAM_ORNAMENT_IMAGE_INDEX.has(key):
-		return "%s/图层 %d.png" % [OGHAM_SOURCE_DIR, OGHAM_ORNAMENT_IMAGE_INDEX[key]]
-	return ""
+	var lookup := _get_rune_icon_path_lookup()
+	return str(lookup.get(_normalize_ornament_name(name), ""))
+
+
+func _get_rune_icon_path_lookup() -> Dictionary:
+	if not _rune_icon_path_by_name.is_empty():
+		return _rune_icon_path_by_name
+	var dir := DirAccess.open(RUNE_ICON_DIR)
+	if dir == null:
+		push_warning("[OrnamentDatabase] Missing rune icon directory: " + RUNE_ICON_DIR)
+		return _rune_icon_path_by_name
+	dir.list_dir_begin()
+	var file_name := dir.get_next()
+	while file_name != "":
+		if not dir.current_is_dir() and file_name.get_extension().to_lower() == "png":
+			var key := _normalize_ornament_name(file_name.get_basename())
+			_rune_icon_path_by_name[key] = "%s/%s" % [RUNE_ICON_DIR, file_name]
+		file_name = dir.get_next()
+	dir.list_dir_end()
+	return _rune_icon_path_by_name
 
 
 func _normalize_ornament_name(name: String) -> String:
 	var key := str(name).strip_edges().to_lower()
+	key = key.replace(" ", "")
+	key = key.replace("_", "")
+	key = key.replace("-", "")
 	key = key.replace("á", "a")
 	key = key.replace("à", "a")
 	key = key.replace("ă", "a")

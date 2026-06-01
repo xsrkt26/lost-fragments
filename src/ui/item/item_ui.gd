@@ -98,11 +98,33 @@ func _sync_visuals():
 	if not item_data:
 		return
 	_init_cell_size_from_scene()
+	var is_battle_scene = false
+	var p = self
+	while p != null:
+		var pname = p.name.to_lower()
+		if "shop" in pname or "debug" in pname or "gallery" in pname:
+			break
+		if "maingameui" in pname or "battlelayer" in pname or "hubbattle" in pname:
+			is_battle_scene = true
+			break
+		p = p.get_parent()
+
 	if name_label:
 		name_label.text = item_data.item_name
+		name_label.visible = not is_battle_scene
 	if icon:
 		icon.texture = item_data.icon
 		icon.visible = item_data.icon != null
+		if is_battle_scene:
+			icon.offset_left = 2
+			icon.offset_top = 2
+			icon.offset_right = -2
+			icon.offset_bottom = -2
+		else:
+			icon.offset_left = 6
+			icon.offset_top = 20
+			icon.offset_right = -6
+			icon.offset_bottom = -6
 	if background:
 		background.visible = item_data.icon == null
 

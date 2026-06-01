@@ -89,7 +89,7 @@ func request_battle_start(run_manager: Node, hub_page_visible: bool, play_start_
 	state = State.BATTLE_STARTING
 	_battle_request_token += 1
 	var request_token := _battle_request_token
-	var accepted_result := battle_controller.enter_battle(
+	var accepted_result: bool = battle_controller.enter_battle(
 		run_manager,
 		hub_page_visible,
 		play_start_swing,

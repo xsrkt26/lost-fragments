@@ -10,12 +10,16 @@ const MERCHANT_FRAME_BOUNDS := {
 }
 const MERCHANT_ANIMATION_SPEED := 6.0
 const MERCHANT_INTERACTION_SOURCE_OFFSET_X := -313.0
-const MERCHANT_INTERACTION_REACH_DISTANCE := 18.0
-const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 58.0
+const MERCHANT_INTERACTION_REACH_DISTANCE := 42.0
+const MERCHANT_INTERACTION_ENTER_PADDING_SOURCE_X := 88.0
+const MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X := 150.0
 const MERCHANT_HOVER_SCALE := 1.04
-const MERCHANT_CLICK_HIT_PADDING := Vector4(16.0, 18.0, 16.0, 18.0)
+const MERCHANT_CLICK_HIT_PADDING := Vector4(44.0, 28.0, 44.0, 28.0)
 const MERCHANT_ALPHA_THRESHOLD := 0.03
 const DEFAULT_MERCHANT_ANIMATION_KEY := "stage"
+const PRESENCE_ANIMATION_NONE := 0
+const PRESENCE_ANIMATION_ARRIVAL := 1
+const PRESENCE_ANIMATION_DEPARTURE := -1
 const MERCHANT_ACT_ANIMATION_KEYS := {
 	1: "cat",
 	2: "stage",
@@ -45,6 +49,7 @@ var _base_sprite_scale := Vector2.ONE
 var _base_sprite_position := Vector2.ZERO
 var _is_hovered := false
 var _hover_tween: Tween = null
+var _presence_animation_direction := PRESENCE_ANIMATION_NONE
 
 func setup(
 	p_merchant_sprite: AnimatedSprite2D,
@@ -85,6 +90,7 @@ func update_state(run_manager: Node, hub_page_visible: bool) -> void:
 			is_player_at_merchant = false
 			shop_click_ready = false
 			_is_hovered = false
+			_presence_animation_direction = PRESENCE_ANIMATION_NONE
 	if merchant_button != null:
 		merchant_button.visible = should_show
 		merchant_button.disabled = false
@@ -175,6 +181,7 @@ func apply_animation(animation_key: String) -> void:
 		merchant_sprite.animation = &"idle"
 		merchant_sprite.stop()
 		merchant_sprite.frame = 0
+		_presence_animation_direction = PRESENCE_ANIMATION_NONE
 
 func layout(source_offset: Vector2) -> void:
 	if merchant_sprite != null and room_art != null:
@@ -235,7 +242,8 @@ func get_interaction_source_rect() -> Rect2:
 		frame_bounds.size * room_scale
 	)
 	source_rect.position.x += MERCHANT_INTERACTION_SOURCE_OFFSET_X
-	return source_rect
+	var trigger_padding := MERCHANT_INTERACTION_ENTER_PADDING_SOURCE_X * absf(room_scale.x)
+	return source_rect.grow_individual(trigger_padding, 0.0, trigger_padding, 0.0)
 
 func get_click_source_rect() -> Rect2:
 	var run_manager := _get_run_manager()
@@ -267,14 +275,23 @@ func get_reach_distance() -> float:
 	return maxf(8.0, MERCHANT_INTERACTION_REACH_DISTANCE * _art_scale)
 
 func play_arrival_animation() -> bool:
+	if _is_presence_animation_playing(PRESENCE_ANIMATION_ARRIVAL):
+		return true
 	if not _prepare_animation():
+		return false
+	if _is_arrival_visual_complete():
+		_presence_animation_direction = PRESENCE_ANIMATION_NONE
 		return false
 	merchant_sprite.stop()
 	merchant_sprite.frame = 0
+	_presence_animation_direction = PRESENCE_ANIMATION_ARRIVAL
+	_bind_presence_animation_finished()
 	merchant_sprite.play(&"idle", 1.0, false)
 	return true
 
 func play_departure_animation() -> bool:
+	if _is_presence_animation_playing(PRESENCE_ANIMATION_DEPARTURE):
+		return true
 	if not _prepare_animation():
 		return false
 	shop_click_ready = false
@@ -283,9 +300,13 @@ func play_departure_animation() -> bool:
 		return false
 	var start_frame := clampi(merchant_sprite.frame, 0, last_frame)
 	if start_frame <= 0:
-		start_frame = last_frame
+		merchant_sprite.stop()
+		_presence_animation_direction = PRESENCE_ANIMATION_NONE
+		return false
 	merchant_sprite.stop()
 	merchant_sprite.frame = start_frame
+	_presence_animation_direction = PRESENCE_ANIMATION_DEPARTURE
+	_bind_presence_animation_finished()
 	merchant_sprite.play(&"idle", -1.0, false)
 	return true
 
@@ -300,6 +321,29 @@ func _prepare_animation() -> bool:
 	else:
 		merchant_sprite.speed_scale = absf(merchant_sprite.speed_scale)
 	return true
+
+func _is_presence_animation_playing(direction: int) -> bool:
+	return (
+		merchant_sprite != null
+		and merchant_sprite.is_playing()
+		and _presence_animation_direction == direction
+	)
+
+func _is_arrival_visual_complete() -> bool:
+	if merchant_sprite == null:
+		return false
+	var last_frame := _get_last_frame()
+	return last_frame > 0 and merchant_sprite.frame >= last_frame and not merchant_sprite.is_playing()
+
+func _bind_presence_animation_finished() -> void:
+	if merchant_sprite == null:
+		return
+	var callback := Callable(self, "_on_presence_animation_finished")
+	if not merchant_sprite.animation_finished.is_connected(callback):
+		merchant_sprite.animation_finished.connect(callback)
+
+func _on_presence_animation_finished() -> void:
+	_presence_animation_direction = PRESENCE_ANIMATION_NONE
 
 func _on_merchant_mouse_entered() -> void:
 	if not shop_click_ready:

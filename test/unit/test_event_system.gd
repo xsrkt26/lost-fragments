@@ -111,7 +111,7 @@ func test_apply_event_choice_updates_long_term_state():
 	assert_eq(rm.current_deck, ["paper_ball"])
 	assert_eq(rm.current_ornaments, ["old_pocket_watch"])
 	assert_eq(grid_config.usable_width, 6)
-	assert_eq(grid_config.usable_height, 6)
+	assert_eq(grid_config.usable_height, 7)
 
 func test_apply_event_choice_rejects_invalid_choices_without_partial_state():
 	var rm = _make_run_manager(1, 2)

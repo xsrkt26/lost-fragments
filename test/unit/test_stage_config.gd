@@ -50,6 +50,18 @@ func test_stage_config_loads_all_six_acts_and_metadata():
 	assert_eq(StageConfig.get_boss_battle_modifiers(5).blocked_cells.size(), 2)
 	assert_eq(StageConfig.get_boss_battle_modifiers(6).draw_cost_delta, 1)
 	assert_eq(StageConfig.get_boss_battle_modifiers(6).pollution_added_bonus, 1)
+	assert_eq(StageConfig.get_backpack_config(1).usable_width, 5)
+	assert_eq(StageConfig.get_backpack_config(1).usable_height, 5)
+	assert_eq(StageConfig.get_backpack_config(2).usable_width, 5)
+	assert_eq(StageConfig.get_backpack_config(2).usable_height, 6)
+	assert_eq(StageConfig.get_backpack_config(3).usable_width, 6)
+	assert_eq(StageConfig.get_backpack_config(3).usable_height, 6)
+	assert_eq(StageConfig.get_backpack_config(4).usable_width, 6)
+	assert_eq(StageConfig.get_backpack_config(4).usable_height, 7)
+	assert_eq(StageConfig.get_backpack_config(5).usable_width, 7)
+	assert_eq(StageConfig.get_backpack_config(5).usable_height, 7)
+	assert_eq(StageConfig.get_backpack_config(6).usable_width, 7)
+	assert_eq(StageConfig.get_backpack_config(6).usable_height, 7)
 	var expected_dreamcatchers := {
 		1: {"path": "res://assets/ui/battle/dreamcatchers/act_1_xiaomi.png", "size": Vector2(456.0, 605.0)},
 		2: {"path": "res://assets/ui/battle/dreamcatchers/act_2_uncle.png", "size": Vector2(244.0, 425.0)},
@@ -162,10 +174,13 @@ func test_run_manager_exposes_stage_battle_config_and_completion():
 	manager.current_route_index = 4
 
 	var config = manager.get_current_battle_config()
+	var grid_config = manager.get_backpack_grid_config()
 
 	assert_eq(config.stage.id, "act_5")
 	assert_true(config.is_boss)
 	assert_eq(config.target_score, 135)
+	assert_eq(grid_config.usable_width, 7)
+	assert_eq(grid_config.usable_height, 7)
 	assert_eq(config.battle_modifiers.draw_cost_delta, 1)
 	assert_eq(config.battle_modifiers.blocked_cells.size(), 3)
 	assert_true(_cells_have(config.battle_modifiers.blocked_cells, Vector2i(1, 1)))

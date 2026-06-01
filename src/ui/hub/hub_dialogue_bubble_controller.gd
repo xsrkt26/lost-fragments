@@ -1,6 +1,7 @@
 extends Control
 
 signal dialogue_finished(sequence_id: String)
+signal background_pressed(position: Vector2)
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 
@@ -156,6 +157,40 @@ func _process(delta: float) -> void:
 	_content_label.visible_characters += 1
 	if _content_label.visible_characters >= _content_label.get_total_character_count():
 		_is_typing = false
+
+
+func _gui_input(event: InputEvent) -> void:
+	if not visible or _finishing:
+		return
+	if not (event is InputEventMouseButton):
+		return
+	var mouse_event := event as InputEventMouseButton
+	if not mouse_event.pressed or mouse_event.button_index != MOUSE_BUTTON_LEFT:
+		return
+	if _bubble_button != null and _bubble_button.get_global_rect().has_point(mouse_event.position):
+		return
+	background_pressed.emit(mouse_event.position)
+
+
+func get_sequence_id() -> String:
+	return _sequence_id
+
+
+func is_on_last_frame() -> bool:
+	return _current_frame_idx >= 0 and _current_frame_idx >= _frames.size() - 1
+
+
+func is_typing() -> bool:
+	return _is_typing
+
+
+func finish_dialogue_now() -> void:
+	if _finishing:
+		return
+	if _content_label != null:
+		_content_label.visible_characters = _content_label.get_total_character_count()
+	_is_typing = false
+	_finish_dialogue()
 
 
 func _position_bubble() -> void:

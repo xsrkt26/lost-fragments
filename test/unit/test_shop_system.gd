@@ -254,7 +254,7 @@ func test_visual_shop_offer_content_renders_item_tool_and_ornament_visuals():
 	var item_button := Button.new()
 	owner.add_child(item_button)
 	item_button.size = Vector2(160, 190)
-	controller._build_offer_content(item_button, {"type": "item", "id": "paper_ball", "title": "纸团", "price": 10}, item_db, tool_db, rm)
+	controller._build_offer_content(item_button, {"type": "item", "id": "paper_ball", "title": "纸团", "price": 10}, item_db, tool_db, ornament_db, rm)
 	controller._layout_offer_content(item_button)
 	var item_icon := item_button.get_node_or_null("OfferContent/VisualArea/OfferItemIcon") as TextureRect
 	assert_not_null(item_icon)
@@ -264,7 +264,7 @@ func test_visual_shop_offer_content_renders_item_tool_and_ornament_visuals():
 	var tool_button := Button.new()
 	owner.add_child(tool_button)
 	tool_button.size = Vector2(160, 190)
-	controller._build_offer_content(tool_button, {"type": "tool", "id": "small_patch", "title": "小补丁", "price": 10}, item_db, tool_db, rm)
+	controller._build_offer_content(tool_button, {"type": "tool", "id": "small_patch", "title": "小补丁", "price": 10}, item_db, tool_db, ornament_db, rm)
 	controller._layout_offer_content(tool_button)
 	var tool_icon := tool_button.get_node_or_null("OfferContent/VisualArea/OfferToolIcon") as TextureRect
 	assert_not_null(tool_icon)
@@ -274,9 +274,13 @@ func test_visual_shop_offer_content_renders_item_tool_and_ornament_visuals():
 	var ornament_button := Button.new()
 	owner.add_child(ornament_button)
 	ornament_button.size = Vector2(160, 190)
-	controller._build_offer_content(ornament_button, {"type": "ornament", "id": "old_pocket_watch", "title": "Fehu", "rarity": "普通", "price": 10}, item_db, tool_db, rm)
+	controller._build_offer_content(ornament_button, {"type": "ornament", "id": "old_pocket_watch", "title": "Fehu", "rarity": "普通", "price": 10}, item_db, tool_db, ornament_db, rm)
 	controller._layout_offer_content(ornament_button)
-	assert_not_null(ornament_button.get_node_or_null("OfferContent/VisualArea/OfferOrnamentTag"))
+	var ornament_icon := ornament_button.get_node_or_null("OfferContent/VisualArea/OfferOrnamentIcon") as TextureRect
+	assert_not_null(ornament_icon)
+	assert_true(ornament_icon.texture is Texture2D)
+	assert_almost_eq(ornament_icon.size.x, item_icon.size.x * HubShopVisualControllerScript.OFFER_ORNAMENT_ICON_SCALE, 0.001)
+	assert_true(ornament_icon.size.x < item_icon.size.x)
 
 
 func test_hub_shop_offers_use_card_tooltips_for_all_types():

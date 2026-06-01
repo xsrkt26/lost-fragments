@@ -2,7 +2,11 @@ extends Control
 
 const DesignScaler = preload("res://src/ui/layout/ui_design_scaler.gd")
 const PendingItemPresenter = preload("res://src/ui/backpack/pending_item_presenter.gd")
+const BattleTutorialBubbleController = preload("res://src/ui/battle/battle_tutorial_bubble_controller.gd")
 const ToolPanelPresenter = preload("res://src/ui/battle/tool_panel_presenter.gd")
+const OrnamentSlotBar = preload("res://src/ui/ornament/ornament_slot_bar.gd")
+
+signal battle_intro_finished
 
 const BATTLE_FRAME_SIZE := Vector2(1920.0, 1080.0)
 const DREAMCATCHER_SWING_PIVOT_DISTANCE_RATIO: float = 0.82
@@ -13,6 +17,13 @@ const STATS_FONT_SIZE_MIN := 26
 const STATS_DARK_COLOR := Color(0.04, 0.035, 0.03)
 const STATS_LOW_SANITY_COLOR := Color(1, 0, 0)
 const STATS_SCORE_REACHED_COLOR := Color(0.2, 0.8, 0.2)
+const REWARD_POPUP_SIZE := Vector2(760.0, 430.0)
+const REWARD_POPUP_GRID_SIZE := Vector2(760.0, 520.0)
+const REWARD_OPTION_SIZE := Vector2(230.0, 142.0)
+const REWARD_OPTION_ICON_SIZE := Vector2(58.0, 48.0)
+const REWARD_OPTION_FRAME_TEXTURE: Texture2D = preload("res://assets/ui/battle/reward_option_frame.png")
+const REWARD_OPTION_TEXT_COLOR := Color(0.16, 0.09, 0.04, 1.0)
+const REWARD_OPTION_DETAIL_COLOR := Color(0.33, 0.20, 0.10, 0.94)
 ## 主游戏 UI 控制器：负责将布局中的各个部分与逻辑层连接
 
 @onready var content_layer = $ContentLayer
@@ -93,6 +104,7 @@ var _is_embedded_mode := false
 var _last_drag_root_grid_pos := Vector2i(-999999, -999999)
 var _last_drag_item_id := 0
 var _last_drag_over_trash := false
+var _battle_tutorial_controller: Control = null
 
 @onready var stats_panel = $ContentLayer/StatsPanel
 @onready var ornaments_panel = $ContentLayer/OrnamentsPanel
@@ -139,6 +151,7 @@ func _ready():
 		call_deferred("_start_intro_sequence")
 
 func _exit_tree() -> void:
+	_clear_battle_tutorial_controller()
 	if _intro_playing:
 		_set_intro_playing(false)
 		_clear_intro_bag_reveal()
@@ -156,6 +169,7 @@ func _prepare_intro_animation() -> void:
 func _start_intro_sequence() -> void:
 	if not play_battle_intro:
 		_set_intro_playing(false)
+		battle_intro_finished.emit()
 		return
 	_set_intro_playing(true)
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
@@ -185,6 +199,7 @@ func _start_intro_sequence() -> void:
 	_set_intro_playing(false)
 	if not _is_battle_ended:
 		GlobalInput.set_context(GlobalInput.Context.BATTLE)
+	battle_intro_finished.emit()
 	print("[MainGameUI] Battle intro finished")
 
 func _set_intro_playing(playing: bool) -> void:
@@ -556,6 +571,55 @@ func _reset_battle_session_state() -> void:
 	_selected_tool_id = ""
 	_dragged_tool_id = ""
 	_tool_drag_start = Vector2.ZERO
+	_clear_battle_tutorial_controller()
+
+
+func play_battle_story_dialogue(sequence_id: String) -> bool:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("get_sequence_frames"):
+		return false
+	var raw_frames: Variant = story_manager.call("get_sequence_frames", sequence_id)
+	if not (raw_frames is Array):
+		return false
+	var frames := Array(raw_frames)
+	if frames.is_empty():
+		return false
+	var controller := _ensure_battle_tutorial_controller()
+	if controller == null:
+		return false
+	controller.call("start_dialogue", sequence_id, frames, self)
+	return true
+
+
+func _ensure_battle_tutorial_controller() -> Control:
+	if _battle_tutorial_controller != null and is_instance_valid(_battle_tutorial_controller):
+		return _battle_tutorial_controller
+	if content_layer == null:
+		return null
+	var controller := BattleTutorialBubbleController.new() as Control
+	controller.name = "BattleTutorialBubbleController"
+	controller.z_index = 3000
+	content_layer.add_child(controller)
+	var callback := Callable(self, "_on_battle_tutorial_dialogue_finished")
+	if controller.has_signal("dialogue_finished") and not controller.is_connected("dialogue_finished", callback):
+		controller.connect("dialogue_finished", callback)
+	_battle_tutorial_controller = controller
+	return _battle_tutorial_controller
+
+
+func _clear_battle_tutorial_controller() -> void:
+	if _battle_tutorial_controller != null and is_instance_valid(_battle_tutorial_controller):
+		_battle_tutorial_controller.queue_free()
+	_battle_tutorial_controller = null
+
+
+func _on_battle_tutorial_dialogue_finished(sequence_id: String) -> void:
+	var story_manager := get_node_or_null("/root/StoryManager")
+	if story_manager == null or not story_manager.has_method("finish_current_sequence"):
+		return
+	var active_sequence: Variant = story_manager.get("current_playing_sequence")
+	if sequence_id == "" or str(active_sequence) == sequence_id:
+		story_manager.call("finish_current_sequence")
 
 func _clear_backpack_item_visuals() -> void:
 	if backpack_ui == null:
@@ -888,31 +952,188 @@ func _has_empty_dream_trophy_bonus(rm) -> bool:
 
 func _add_reward_choices(popup: Control, reward_options: Array[Dictionary], rm) -> void:
 	var panel = popup.get_node("Panel")
-	panel.custom_minimum_size = Vector2(640, 360)
-	panel.offset_left = -320.0
-	panel.offset_top = -180.0
-	panel.offset_right = 320.0
-	panel.offset_bottom = 180.0
+	var panel_size := REWARD_POPUP_GRID_SIZE if reward_options.size() > 3 else REWARD_POPUP_SIZE
+	panel.custom_minimum_size = panel_size
+	panel.offset_left = -panel_size.x * 0.5
+	panel.offset_top = -panel_size.y * 0.5
+	panel.offset_right = panel_size.x * 0.5
+	panel.offset_bottom = panel_size.y * 0.5
 
 	var container = popup.get_node("Panel/VBoxContainer")
-	var reward_row = HBoxContainer.new()
-	reward_row.alignment = BoxContainer.ALIGNMENT_CENTER
-	reward_row.add_theme_constant_override("separation", 12)
-	container.add_child(reward_row)
-	container.move_child(reward_row, max(0, container.get_child_count() - 2))
+	container.add_theme_constant_override("separation", 16)
+	var reward_group := _create_reward_option_group(reward_options.size())
+	container.add_child(reward_group)
+	container.move_child(reward_group, max(0, container.get_child_count() - 2))
 
 	for reward in reward_options:
-		var reward_button = Button.new()
-		reward_button.custom_minimum_size = Vector2(180, 92)
-		reward_button.text = _format_reward_button_text(reward)
-		reward_button.tooltip_text = str(reward.get("description", ""))
-		reward_button.pressed.connect(func():
-			if rm and rm.has_method("apply_reward"):
-				var item_db = _get_item_database()
-				rm.apply_reward(reward, item_db)
-			_complete_victory_route(rm)
-		)
-		reward_row.add_child(reward_button)
+		reward_group.add_child(_create_reward_option_button(reward, rm))
+
+func _create_reward_option_group(option_count: int) -> Container:
+	if option_count > 3:
+		var reward_grid := GridContainer.new()
+		reward_grid.columns = 2
+		reward_grid.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		reward_grid.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+		reward_grid.add_theme_constant_override("h_separation", 18)
+		reward_grid.add_theme_constant_override("v_separation", 10)
+		return reward_grid
+	var reward_row := HBoxContainer.new()
+	reward_row.alignment = BoxContainer.ALIGNMENT_CENTER
+	reward_row.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	reward_row.add_theme_constant_override("separation", 18)
+	return reward_row
+
+func _create_reward_option_button(reward: Dictionary, rm) -> Button:
+	var reward_button := Button.new()
+	reward_button.custom_minimum_size = REWARD_OPTION_SIZE
+	reward_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	reward_button.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	reward_button.focus_mode = Control.FOCUS_NONE
+	reward_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+	reward_button.text = ""
+	reward_button.tooltip_text = str(reward.get("description", ""))
+	_apply_reward_option_button_style(reward_button)
+	_add_reward_option_background(reward_button)
+	_add_reward_option_content(reward_button, reward)
+	reward_button.mouse_entered.connect(func(): reward_button.modulate = Color(1.04, 1.02, 0.95, 1.0))
+	reward_button.mouse_exited.connect(func(): reward_button.modulate = Color.WHITE)
+	reward_button.pressed.connect(func():
+		reward_button.disabled = true
+		var applied := true
+		if rm and rm.has_method("apply_reward"):
+			var item_db = _get_item_database()
+			applied = bool(rm.apply_reward(reward, item_db))
+		if not applied:
+			reward_button.disabled = false
+			return
+		_complete_victory_route(rm)
+	)
+	return reward_button
+
+func _apply_reward_option_button_style(button: Button) -> void:
+	var empty_style := StyleBoxEmpty.new()
+	for style_name in ["normal", "hover", "pressed", "disabled", "focus"]:
+		button.add_theme_stylebox_override(style_name, empty_style)
+
+func _add_reward_option_background(button: Button) -> void:
+	var background := TextureRect.new()
+	background.name = "RewardOptionFrame"
+	background.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	background.texture = REWARD_OPTION_FRAME_TEXTURE
+	background.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	background.stretch_mode = TextureRect.STRETCH_SCALE
+	button.add_child(background)
+	background.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+func _add_reward_option_content(button: Button, reward: Dictionary) -> void:
+	var margin := MarginContainer.new()
+	margin.name = "RewardOptionContent"
+	margin.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	margin.add_theme_constant_override("margin_left", 20)
+	margin.add_theme_constant_override("margin_top", 16)
+	margin.add_theme_constant_override("margin_right", 20)
+	margin.add_theme_constant_override("margin_bottom", 14)
+	button.add_child(margin)
+	margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+
+	var content := VBoxContainer.new()
+	content.alignment = BoxContainer.ALIGNMENT_CENTER
+	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	content.size_flags_vertical = Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation", 4)
+	margin.add_child(content)
+
+	var icon_texture := _get_reward_icon_texture(reward)
+	if icon_texture != null:
+		var icon_rect := TextureRect.new()
+		icon_rect.name = "RewardIcon"
+		icon_rect.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		icon_rect.custom_minimum_size = REWARD_OPTION_ICON_SIZE
+		icon_rect.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+		icon_rect.texture = icon_texture
+		icon_rect.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		icon_rect.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		content.add_child(icon_rect)
+
+	var title_label := _make_reward_option_label(str(reward.get("title", "奖励")), 18 if icon_texture != null else 21, REWARD_OPTION_TEXT_COLOR)
+	title_label.custom_minimum_size = Vector2(0.0, 28.0)
+	content.add_child(title_label)
+
+	var detail_text := _format_reward_detail_text(reward)
+	if detail_text != "":
+		var detail_label := _make_reward_option_label(detail_text, 14, REWARD_OPTION_DETAIL_COLOR)
+		detail_label.custom_minimum_size = Vector2(0.0, 18.0)
+		content.add_child(detail_label)
+
+func _make_reward_option_label(text_value: String, font_size: int, color: Color) -> Label:
+	var label := Label.new()
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	label.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	label.text = text_value
+	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	label.text_overrun_behavior = TextServer.OVERRUN_TRIM_ELLIPSIS
+	label.add_theme_color_override("font_color", color)
+	label.add_theme_color_override("font_shadow_color", Color(1.0, 0.96, 0.86, 0.75))
+	label.add_theme_constant_override("shadow_offset_x", 1)
+	label.add_theme_constant_override("shadow_offset_y", 1)
+	label.add_theme_font_size_override("font_size", font_size)
+	return label
+
+func _get_reward_icon_texture(reward: Dictionary) -> Texture2D:
+	var reward_type := str(reward.get("type", ""))
+	match reward_type:
+		"item":
+			return _get_item_reward_icon(str(reward.get("id", "")))
+		"tool":
+			var tool_icon := _get_tool_reward_icon(str(reward.get("id", "")))
+			return tool_icon if tool_icon != null else _get_item_reward_icon(str(reward.get("id", "")))
+		"ornament":
+			return _get_ornament_reward_icon(str(reward.get("id", "")))
+	return null
+
+func _get_item_reward_icon(item_id: String) -> Texture2D:
+	var item_db = _get_item_database()
+	if item_db == null or not item_db.has_method("get_item_by_id"):
+		return null
+	var item = item_db.get_item_by_id(item_id)
+	if item == null:
+		return null
+	return item.get("icon") as Texture2D
+
+func _get_tool_reward_icon(tool_id: String) -> Texture2D:
+	var tool_db = _get_tool_database()
+	if tool_db == null or not tool_db.has_method("get_tool_by_id"):
+		return null
+	var tool = tool_db.get_tool_by_id(tool_id)
+	if tool == null:
+		return null
+	return tool.get("icon") as Texture2D
+
+func _get_ornament_reward_icon(ornament_id: String) -> Texture2D:
+	var ornament_db = _get_ornament_database()
+	if ornament_db == null or not ornament_db.has_method("get_ornament_by_id"):
+		return null
+	var ornament = ornament_db.get_ornament_by_id(ornament_id)
+	if ornament == null:
+		return null
+	return ornament.get("icon") as Texture2D
+
+func _format_reward_detail_text(reward: Dictionary) -> String:
+	var reward_type := str(reward.get("type", ""))
+	match reward_type:
+		"item":
+			return "物品/%s" % _format_item_destination(reward)
+		"ornament":
+			var rarity := str(reward.get("rarity", ""))
+			return "%s饰品" % rarity if rarity != "" else "饰品"
+		"tool":
+			var rarity := str(reward.get("rarity", "道具"))
+			return rarity if rarity != "" else "道具"
+		"shards":
+			return str(reward.get("description", ""))
+	return str(reward.get("description", ""))
 
 func _get_result_bgm_key(is_victory: bool) -> String:
 	if not is_victory:
@@ -1042,42 +1263,18 @@ func _render_pending_items():
 func _render_ornaments():
 	if ornaments_area == null:
 		return
-	for child in ornaments_area.get_children():
-		child.queue_free()
 	var rm = _get_run_manager()
 	var ornament_db = _get_ornament_database()
 	if rm == null or ornament_db == null:
+		OrnamentSlotBar.clear(ornaments_area)
 		return
-	for ornament_id in rm.current_ornaments:
-		var ornament = ornament_db.get_ornament_by_id(ornament_id)
-		if ornament == null:
-			continue
-		var slot = Button.new()
-		slot.custom_minimum_size = Vector2(54, 54)
-		if ornament.icon != null:
-			slot.text = ""
-			var icon := TextureRect.new()
-			icon.name = "OrnamentIcon"
-			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			icon.texture = ornament.icon
-			icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-			icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-			icon.anchor_left = 0.0
-			icon.anchor_top = 0.0
-			icon.anchor_right = 1.0
-			icon.anchor_bottom = 1.0
-			icon.offset_left = 4.0
-			icon.offset_top = 4.0
-			icon.offset_right = -4.0
-			icon.offset_bottom = -4.0
-			slot.add_child(icon)
-		else:
-			slot.text = ornament.ornament_name.substr(0, min(2, ornament.ornament_name.length()))
-		slot.tooltip_text = ornament.get_tooltip_text()
-		slot.focus_mode = Control.FOCUS_NONE
-		slot.flat = true
-		slot.set_meta("ornament_id", ornament.id)
-		ornaments_area.add_child(slot)
+	OrnamentSlotBar.render_to_container(
+		ornaments_area,
+		Array(rm.current_ornaments),
+		ornament_db,
+		1.0,
+		OrnamentSlotBar.PLAYABLE_BAG_SLOT_CENTERS
+	)
 
 func _ensure_tool_panel() -> void:
 	tool_panel = get_node_or_null("ContentLayer/ToolPanel")

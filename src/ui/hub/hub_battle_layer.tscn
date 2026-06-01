@@ -267,14 +267,11 @@ offset_bottom = 292.0
 mouse_filter = 2
 expand_mode = 1
 
-[node name="Slots" type="HBoxContainer" parent="ContentLayer/OrnamentsPanel"]
+[node name="Slots" type="Control" parent="ContentLayer/OrnamentsPanel"]
 layout_mode = 0
-offset_left = 62.0
-offset_top = 143.0
-offset_right = 700.0
-offset_bottom = 247.0
-theme_override_constants/separation = 18
-alignment = 1
+offset_right = 767.0
+offset_bottom = 314.0
+mouse_filter = 2
 
 [node name="MenuButton" type="Button" parent="ContentLayer"]
 layout_mode = 0
@@ -287,32 +284,30 @@ focus_mode = 0
 mouse_default_cursor_shape = 2
 flat = true
 
-[node name="PendingItemPanel" type="PanelContainer" parent="ContentLayer"]
+[node name="PendingItemPanel" type="Control" parent="ContentLayer"]
 visible = false
 layout_mode = 1
 offset_left = 328.0
 offset_top = 506.0
 offset_right = 848.0
 offset_bottom = 618.0
-mouse_filter = 1
+mouse_filter = 2
 
-[node name="MarginContainer" type="MarginContainer" parent="ContentLayer/PendingItemPanel"]
-layout_mode = 2
-theme_override_constants/margin_left = 10
-theme_override_constants/margin_top = 8
-theme_override_constants/margin_right = 10
-theme_override_constants/margin_bottom = 8
-
-[node name="VBoxContainer" type="VBoxContainer" parent="ContentLayer/PendingItemPanel/MarginContainer"]
-layout_mode = 2
-theme_override_constants/separation = 4
-
-[node name="TitleLabel" type="Label" parent="ContentLayer/PendingItemPanel/MarginContainer/VBoxContainer"]
-layout_mode = 2
-text = "Pending items"
+[node name="PendingItemLabel" type="Label" parent="ContentLayer/PendingItemPanel"]
+layout_mode = 0
+offset_right = 520.0
+offset_bottom = 26.0
+mouse_filter = 2
+theme_override_colors/font_color = Color(0.1, 0.07, 0.04, 1)
+theme_override_font_sizes/font_size = 20
+text = "暂存物品"
+horizontal_alignment = 1
 
 [node name="PendingItemArea" type="Control" parent="ContentLayer/PendingItemPanel"]
-layout_mode = 2
+layout_mode = 0
+offset_top = 26.0
+offset_right = 520.0
+offset_bottom = 112.0
 mouse_filter = 2
 
 [node name="ToolPanel" type="PanelContainer" parent="ContentLayer"]

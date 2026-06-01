@@ -152,6 +152,10 @@ func _get_tag_affinity(event_tags: Array[String], run_manager: Node) -> float:
 	var owned_ornaments = Array(run_manager.get("current_ornaments"))
 	var backpack_width = int(run_manager.get("backpack_usable_width"))
 	var backpack_height = int(run_manager.get("backpack_usable_height"))
+	if run_manager.has_method("get_backpack_grid_config"):
+		var backpack_config: Dictionary = run_manager.get_backpack_grid_config()
+		backpack_width = int(backpack_config.get("usable_width", backpack_width))
+		backpack_height = int(backpack_config.get("usable_height", backpack_height))
 	for tag in event_tags:
 		match tag:
 			"碎片":

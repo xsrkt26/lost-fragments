@@ -3,6 +3,7 @@ extends RefCounted
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
 const PendingItemPresenter = preload("res://src/ui/backpack/pending_item_presenter.gd")
+const OrnamentSlotBar = preload("res://src/ui/ornament/ornament_slot_bar.gd")
 const PlayableBagTexture = preload("res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png")
 
 const DESIGN_SIZE := BookBackgroundConfig.DESIGN_SIZE
@@ -19,9 +20,12 @@ const SHOP_BUYBACK_HOVER_SCALE := 1.08
 const SHOP_BUYBACK_ITEM_HOVER_SCALE := 1.1
 const PLAYABLE_BAG_SOURCE_SIZE := Vector2(806.6115, 1018.74243)
 const PLAYABLE_BAG_GRID_SOURCE_RECT := Rect2(Vector2(119.28073, 384.0497), Vector2(576.8495, 532.6164))
+const PLAYABLE_BAG_ORNAMENT_SOURCE_RECT := Rect2(Vector2.ZERO, Vector2(767.0, 314.0))
 const SHOP_SKULL_FADE_START_PROGRESS := 0.82
 const SHOP_SKULL_FADE_END_PROGRESS := 0.96
 const OFFER_ITEM_MARGIN := Vector2(4.0, 4.0)
+const OFFER_ORNAMENT_ICON_SCALE := 0.74
+const SHOP_BACKPACK_ORNAMENT_SLOT_SCALE := 0.72
 const OFFER_TEXT_COLOR := Color(0.12, 0.08, 0.04, 1.0)
 const OFFER_PRICE_COLOR := Color(0.86, 0.02, 0.02, 1.0)
 const OFFER_SOLD_OVERLAY_COLOR := Color(0.08, 0.06, 0.04, 0.52)
@@ -52,6 +56,7 @@ var _backpack_root: Control = null
 var _backpack_panel: Control = null
 var _backpack_art: TextureRect = null
 var _backpack_ui: Control = null
+var _ornament_slots: Control = null
 var _shards_label: Label = null
 var _pending_item_panel: Control = null
 var _pending_item_area: Control = null
@@ -88,7 +93,7 @@ func play_intro_overlay(owner_node: Node, run_manager: Node, item_db: Node, orna
 	_setup_interactive_backpack(owner_node, run_manager, item_db)
 	await owner_node.get_tree().process_frame
 	_layout_all(_last_viewport_size, true)
-	_render_backpack(run_manager, item_db)
+	_render_backpack(run_manager, item_db, ornament_db)
 	_animate_backpack_in()
 
 	var frame_paths: Array = AssetPaths.shop_intro_frame_paths()
@@ -155,6 +160,7 @@ func close() -> void:
 	_backpack_panel = null
 	_backpack_art = null
 	_backpack_ui = null
+	_ornament_slots = null
 	_shards_label = null
 	_pending_item_panel = null
 	_pending_item_area = null
@@ -243,6 +249,11 @@ func _create_backpack_overlay(owner_node: Node) -> void:
 	_backpack_art.stretch_mode = TextureRect.STRETCH_SCALE
 	_backpack_panel.add_child(_backpack_art)
 
+	_ornament_slots = Control.new()
+	_ornament_slots.name = "OrnamentSlots"
+	_ornament_slots.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	_backpack_panel.add_child(_ornament_slots)
+
 	_shards_label = Label.new()
 	_shards_label.name = "ShardLabel"
 	_shards_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
@@ -275,12 +286,28 @@ func _create_backpack_overlay(owner_node: Node) -> void:
 	_backpack_panel.add_child(_backpack_ui)
 
 
-func _render_backpack(run_manager: Node, item_db: Node) -> void:
+func _render_backpack(run_manager: Node, item_db: Node, ornament_db: Node = null) -> void:
 	if _owner_node == null or _backpack_ui == null or _battle_manager == null or run_manager == null or item_db == null:
 		return
 	_render_existing_backpack_items()
 	_render_pending_items(run_manager, item_db)
+	_render_ornaments(run_manager, ornament_db if ornament_db != null else _get_ornament_database())
 	_update_shards_label(run_manager)
+
+
+func _render_ornaments(run_manager: Node, ornament_db: Node) -> void:
+	if _ornament_slots == null:
+		return
+	if run_manager == null or ornament_db == null:
+		OrnamentSlotBar.clear(_ornament_slots)
+		return
+	OrnamentSlotBar.render_to_container(
+		_ornament_slots,
+		Array(run_manager.get("current_ornaments")),
+		ornament_db,
+		SHOP_BACKPACK_ORNAMENT_SLOT_SCALE,
+		OrnamentSlotBar.PLAYABLE_BAG_SLOT_CENTERS
+	)
 
 
 func _setup_interactive_backpack(owner_node: Node, run_manager: Node, item_db: Node) -> void:
@@ -569,7 +596,8 @@ func _refresh_offer_buttons(run_manager: Node) -> void:
 		var offer: Dictionary = Dictionary(button.get_meta("offer"))
 		var is_purchased := bool(button.get_meta("purchased", false)) or _is_offer_purchased(run_manager, offer)
 		var price := _get_offer_price(offer, run_manager)
-		button.disabled = is_purchased or current_shards < price
+		var is_full_ornament_offer: bool = str(offer.get("type", "")) == ShopGenerator.TYPE_ORNAMENT and run_manager != null and run_manager.has_method("has_ornament_capacity") and not run_manager.has_ornament_capacity()
+		button.disabled = is_purchased or current_shards < price or is_full_ornament_offer
 		button.text = ""
 		_update_offer_content(button, offer, run_manager, is_purchased)
 
@@ -840,17 +868,19 @@ func _layout_offer_visual_area(visual_area: Control) -> void:
 		tool_icon.size = icon_rect.size
 	var ornament_icon := visual_area.get_node_or_null("OfferOrnamentIcon") as TextureRect
 	if ornament_icon != null:
-		ornament_icon.position = icon_rect.position
-		ornament_icon.size = icon_rect.size
+		var ornament_icon_rect := _scaled_rect_from_center(icon_rect, OFFER_ORNAMENT_ICON_SCALE)
+		ornament_icon.position = ornament_icon_rect.position
+		ornament_icon.size = ornament_icon_rect.size
 	var ornament_tag := visual_area.get_node_or_null("OfferOrnamentTag") as Control
 	if ornament_tag != null:
 		var size := Vector2(minf(inset_rect.size.x, inset_rect.size.y * 0.78), inset_rect.size.y)
-		ornament_tag.position = inset_rect.position + (inset_rect.size - size) * 0.5
-		ornament_tag.size = size
+		var tag_rect := _scaled_rect_from_center(Rect2(inset_rect.position + (inset_rect.size - size) * 0.5, size), OFFER_ORNAMENT_ICON_SCALE)
+		ornament_tag.position = tag_rect.position
+		ornament_tag.size = tag_rect.size
 		var glyph := ornament_tag.get_node_or_null("OrnamentGlyph") as Label
 		if glyph != null:
 			glyph.position = Vector2.ZERO
-			glyph.size = size
+			glyph.size = tag_rect.size
 	var text_visual := visual_area.get_node_or_null("OfferTextVisual") as Label
 	if text_visual != null:
 		text_visual.position = inset_rect.position
@@ -861,6 +891,11 @@ func _centered_offer_icon_rect(container_rect: Rect2) -> Rect2:
 	var edge := minf(container_rect.size.x, container_rect.size.y)
 	var icon_size := Vector2(edge, edge)
 	return Rect2(container_rect.position + (container_rect.size - icon_size) * 0.5, icon_size)
+
+
+func _scaled_rect_from_center(rect: Rect2, scale_amount: float) -> Rect2:
+	var scaled_size := rect.size * maxf(scale_amount, 0.1)
+	return Rect2(rect.position + (rect.size - scaled_size) * 0.5, scaled_size)
 
 
 func _trim_texture_to_alpha(texture: Texture2D) -> Texture2D:
@@ -1001,6 +1036,11 @@ func _layout_backpack_panel(place_at_start: bool) -> void:
 		_backpack_ui.position = grid_rect.position
 		_backpack_ui.size = grid_rect.size
 		_backpack_ui.custom_minimum_size = grid_rect.size
+	if _ornament_slots != null:
+		var ornament_rect := _get_backpack_ornament_rect(target_rect.size)
+		_ornament_slots.position = ornament_rect.position
+		_ornament_slots.size = ornament_rect.size
+		_ornament_slots.custom_minimum_size = ornament_rect.size
 
 
 func _layout_offer_buttons() -> void:
@@ -1215,6 +1255,17 @@ func _get_backpack_grid_rect(panel_size: Vector2) -> Rect2:
 	)
 
 
+func _get_backpack_ornament_rect(panel_size: Vector2) -> Rect2:
+	var scale := Vector2(
+		panel_size.x / PLAYABLE_BAG_SOURCE_SIZE.x,
+		panel_size.y / PLAYABLE_BAG_SOURCE_SIZE.y
+	)
+	return Rect2(
+		PLAYABLE_BAG_ORNAMENT_SOURCE_RECT.position * scale,
+		PLAYABLE_BAG_ORNAMENT_SOURCE_RECT.size * scale
+	)
+
+
 func _get_cover_scale() -> float:
 	if _last_viewport_size.x <= 0.0 or _last_viewport_size.y <= 0.0:
 		return 1.0
@@ -1332,3 +1383,9 @@ func _get_tool_database() -> Node:
 	if _owner_node == null:
 		return null
 	return _owner_node.get_node_or_null("/root/ToolDatabase")
+
+
+func _get_ornament_database() -> Node:
+	if _owner_node == null:
+		return null
+	return _owner_node.get_node_or_null("/root/OrnamentDatabase")

@@ -88,8 +88,8 @@ static func _make_item_reward(item) -> Dictionary:
 		"type": TYPE_ITEM,
 		"id": item.id,
 		"title": item.item_name,
-		"description": "加入卡组",
-		"item_destination": "deck",
+		"description": "进入暂存区，可拖入背包网格或转入卡组。",
+		"item_destination": "staging",
 		"rarity": "",
 		"amount": 1,
 	}
@@ -160,6 +160,8 @@ static func _pick_ornament(run_manager: Node, ornament_db: Node, act: int, prefe
 static func _pick_additional_ornaments(run_manager: Node, ornament_db: Node, act: int, prefer_high_value: bool, count: int, existing: Array, build_tags: Dictionary, weight_modifiers: Dictionary, rng: RandomNumberGenerator = null) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	if count <= 0 or ornament_db == null or not ornament_db.has_method("get_available_ornaments"):
+		return result
+	if run_manager != null and run_manager.has_method("has_ornament_capacity") and not run_manager.has_ornament_capacity():
 		return result
 	var owned: Array[String] = []
 	if run_manager != null:

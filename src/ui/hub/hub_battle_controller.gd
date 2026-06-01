@@ -25,6 +25,7 @@ func update_state(run_manager, hub_page_visible: bool) -> void:
 		return
 	var can_start_game := can_enter_battle(run_manager) and not transition_pending and hub_page_visible
 	dreamcatcher_button.disabled = not can_start_game
+	dreamcatcher_button.mouse_filter = Control.MOUSE_FILTER_STOP if can_start_game else Control.MOUSE_FILTER_IGNORE
 	dreamcatcher_button.tooltip_text = "Start dream" if can_start_game else ""
 	dreamcatcher_button.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if can_start_game else Control.CURSOR_ARROW
 
@@ -52,11 +53,7 @@ func enter_battle(run_manager, hub_page_visible: bool, play_start_swing: Callabl
 	_active_battle_run_manager = run_manager
 	_active_battle_hub_page_visible = hub_page_visible
 	if play_start_swing.is_valid():
-		var play_state := play_start_swing.call()
-		if play_state is GDScriptFunctionState and play_state.is_valid():
-			play_state.connect("completed", Callable(self, "_on_battle_start_swing_completed"), Object.CONNECT_ONE_SHOT)
-			return true
-		_finalize_battle_entry_request()
+		_run_battle_start_sequence(play_start_swing)
 		return true
 	_finalize_battle_entry_request()
 	return true
@@ -71,15 +68,20 @@ func _on_battle_start_swing_completed(_result = null) -> void:
 	_finalize_battle_entry_request()
 
 
+func _run_battle_start_sequence(play_start_swing: Callable) -> void:
+	await play_start_swing.call()
+	_on_battle_start_swing_completed()
+
+
 func _finalize_battle_entry_request() -> void:
 	if not transition_pending:
 		_clear_battle_start_context()
 		return
 	if owner_node != null and (not is_instance_valid(owner_node) or not owner_node.is_inside_tree()):
 		return_to_ready_state(_active_battle_run_manager, _active_battle_hub_page_visible)
-	_call_battle_start_complete_callback()
-	_clear_battle_start_context()
-	return
+		_call_battle_start_complete_callback()
+		_clear_battle_start_context()
+		return
 	if not can_enter_battle(_active_battle_run_manager):
 		return_to_ready_state(_active_battle_run_manager, _active_battle_hub_page_visible)
 		request_idle_restart.emit()

@@ -174,7 +174,8 @@ func test_tool_panel_renders_loaded_icon_and_count():
 	var panel = autofree(Control.new())
 	var slots = autofree(HBoxContainer.new())
 
-	ToolPanelPresenter.render(
+	var presenter := ToolPanelPresenter.new()
+	presenter.render(
 		panel,
 		slots,
 		[{"id": "small_patch", "title": "small_patch", "count": 2}],

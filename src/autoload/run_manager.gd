@@ -15,7 +15,8 @@ signal pending_items_changed(pending_items: Array[Dictionary])
 signal tools_changed(current_tools: Dictionary)
 
 # --- 配置项 ---
-const INITIAL_SHARDS = 10
+const INITIAL_SHARDS = 10000
+const MAX_ORNAMENTS := 10
 const INITIAL_DECK: Array[String] = [
 	"baseball", "baseball", "baseball",
 	"alarm_clock", "alarm_clock", "alarm_clock",
@@ -72,6 +73,7 @@ var is_run_active: bool = false
 var is_run_complete: bool = false
 var debug_hub_page_request: String = ""
 var debug_hub_advance_next_node_request: bool = false
+var auto_enter_next_node_request: bool = false
 
 var saver: SaveManager = null
 var _route_progress: RunRouteProgress = RunRouteProgress.new()
@@ -113,6 +115,7 @@ func start_new_run():
 	event_node_state.clear()
 	seen_event_ids = []
 	story_played_flags.clear()
+	auto_enter_next_node_request = false
 	_initialize_random_source()
 	current_depth = 1
 	reset_route_progress()
@@ -167,13 +170,19 @@ func add_to_deck(item_id: String, cost: int):
 	return false
 
 func add_ornament(ornament_id: String, save_after: bool = true) -> bool:
-	if ornament_id == "" or current_ornaments.has(ornament_id):
+	if not can_add_ornament(ornament_id):
 		return false
 	current_ornaments.append(ornament_id)
 	ornaments_changed.emit(current_ornaments)
 	if save_after:
 		save_current_state()
 	return true
+
+func can_add_ornament(ornament_id: String) -> bool:
+	return ornament_id != "" and not current_ornaments.has(ornament_id) and has_ornament_capacity()
+
+func has_ornament_capacity() -> bool:
+	return current_ornaments.size() < MAX_ORNAMENTS
 
 func has_ornament(ornament_id: String) -> bool:
 	return current_ornaments.has(ornament_id)
@@ -265,7 +274,7 @@ func buy_shop_offer(offer: Dictionary, item_db: Node = null) -> bool:
 				return false
 		ShopGenerator.TYPE_ORNAMENT:
 			var ornament_id = str(offer.get("id", ""))
-			if ornament_id == "" or current_ornaments.has(ornament_id):
+			if not can_add_ornament(ornament_id):
 				return false
 			current_shards -= price
 			current_ornaments.append(ornament_id)
@@ -446,8 +455,14 @@ func _try_add_item_to_backpack_state(item_id: String, item_db: Node, stack_count
 		item_data.set_meta("stack_count", stack_count)
 
 	var backpack = BackpackManager.new()
-	backpack.setup_grid(BACKPACK_GRID_WIDTH, BACKPACK_GRID_HEIGHT, backpack_usable_width, backpack_usable_height)
-	backpack.set_blocked_cells(_to_vector2i_cells(_get_all_blocked_backpack_cells()))
+	var grid_config := get_backpack_grid_config()
+	backpack.setup_grid(
+		BACKPACK_GRID_WIDTH,
+		BACKPACK_GRID_HEIGHT,
+		int(grid_config.get("usable_width", INITIAL_BACKPACK_USABLE_WIDTH)),
+		int(grid_config.get("usable_height", INITIAL_BACKPACK_USABLE_HEIGHT))
+	)
+	backpack.set_blocked_cells(_to_vector2i_cells(Array(grid_config.get("blocked_cells", []))))
 	restore_backpack_state(backpack, item_db)
 	var stack_pos = backpack.find_stackable_pos(item_data) if backpack.has_method("find_stackable_pos") else Vector2i(-1, -1)
 	if stack_pos != Vector2i(-1, -1) and backpack.stack_item_at(item_data, stack_pos):
@@ -584,15 +599,25 @@ func apply_event_choice(choice: Dictionary) -> bool:
 	return true
 
 func get_backpack_grid_config() -> Dictionary:
+	var effective_size := _get_effective_backpack_usable_size()
 	var stage_modifiers = get_current_battle_modifiers()
 	var blocked_cells = _merge_cell_arrays(_get_all_blocked_backpack_cells(), Array(stage_modifiers.get("blocked_cells", [])))
 	return {
 		"grid_width": BACKPACK_GRID_WIDTH,
 		"grid_height": BACKPACK_GRID_HEIGHT,
-		"usable_width": clampi(backpack_usable_width, 1, BACKPACK_GRID_WIDTH),
-		"usable_height": clampi(backpack_usable_height, 1, BACKPACK_GRID_HEIGHT),
+		"usable_width": effective_size.x,
+		"usable_height": effective_size.y,
 		"blocked_cells": blocked_cells,
 	}
+
+func _get_effective_backpack_usable_size() -> Vector2i:
+	var stage_backpack := StageConfig.get_backpack_config(current_act)
+	var stage_width := int(stage_backpack.get("usable_width", INITIAL_BACKPACK_USABLE_WIDTH))
+	var stage_height := int(stage_backpack.get("usable_height", INITIAL_BACKPACK_USABLE_HEIGHT))
+	return Vector2i(
+		clampi(maxi(backpack_usable_width, stage_width), 1, BACKPACK_GRID_WIDTH),
+		clampi(maxi(backpack_usable_height, stage_height), 1, BACKPACK_GRID_HEIGHT)
+	)
 
 func _apply_event_effect(effect: Dictionary) -> bool:
 	var effect_type = str(effect.get("type", ""))
@@ -612,9 +637,10 @@ func _apply_event_effect(effect: Dictionary) -> bool:
 		"backpack_space":
 			var width_delta = int(effect.get("width_delta", 0))
 			var height_delta = int(effect.get("height_delta", 0))
-			var next_width = clampi(backpack_usable_width + width_delta, INITIAL_BACKPACK_USABLE_WIDTH, BACKPACK_GRID_WIDTH)
-			var next_height = clampi(backpack_usable_height + height_delta, INITIAL_BACKPACK_USABLE_HEIGHT, BACKPACK_GRID_HEIGHT)
-			if next_width == backpack_usable_width and next_height == backpack_usable_height:
+			var current_size := _get_effective_backpack_usable_size()
+			var next_width = clampi(current_size.x + width_delta, INITIAL_BACKPACK_USABLE_WIDTH, BACKPACK_GRID_WIDTH)
+			var next_height = clampi(current_size.y + height_delta, INITIAL_BACKPACK_USABLE_HEIGHT, BACKPACK_GRID_HEIGHT)
+			if next_width == current_size.x and next_height == current_size.y:
 				return false
 			backpack_usable_width = next_width
 			backpack_usable_height = next_height
@@ -730,8 +756,9 @@ func _entry_shape(entry: Dictionary) -> Array[Vector2i]:
 	return _deserialize_shape(Array(entry.get("shape", [])), fallback)
 
 func _is_cell_in_usable_rect(cell: Vector2i) -> bool:
-	var width = clampi(backpack_usable_width, 1, BACKPACK_GRID_WIDTH)
-	var height = clampi(backpack_usable_height, 1, BACKPACK_GRID_HEIGHT)
+	var effective_size := _get_effective_backpack_usable_size()
+	var width = effective_size.x
+	var height = effective_size.y
 	var start_x = floori((BACKPACK_GRID_WIDTH - width) / 2.0)
 	var start_y = floori((BACKPACK_GRID_HEIGHT - height) / 2.0)
 	return cell.x >= start_x and cell.x < start_x + width and cell.y >= start_y and cell.y < start_y + height
@@ -904,8 +931,14 @@ func _get_initial_backpack_items(item_db: Node = null) -> Array[Dictionary]:
 		item_db = _get_item_database()
 	var result: Array[Dictionary] = []
 	var backpack := BackpackManager.new()
-	backpack.setup_grid(BACKPACK_GRID_WIDTH, BACKPACK_GRID_HEIGHT, backpack_usable_width, backpack_usable_height)
-	backpack.set_blocked_cells(_to_vector2i_cells(_get_all_blocked_backpack_cells()))
+	var grid_config := get_backpack_grid_config()
+	backpack.setup_grid(
+		BACKPACK_GRID_WIDTH,
+		BACKPACK_GRID_HEIGHT,
+		int(grid_config.get("usable_width", INITIAL_BACKPACK_USABLE_WIDTH)),
+		int(grid_config.get("usable_height", INITIAL_BACKPACK_USABLE_HEIGHT))
+	)
+	backpack.set_blocked_cells(_to_vector2i_cells(Array(grid_config.get("blocked_cells", []))))
 	for raw_entry in INITIAL_BACKPACK_ITEMS:
 		var entry := Dictionary(raw_entry).duplicate(true)
 		var runtime_data := _make_runtime_backpack_item_data(entry, item_db)

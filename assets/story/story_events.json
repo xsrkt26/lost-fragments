@@ -71,50 +71,164 @@
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "用z键来前往下一个地点吧"
+      "text": "点击捕梦网，我们就能进入下一段梦境。"
     }
   ],
   "进入局内1": [
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "让咪来教你！"
+      "text": "这里是捕梦网。点击它会消耗梦值，捞出一件记忆物品。",
+      "note": "教程/规则",
+      "target": "dreamcatcher",
+      "xiaomi_side": "right",
+      "bubble_side": "right",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 835, "y": 205},
+      "bubble_position": {"x": 545, "y": 105},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "左上角是捕梦网，点击它可以让你回忆起一些物品。",
-      "note": "教程/规则"
+      "text": "右侧是背包。物品占几格，就要找几格连续空位放下。",
+      "target": "backpack",
+      "xiaomi_side": "left",
+      "bubble_side": "left",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 735, "y": 215},
+      "bubble_position": {"x": 900, "y": 150},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "右侧是背包，背包中的物品会随着捕梦进行产生一些效果，增加你的分数。"
+      "text": "放不下时，对着物品点右键可以旋转。形状和箭头都会一起转。",
+      "target": "backpack",
+      "xiaomi_side": "left",
+      "bubble_side": "left",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 735, "y": 215},
+      "bubble_position": {"x": 900, "y": 150},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "下侧为梦值和分数。"
+      "text": "物品上的箭头是撞击方向。被触发后，会沿箭头撞向下一件物品。",
+      "target": "backpack",
+      "xiaomi_side": "left",
+      "bubble_side": "left",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 735, "y": 215},
+      "bubble_position": {"x": 900, "y": 150},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "当梦值归0时，就会从捕梦中醒来。"
+      "text": "新的捕梦、物品效果或道具，都可能触发撞击。箭头接得越顺，连锁越长。",
+      "target": "backpack",
+      "xiaomi_side": "left",
+      "bubble_side": "left",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 735, "y": 215},
+      "bubble_position": {"x": 900, "y": 150},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "有些时候下侧会有目标分数，如果没有达到目标分数，游戏就会失败。"
+      "text": "得分主要来自物品效果：被撞加分、连锁加分、捕梦次数加分都会结算出来。",
+      "target": "score",
+      "xiaomi_side": "right",
+      "bubble_side": "right",
+      "bubble_scale": 0.7,
+      "xiaomi_position": {"x": 875, "y": 420},
+      "bubble_position": {"x": 560, "y": 350},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "看来你已经会啦！"
+      "text": "每幕有两场普通战斗和一场Boss战。普通战斗目标分显示“无”，先用来搭背包。",
+      "target": "stats",
+      "xiaomi_side": "right",
+      "bubble_side": "right",
+      "bubble_scale": 0.7,
+      "xiaomi_position": {"x": 875, "y": 420},
+      "bubble_position": {"x": 560, "y": 350},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     },
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "咪的时间不多了，该走了，要加油呀小人类！"
+      "text": "Boss战会出现目标分。梦值归零时没达标就会失败，达标后结束才算通过。",
+      "target": "stats",
+      "xiaomi_side": "right",
+      "bubble_side": "right",
+      "bubble_scale": 0.7,
+      "xiaomi_position": {"x": 875, "y": 420},
+      "bubble_position": {"x": 560, "y": 350},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "顶部是饰品栏。获得的饰品会自动生效，比如省梦值，或在捕梦、撞击后加分。",
+      "target": "ornaments",
+      "xiaomi_side": "left",
+      "bubble_side": "above",
+      "bubble_scale": 0.64,
+      "xiaomi_position": {"x": 705, "y": 150},
+      "bubble_position": {"x": 830, "y": 38},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "不想要的物品可以拖到垃圾桶丢弃，给关键连锁腾空间。",
+      "target": "trash",
+      "xiaomi_side": "left",
+      "bubble_side": "left",
+      "bubble_scale": 0.7,
+      "xiaomi_position": {"x": 875, "y": 420},
+      "bubble_position": {"x": 585, "y": 350},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "先点捕梦网捞第一件记忆，再试着旋转、摆放，让箭头连起来。",
+      "target": "dreamcatcher",
+      "xiaomi_side": "right",
+      "bubble_side": "right",
+      "bubble_scale": 0.68,
+      "xiaomi_position": {"x": 835, "y": 205},
+      "bubble_position": {"x": 545, "y": 105},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "咪的时间不多了，该走了，要加油呀小人类！",
+      "target": "center",
+      "bubble_scale": 0.7,
+      "xiaomi_position": {"x": 725, "y": 420},
+      "bubble_position": {"x": 895, "y": 355},
+      "xiaomi_offset": {"x": 0, "y": 0},
+      "bubble_offset": {"x": 0, "y": 0}
     }
   ],
   "固定事件1·小咪": [

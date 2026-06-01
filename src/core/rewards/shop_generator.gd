@@ -73,6 +73,8 @@ static func _get_ornament_offers(run_manager: Node, ornament_db: Node, act: int,
 	var result: Array[Dictionary] = []
 	if ornament_db == null or not ornament_db.has_method("get_available_ornaments"):
 		return result
+	if run_manager != null and run_manager.has_method("has_ornament_capacity") and not run_manager.has_ornament_capacity():
+		return result
 	var owned: Array[String] = []
 	if run_manager != null:
 		for ornament_id in Array(run_manager.get("current_ornaments")):

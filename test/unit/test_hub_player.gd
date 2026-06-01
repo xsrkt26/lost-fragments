@@ -61,6 +61,14 @@ class FakeShopVisualController:
 		close_calls += 1
 
 
+func _identity_rect(rect: Rect2) -> Rect2:
+	return rect
+
+
+func _zero_player_half_width() -> float:
+	return 0.0
+
+
 func before_each():
 	player = add_child_autofree(load("res://src/ui/hub/hub_player.gd").new())
 	var rm = get_node_or_null("/root/RunManager")
@@ -68,6 +76,7 @@ func before_each():
 	if rm:
 		rm.debug_hub_page_request = ""
 		rm.debug_hub_advance_next_node_request = false
+		rm.auto_enter_next_node_request = false
 
 
 func after_each():
@@ -77,6 +86,7 @@ func after_each():
 	if rm:
 		rm.debug_hub_page_request = ""
 		rm.debug_hub_advance_next_node_request = false
+		rm.auto_enter_next_node_request = false
 	rm_snapshot = {}
 
 
@@ -307,6 +317,120 @@ func test_hub_merchant_default_interaction_rect_uses_first_frame_alpha():
 	assert_eq(controller.get_interaction_frame_bounds(run), expected_rect)
 
 
+func test_hub_merchant_trigger_area_is_padded_and_uses_exit_hysteresis():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+
+	var controller = HubMerchantController.new()
+	var sprite := AnimatedSprite2D.new()
+	var button := Button.new()
+	var player_body := CharacterBody2D.new()
+	var room := Sprite2D.new()
+	add_child_autofree(sprite)
+	add_child_autofree(button)
+	add_child_autofree(player_body)
+	add_child_autofree(room)
+	sprite.visible = true
+	room.position = Vector2.ZERO
+	room.scale = Vector2.ONE
+	controller.setup(
+		sprite,
+		button,
+		player_body,
+		room,
+		Vector2.ZERO,
+		Callable(self, "_identity_rect"),
+		Callable(self, "_zero_player_half_width")
+	)
+
+	var raw_rect := controller.get_interaction_frame_bounds(rm)
+	raw_rect.position.x += HubMerchantController.MERCHANT_INTERACTION_SOURCE_OFFSET_X
+	var trigger_rect := controller.get_interaction_source_rect()
+	assert_almost_eq(trigger_rect.position.x, raw_rect.position.x - HubMerchantController.MERCHANT_INTERACTION_ENTER_PADDING_SOURCE_X, 0.001)
+	assert_almost_eq(trigger_rect.size.x, raw_rect.size.x + HubMerchantController.MERCHANT_INTERACTION_ENTER_PADDING_SOURCE_X * 2.0, 0.001)
+
+	player_body.global_position.x = trigger_rect.end.x + HubMerchantController.MERCHANT_INTERACTION_EXIT_PADDING_SOURCE_X * 0.5
+	controller.is_player_at_merchant = false
+	assert_false(controller.is_player_in_position(rm))
+
+	controller.is_player_at_merchant = true
+	assert_true(controller.is_player_in_position(rm))
+
+
+func test_hub_merchant_presence_animation_does_not_restart_same_direction():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+
+	var controller = HubMerchantController.new()
+	var sprite := AnimatedSprite2D.new()
+	var button := Button.new()
+	var player_body := CharacterBody2D.new()
+	var room := Sprite2D.new()
+	add_child_autofree(sprite)
+	add_child_autofree(button)
+	add_child_autofree(player_body)
+	add_child_autofree(room)
+	sprite.visible = true
+	controller.setup(
+		sprite,
+		button,
+		player_body,
+		room,
+		Vector2.ZERO,
+		Callable(self, "_identity_rect"),
+		Callable(self, "_zero_player_half_width")
+	)
+
+	assert_true(controller.play_arrival_animation())
+	sprite.frame = 3
+	assert_true(controller.play_arrival_animation())
+	assert_eq(sprite.frame, 3)
+	assert_gt(sprite.speed_scale, 0.0)
+
+	assert_true(controller.play_departure_animation())
+	sprite.frame = 2
+	assert_true(controller.play_departure_animation())
+	assert_eq(sprite.frame, 2)
+	assert_lt(sprite.get_playing_speed(), 0.0)
+
+
+func test_hub_merchant_departure_does_not_jump_from_unadvanced_arrival():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+
+	var controller = HubMerchantController.new()
+	var sprite := AnimatedSprite2D.new()
+	var button := Button.new()
+	var player_body := CharacterBody2D.new()
+	var room := Sprite2D.new()
+	add_child_autofree(sprite)
+	add_child_autofree(button)
+	add_child_autofree(player_body)
+	add_child_autofree(room)
+	sprite.visible = true
+	controller.setup(
+		sprite,
+		button,
+		player_body,
+		room,
+		Vector2.ZERO,
+		Callable(self, "_identity_rect"),
+		Callable(self, "_zero_player_half_width")
+	)
+
+	assert_true(controller.play_arrival_animation())
+	sprite.frame = 0
+	assert_false(controller.play_departure_animation())
+	assert_eq(sprite.frame, 0)
+	assert_false(sprite.is_playing())
+
+
 func test_hub_dreamcatcher_uses_stage_reference_rects():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)
@@ -338,6 +462,62 @@ func test_hub_dreamcatcher_uses_stage_reference_rects():
 		var expected_rect := _rect_from_dict(visual.get("hub_dreamcatcher_rect", {}))
 		var actual_rect: Rect2 = hub.call("_get_hub_dreamcatcher_visual_parent_rect")
 		_assert_rect_almost_eq(actual_rect, expected_rect)
+
+
+func test_hub_battle_focus_frames_each_stage_dreamcatcher_in_upper_left():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	if rm == null:
+		return
+	rm.is_run_active = true
+	rm.current_route_index = 0
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+	hub.call("_stop_hub_dreamcatcher_idle_swing")
+
+	var viewport_size: Vector2 = hub.get_viewport_rect().size
+	var first_target_rect := Rect2()
+	for act in [1, 2, 3, 4, 5, 6]:
+		rm.current_act = act
+		hub.call("_restore_hub_focus_layer_base_transforms")
+		hub.call("_apply_stage_hub_background")
+		hub.call("_apply_hub_dreamcatcher_stage_visual")
+		hub.call("_configure_hub_dreamcatcher_swing_pivot")
+		hub.call("_capture_hub_dreamcatcher_pose")
+		hub.call("_layout_scene")
+
+		var focus: Vector2 = hub.call("_get_hub_dreamcatcher_focus_global_position")
+		var target: Vector2 = hub.call("_get_hub_to_battle_board_target_global_position")
+		var target_rect: Rect2 = hub.call("_get_hub_to_battle_dreamcatcher_target_global_rect")
+		if act == 1:
+			first_target_rect = target_rect
+		elif act == 4:
+			assert_almost_eq(target_rect.position.x, first_target_rect.position.x, 0.1)
+			assert_gt(target_rect.position.y, first_target_rect.position.y)
+			assert_almost_eq(target_rect.size.x, first_target_rect.size.x, 0.1)
+			assert_almost_eq(target_rect.size.y, first_target_rect.size.y, 0.1)
+		else:
+			assert_almost_eq(target_rect.position.x, first_target_rect.position.x, 0.1)
+			assert_almost_eq(target_rect.position.y, first_target_rect.position.y, 0.1)
+			assert_almost_eq(target_rect.size.x, first_target_rect.size.x, 0.1)
+			assert_almost_eq(target_rect.size.y, first_target_rect.size.y, 0.1)
+		hub.call("_begin_hub_to_battle_focus", focus / viewport_size, target / viewport_size, 0.0)
+		var framed_rect: Rect2 = hub.call("_get_hub_dreamcatcher_global_rect")
+
+		assert_almost_eq(framed_rect.position.x, target_rect.position.x, 3.0)
+		assert_almost_eq(framed_rect.position.y, target_rect.position.y, 3.0)
+		assert_true(framed_rect.size.x <= target_rect.size.x + 3.0)
+		assert_true(framed_rect.size.y <= target_rect.size.y + 3.0)
+		assert_true(
+			absf(framed_rect.size.x - target_rect.size.x) <= 3.0 \
+			or absf(framed_rect.size.y - target_rect.size.y) <= 3.0
+		)
+		assert_true(framed_rect.size.x >= 200.0 and framed_rect.size.x <= 360.0)
+		assert_true(framed_rect.size.y >= 190.0 and framed_rect.size.y <= 520.0)
+
+	hub.call("_restore_hub_focus_layer_base_transforms")
 
 
 func test_mouse_move_target_is_set_and_cleared():
@@ -964,6 +1144,33 @@ func test_hub_f10_shortcut_enters_hub_shop_visual_for_next_shop_node():
 	assert_true(GlobalInput.is_context(GlobalInput.Context.UI))
 
 
+func test_hub_f10_shortcut_stops_at_free_hub_after_skipping_boss():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 4
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	var event := InputEventKey.new()
+	event.keycode = KEY_F10
+	event.physical_keycode = KEY_F10
+	event.pressed = true
+	hub._input(event)
+	await get_tree().process_frame
+
+	assert_eq(rm.current_act, 2)
+	assert_eq(rm.current_route_index, 0)
+	assert_eq(hub.get("_hub_to_battle_focus_tween"), null)
+	assert_false(bool(hub.get("_is_hub_battle_session_active")))
+	assert_false(bool(hub.get("_is_shop_visual_state_active")))
+
+
 func test_hub_applies_pending_page_shortcut_request_from_menu():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)
@@ -1081,6 +1288,101 @@ func test_hub_z_shortcut_enters_second_battle_without_skipping_nodes():
 	assert_true(hub._advance_current_route_by_shortcut())
 	assert_eq(rm.current_route_index, 2)
 	assert_false(rm.completed_route_nodes.has(2))
+
+
+func test_auto_enter_request_does_not_skip_free_hub_at_new_act_start():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 2
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	rm.auto_enter_next_node_request = true
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_false(rm.auto_enter_next_node_request)
+	assert_eq(hub.get("_hub_to_battle_focus_tween"), null)
+	assert_false(bool(hub.get("_is_hub_battle_session_active")))
+	assert_eq(rm.current_route_index, 0)
+
+
+func test_story_return_temporarily_blocks_route_entry_leak():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 2
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	hub.set("_story_book_sequence_active", true)
+	hub.call("set_book_hub_visible", true)
+	assert_gt(int(hub.get("_route_entry_blocked_until_msec")), Time.get_ticks_msec())
+	assert_false(hub.call("_advance_current_route_by_shortcut"))
+	hub.call("_enter_current_route_node")
+
+	assert_eq(hub.get("_hub_to_battle_focus_tween"), null)
+	assert_false(bool(hub.get("_is_hub_battle_session_active")))
+	assert_eq(rm.current_route_index, 0)
+
+
+func test_story_return_buffers_dreamcatcher_click_during_route_block():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	hub.set("_story_book_sequence_active", true)
+	hub.call("set_book_hub_visible", true)
+	var dreamcatcher_rect: Rect2 = hub.call("_get_hub_dreamcatcher_global_rect")
+	assert_gt(dreamcatcher_rect.size.x, 1.0)
+	assert_gt(dreamcatcher_rect.size.y, 1.0)
+
+	assert_true(hub.call("_activate_hub_dreamcatcher_at_position", dreamcatcher_rect.get_center()))
+	assert_true(bool(hub.get("_pending_dreamcatcher_activation_after_route_block")))
+	assert_eq(hub.get("_hub_to_battle_focus_tween"), null)
+	assert_false(bool(hub.get("_is_hub_battle_session_active")))
+
+
+func test_stage_intro_final_dreamcatcher_click_is_buffered_from_story_bubble():
+	var rm = get_node_or_null("/root/RunManager")
+	assert_not_null(rm)
+	rm.is_run_active = true
+	rm.current_act = 1
+	rm.current_route_index = 0
+	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
+
+	var hub = HubScene.instantiate()
+	add_child_autofree(hub)
+	await get_tree().create_timer(0.2).timeout
+
+	assert_true(hub.play_story_bubble_dialogue("进入场景1"))
+	var controller := hub.get_node_or_null("CanvasLayer/HubDialogueBubbleController") as Control
+	assert_not_null(controller)
+	var frames: Array = Array(controller.get("_frames"))
+	controller.set("_current_frame_idx", frames.size() - 1)
+	controller.set("_is_typing", false)
+
+	var dreamcatcher_rect: Rect2 = hub.call("_get_hub_dreamcatcher_global_rect")
+	hub.call("_on_story_bubble_background_pressed", dreamcatcher_rect.get_center())
+
+	assert_true(bool(hub.get("_pending_dreamcatcher_activation_after_story_bubble")))
 
 
 func test_hub_back_tab_is_visible_low_layer_and_returns_to_main_menu():

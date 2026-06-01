@@ -250,6 +250,7 @@ func _on_back_pressed():
 	var rm = _get_run_manager()
 	if rm and rm.get_current_route_node_type() == RouteConfig.NODE_SHOP:
 		rm.advance_route_node()
+		rm.auto_enter_next_node_request = true
 		var next_scene = GlobalScene.SceneType.MAIN_MENU if rm.is_run_complete else GlobalScene.SceneType.HUB
 		GlobalScene.transition_to(next_scene, false)
 	else:

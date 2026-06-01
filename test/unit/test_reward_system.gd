@@ -40,6 +40,13 @@ func test_normal_battle_rewards_include_item_ornament_and_shards():
 	assert_true(types.has("item"))
 	assert_true(types.has("ornament"))
 	assert_true(types.has("shards"))
+	var item_reward := _find_reward(options, "item")
+	assert_false(item_reward.is_empty())
+	assert_eq(item_reward.get("item_destination", ""), RunManagerScript.ITEM_DEST_STAGING)
+	assert_true(rm.apply_reward(item_reward, item_db))
+	assert_true(rm.current_deck.is_empty())
+	assert_eq(rm.pending_item_rewards.size(), 1)
+	assert_eq(str(rm.pending_item_rewards[0].get("id", "")), str(item_reward.get("id", "")))
 
 func test_boss_rewards_prioritize_rare_ornaments_when_available():
 	var rm = _make_run_manager(4, 6)
@@ -101,6 +108,12 @@ func test_apply_reward_updates_long_term_state_and_blocks_duplicate_ornaments():
 	assert_eq(rm.pending_item_rewards.size(), 1)
 	assert_eq(str(rm.pending_item_rewards[0].get("id", "")), "small_patch")
 	assert_eq(int(rm.pending_item_rewards[0].get("stack_count", 0)), 2)
+
+func _find_reward(options: Array[Dictionary], reward_type: String) -> Dictionary:
+	for reward in options:
+		if str(reward.get("type", "")) == reward_type:
+			return reward
+	return {}
 
 func _reward_keys(options: Array[Dictionary]) -> Array[String]:
 	var keys: Array[String] = []

@@ -4,6 +4,8 @@ extends RefCounted
 const STAGE_DATA_PATH := "res://data/stages/stages.json"
 const DEFAULT_STAGE_ID := "act_1"
 const DEFAULT_MAX_ACT := 6
+const MAX_BACKPACK_USABLE_WIDTH := 7
+const MAX_BACKPACK_USABLE_HEIGHT := 7
 const FALLBACK_BOSS_SCORE_TARGETS := {
 	1: 45,
 	2: 65,
@@ -11,6 +13,14 @@ const FALLBACK_BOSS_SCORE_TARGETS := {
 	4: 110,
 	5: 135,
 	6: 165,
+}
+const FALLBACK_BACKPACK_SIZES := {
+	1: {"usable_width": 5, "usable_height": 5},
+	2: {"usable_width": 5, "usable_height": 6},
+	3: {"usable_width": 6, "usable_height": 6},
+	4: {"usable_width": 6, "usable_height": 7},
+	5: {"usable_width": 7, "usable_height": 7},
+	6: {"usable_width": 7, "usable_height": 7},
 }
 
 const DEFAULT_STAGE := {
@@ -27,6 +37,7 @@ const DEFAULT_STAGE := {
 		"pollution_added_bonus": 0,
 		"blocked_cells": [],
 	},
+	"backpack": {"usable_width": 5, "usable_height": 5},
 	"boss": {
 		"mechanics": ["score_target"],
 		"score_target": {"enabled": true, "value": 45},
@@ -104,6 +115,11 @@ static func get_visual(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 static func get_battle_modifiers(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 	return _normalize_battle_modifiers(get_stage(act, path).get("battle_modifiers", {}))
 
+static func get_backpack_config(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
+	var stage = get_stage(act, path)
+	var fallback = FALLBACK_BACKPACK_SIZES.get(clampi(act, 1, DEFAULT_MAX_ACT), DEFAULT_STAGE.get("backpack", {}))
+	return _normalize_backpack_config(stage.get("backpack", fallback))
+
 static func get_boss_config(act: int, path: String = STAGE_DATA_PATH) -> Dictionary:
 	return _dictionary_or_empty(get_stage(act, path).get("boss", {}))
 
@@ -148,6 +164,7 @@ static func _fallback_stage_table(reason: String = "") -> Dictionary:
 		var stage = DEFAULT_STAGE.duplicate(true)
 		stage["id"] = "act_%d" % act
 		stage["name"] = "Stage %d" % act
+		stage["backpack"] = Dictionary(FALLBACK_BACKPACK_SIZES.get(act, DEFAULT_STAGE.get("backpack", {}))).duplicate(true)
 		stage["boss"] = {
 			"mechanics": ["score_target"],
 			"score_target": {"enabled": true, "value": int(FALLBACK_BOSS_SCORE_TARGETS.get(act, 45 + (act - 1) * 20))},
@@ -206,6 +223,7 @@ static func _normalize_stage(value: Variant, act: int) -> Dictionary:
 		stage["name"] = "Stage %d" % act
 	stage["visual"] = _dictionary_or_empty(stage.get("visual", {}))
 	stage["battle_modifiers"] = _normalize_battle_modifiers(stage.get("battle_modifiers", {}))
+	stage["backpack"] = _normalize_backpack_config(stage.get("backpack", FALLBACK_BACKPACK_SIZES.get(act, DEFAULT_STAGE.get("backpack", {}))))
 	stage["boss"] = _dictionary_or_empty(stage.get("boss", {}))
 	stage["reward_weight_modifiers"] = _normalize_weight_modifiers(stage.get("reward_weight_modifiers", {}))
 	stage["shop_weight_modifiers"] = _normalize_weight_modifiers(stage.get("shop_weight_modifiers", {}))
@@ -220,6 +238,13 @@ static func _normalize_battle_modifiers(value: Variant) -> Dictionary:
 	else:
 		modifiers["blocked_cells"] = Array(modifiers.get("blocked_cells", [])).duplicate(true)
 	return modifiers
+
+static func _normalize_backpack_config(value: Variant) -> Dictionary:
+	var source = _dictionary_or_empty(value)
+	return {
+		"usable_width": clampi(int(source.get("usable_width", source.get("width", 5))), 1, MAX_BACKPACK_USABLE_WIDTH),
+		"usable_height": clampi(int(source.get("usable_height", source.get("height", 5))), 1, MAX_BACKPACK_USABLE_HEIGHT),
+	}
 
 static func _normalize_weight_modifiers(value: Variant) -> Dictionary:
 	var source = _dictionary_or_empty(value)

@@ -85,6 +85,7 @@
         "route_id",
         "visual",
         "battle_modifiers",
+        "backpack",
         "boss",
         "reward_weight_modifiers",
         "shop_weight_modifiers"

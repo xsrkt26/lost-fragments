@@ -2,6 +2,8 @@
 
 const BattleManagerScript = preload("res://src/battle/battle_manager.gd")
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
+const OrnamentSlotBarScript = preload("res://src/ui/ornament/ornament_slot_bar.gd")
+const BackpackPageScene = preload("res://src/ui/backpack/backpack_page.tscn")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
@@ -27,6 +29,7 @@ const REMOVED_SEED_ORNAMENT_IDS := [
 var rm
 var gs
 var item_db
+var ornament_db
 var old_ornaments: Array[String]
 var old_tools: Dictionary
 
@@ -34,12 +37,15 @@ func before_each():
 	rm = get_node_or_null("/root/RunManager")
 	gs = get_node_or_null("/root/GameState")
 	item_db = get_node_or_null("/root/ItemDatabase")
+	ornament_db = get_node_or_null("/root/OrnamentDatabase")
 	old_ornaments = Array(rm.current_ornaments).duplicate() if rm else []
 	old_tools = rm.get_current_tools() if rm and rm.has_method("get_current_tools") else {}
 	if gs:
 		gs.reset_game()
 	if item_db and item_db.items.is_empty():
 		item_db.load_all_items()
+	if ornament_db and ornament_db.ornaments.is_empty():
+		ornament_db.load_all_ornaments()
 
 func after_each():
 	if rm:
@@ -98,7 +104,6 @@ func _make_tool(id: String, tags: Array[String]) -> ToolData:
 	return tool
 
 func test_ornament_database_loads_formal_table_and_filters_available_pool():
-	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
 	assert_not_null(ornament_db)
 	var all_ornaments = ornament_db.get_all_ornaments()
 	assert_eq(all_ornaments.size(), 45)
@@ -107,6 +112,7 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 	for ornament in all_ornaments:
 		assert_ne(ornament.effect_id, "")
 		assert_not_null(ornament.effect)
+		assert_not_null(ornament.icon)
 		if ornament.enabled:
 			enabled_count += 1
 	assert_eq(enabled_count, 45)
@@ -117,6 +123,137 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 		assert_eq(ornament.effect_id, ornament_id)
 	for ornament_id in REMOVED_SEED_ORNAMENT_IDS:
 		assert_null(ornament_db.get_ornament_by_id(ornament_id))
+
+func test_ornament_slot_bar_aligns_to_playable_bag_rings():
+	assert_not_null(ornament_db)
+	var container := Control.new()
+	add_child_autofree(container)
+	container.size = Vector2(767.0, 314.0)
+
+	var ornament_ids := [
+		"old_pocket_watch",
+		"dreamcatcher_filter",
+		"echo_earring",
+		"guiding_compass",
+		"safety_pin",
+		"sanity_coin_purse",
+		"recycling_coupon",
+		"sturdy_strap",
+		"buckle_guide",
+		"light_pendant",
+	]
+	OrnamentSlotBarScript.render_to_container(
+		container,
+		ornament_ids,
+		ornament_db,
+		1.0,
+		OrnamentSlotBarScript.PLAYABLE_BAG_SLOT_CENTERS
+	)
+
+	assert_eq(container.get_child_count(), OrnamentSlotBarScript.PLAYABLE_BAG_SLOT_CENTERS.size())
+	for index in range(OrnamentSlotBarScript.PLAYABLE_BAG_SLOT_CENTERS.size()):
+		var slot := container.get_child(index) as Control
+		assert_not_null(slot)
+		var configured_center: Vector2 = OrnamentSlotBarScript.PLAYABLE_BAG_SLOT_CENTERS[index]
+		var expected_center := Vector2(
+			configured_center.x * container.size.x,
+			configured_center.y * container.size.y
+		)
+		var actual_center := slot.position + slot.size * 0.5
+		assert_almost_eq(actual_center.x, expected_center.x, 0.001)
+		assert_almost_eq(actual_center.y, expected_center.y, 0.001)
+
+func test_backpack_page_uses_playable_bag_art_for_ornament_slots():
+	var page := BackpackPageScene.instantiate()
+	add_child_autofree(page)
+	await get_tree().process_frame
+
+	var playable_bag := page.get_node_or_null("ContentLayer/BackpackArt/PlayableBagArt") as TextureRect
+	assert_not_null(playable_bag)
+	assert_not_null(playable_bag.texture)
+	assert_eq(playable_bag.texture.resource_path, "res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png")
+	assert_null(page.get_node_or_null("ContentLayer/BackpackArt/OrnamentBar"))
+
+	var ornament_slots := page.get_node_or_null("ContentLayer/OrnamentSlots") as Control
+	assert_not_null(ornament_slots)
+	assert_eq(ornament_slots.position, playable_bag.position)
+	assert_eq(ornament_slots.size, Vector2(767.0, 314.0))
+
+
+func test_backpack_page_restores_placed_shop_item_after_cached_page_reopens():
+	assert_not_null(item_db)
+	assert_not_null(ornament_db)
+	var manager = autofree(RunManagerScript.new())
+	manager.is_run_active = true
+	manager.current_shards = 100
+	manager.current_backpack_items = [] as Array[Dictionary]
+	manager.pending_item_rewards = [] as Array[Dictionary]
+	manager.next_pending_item_uid = 1
+	manager.current_ornaments = ["old_pocket_watch"] as Array[String]
+
+	var page := BackpackPageScene.instantiate()
+	page.run_manager_override = manager
+	page.item_database_override = item_db
+	page.ornament_database_override = ornament_db
+	var page_battle_manager := page.get_node("BattleManager") as BattleManager
+	page_battle_manager.run_manager_override = manager
+	page_battle_manager.item_database_override = item_db
+	page_battle_manager.ornament_database_override = ornament_db
+	add_child_autofree(page)
+	await get_tree().process_frame
+	await get_tree().process_frame
+
+	var pending_panel := page.get_node("ContentLayer/PendingItemPanel") as Control
+	var pending_area := page.get_node("ContentLayer/PendingItemPanel/PendingItemArea") as Control
+	assert_not_null(pending_panel)
+	assert_not_null(pending_area)
+	assert_false(pending_panel.visible)
+
+	page.visible = false
+	assert_true(manager.buy_shop_offer({
+		"type": "item",
+		"id": "paper_ball",
+		"price": 1,
+		"item_destination": RunManagerScript.ITEM_DEST_STAGING,
+	}, item_db))
+	var pending_uid := int(manager.pending_item_rewards[0].uid)
+	assert_true(manager.place_pending_item_in_backpack(pending_uid, item_db))
+	await get_tree().process_frame
+
+	page.visible = true
+	await get_tree().process_frame
+
+	assert_true(manager.pending_item_rewards.is_empty())
+	assert_false(pending_panel.visible)
+	assert_eq(pending_area.get_child_count(), 0)
+	assert_true(_backpack_page_has_rendered_item(page, "paper_ball"))
+
+
+func test_ornament_slot_hover_uses_card_tooltip():
+	assert_not_null(ornament_db)
+	GlobalTooltip.hide()
+	var container := Control.new()
+	add_child_autofree(container)
+	container.size = Vector2(767.0, 314.0)
+	OrnamentSlotBarScript.render_to_container(container, ["old_pocket_watch"], ornament_db)
+
+	var slot := container.get_child(0) as Button
+	assert_not_null(slot)
+	assert_eq(slot.tooltip_text, "")
+	assert_true(slot.get_signal_connection_list("mouse_entered").size() > 0)
+	assert_true(slot.get_signal_connection_list("mouse_exited").size() > 0)
+
+	slot.mouse_entered.emit()
+	await get_tree().create_timer(0.25).timeout
+	var tooltip = GlobalTooltip._tooltip_instance
+	assert_not_null(tooltip)
+	assert_true(tooltip.is_panel_visible())
+	var title_label = tooltip.get_node("PanelContainer/MarginContainer/VBoxContainer/TitleLabel")
+	assert_eq(title_label.text, "Fehu")
+
+	slot.mouse_exited.emit()
+	await get_tree().create_timer(0.12).timeout
+	assert_false(tooltip.is_panel_visible())
 
 	var act_one = ornament_db.get_available_ornaments(1, ["old_pocket_watch"] as Array[String])
 	for ornament in act_one:
@@ -135,6 +272,26 @@ func test_run_manager_prevents_duplicate_ornaments():
 	assert_true(manager.add_ornament("old_pocket_watch"))
 	assert_false(manager.add_ornament("old_pocket_watch"))
 	assert_eq(manager.current_ornaments, ["old_pocket_watch"])
+
+	manager.current_ornaments.clear()
+	for index in range(RunManagerScript.MAX_ORNAMENTS):
+		assert_true(manager.add_ornament("ornament_%d" % index, false))
+	assert_false(manager.add_ornament("overflow_ornament", false))
+	assert_eq(manager.current_ornaments.size(), RunManagerScript.MAX_ORNAMENTS)
+
+
+func _backpack_page_has_rendered_item(page: Control, item_id: String) -> bool:
+	var backpack_ui := page.get_node_or_null("ContentLayer/GridPanel/BackpackUI") as Control
+	if backpack_ui == null:
+		return false
+	for child in backpack_ui.get_children():
+		if child.name == "GridContainer":
+			continue
+		var item_data = child.get("item_data") if child is Control else null
+		if item_data != null and str(item_data.id) == item_id:
+			return true
+	return false
+
 
 func test_old_pocket_watch_and_safety_pin_modify_sanity_loss_in_order():
 	var manager = await _make_manager(["old_pocket_watch", "safety_pin"] as Array[String])
