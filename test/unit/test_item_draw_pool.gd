@@ -49,9 +49,8 @@ func test_all_current_pollution_flow_items_unlock_by_act_five():
 func test_design_doc_category_and_role_weights_are_encoded():
 	var act_4_category_weights = ItemDrawPool.get_category_weights(4)
 	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_GENERAL, 0.0)), 22.0)
-	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_POLLUTION, 0.0)), 26.0)
-	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_DREAM_SEED, 0.0)), 26.0)
-	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_MECHANICAL, 0.0)), 26.0)
+	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_POLLUTION, 0.0)), 39.0)
+	assert_eq(float(act_4_category_weights.get(ItemDrawPool.CATEGORY_MECHANICAL, 0.0)), 39.0)
 
 	var act_4_role_weights = ItemDrawPool.get_role_weights(4)
 	assert_eq(float(act_4_role_weights.get(ItemDrawPool.ROLE_STARTER, 0.0)), 30.0)

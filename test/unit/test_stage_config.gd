@@ -76,9 +76,9 @@ func test_stage_routes_point_to_distinct_content_tracks():
 	assert_eq(StageConfig.get_route_id_for_act(6), "act_6_finale")
 
 	var finale_nodes = RouteConfig.get_route_nodes("act_6_finale")
-	assert_eq(finale_nodes.size(), 7)
+	assert_eq(finale_nodes.size(), 5)
 	assert_eq(finale_nodes[0].get("type"), RouteConfig.NODE_BATTLE)
-	assert_eq(finale_nodes[6].get("type"), RouteConfig.NODE_BOSS_BATTLE)
+	assert_eq(finale_nodes[4].get("type"), RouteConfig.NODE_BOSS_BATTLE)
 
 func test_each_stage_route_has_two_growth_battles_and_one_boss():
 	for route_id in [
@@ -159,7 +159,7 @@ func test_run_manager_exposes_stage_battle_config_and_completion():
 	var manager = autofree(RunManagerScript.new())
 	manager.is_run_active = true
 	manager.current_act = 5
-	manager.current_route_index = 6
+	manager.current_route_index = 4
 
 	var config = manager.get_current_battle_config()
 
@@ -184,7 +184,7 @@ func test_late_act_boss_modifiers_only_apply_on_boss_nodes():
 	assert_eq(normal_config.battle_modifiers.pollution_added_bonus, 1)
 	assert_eq(normal_config.battle_modifiers.blocked_cells.size(), 2)
 
-	manager.current_route_index = 6
+	manager.current_route_index = 4
 	var boss_config = manager.get_current_battle_config()
 	assert_true(boss_config.is_boss)
 	assert_eq(boss_config.battle_modifiers.draw_cost_delta, 3)

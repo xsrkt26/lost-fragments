@@ -12,12 +12,13 @@ func before_each():
 
 func test_default_route_is_configured():
 	var nodes = run_manager.get_route_nodes()
-	assert_eq(nodes.size(), 7)
+	assert_eq(nodes.size(), 5)
 	assert_eq(nodes[0].get("type"), RouteConfig.NODE_BATTLE)
 	assert_eq(nodes[1].get("type"), RouteConfig.NODE_SHOP)
-	assert_eq(nodes[2].get("type"), RouteConfig.NODE_EVENT)
-	assert_eq(nodes[6].get("type"), RouteConfig.NODE_BOSS_BATTLE)
-	assert_eq(nodes[6].get("scene"), RouteConfig.SCENE_BATTLE)
+	assert_eq(nodes[2].get("type"), RouteConfig.NODE_BATTLE)
+	assert_eq(nodes[3].get("type"), RouteConfig.NODE_SHOP)
+	assert_eq(nodes[4].get("type"), RouteConfig.NODE_BOSS_BATTLE)
+	assert_eq(nodes[4].get("scene"), RouteConfig.SCENE_BATTLE)
 
 func test_default_route_loads_from_external_config():
 	var table = RouteConfig.load_route_table_from_path(RouteConfig.ROUTE_DATA_PATH)
@@ -25,7 +26,7 @@ func test_default_route_loads_from_external_config():
 	assert_true(routes is Dictionary)
 	assert_true(routes.has(RouteConfig.DEFAULT_ROUTE_ID))
 	assert_eq(RouteConfig.get_max_act(), 6)
-	assert_eq(RouteConfig.get_route_size(), 7)
+	assert_eq(RouteConfig.get_route_size(), 5)
 
 func test_route_config_cache_returns_defensive_copies():
 	var table = RouteConfig.load_route_table_from_path(RouteConfig.ROUTE_DATA_PATH)
@@ -43,7 +44,7 @@ func test_route_config_falls_back_when_file_is_missing():
 	var routes = table.get("routes", {})
 	assert_true(routes is Dictionary)
 	assert_true(routes.has(RouteConfig.DEFAULT_ROUTE_ID))
-	assert_eq(Array(routes[RouteConfig.DEFAULT_ROUTE_ID]).size(), 7)
+	assert_eq(Array(routes[RouteConfig.DEFAULT_ROUTE_ID]).size(), 5)
 
 func test_route_config_falls_back_when_json_is_invalid():
 	var path = "user://invalid_routes_for_test.json"
@@ -56,7 +57,7 @@ func test_route_config_falls_back_when_json_is_invalid():
 	var routes = table.get("routes", {})
 	assert_true(routes is Dictionary)
 	assert_true(routes.has(RouteConfig.DEFAULT_ROUTE_ID))
-	assert_eq(Array(routes[RouteConfig.DEFAULT_ROUTE_ID]).size(), 7)
+	assert_eq(Array(routes[RouteConfig.DEFAULT_ROUTE_ID]).size(), 5)
 	DirAccess.remove_absolute(path)
 
 func test_route_config_supports_custom_route_nodes_and_score_rules():
@@ -158,7 +159,7 @@ func test_normal_battle_has_no_score_target():
 	assert_true(run_manager.is_current_battle_score_success(0))
 
 func test_boss_battle_requires_score_target():
-	run_manager.current_route_index = 6
+	run_manager.current_route_index = 4
 	var config = run_manager.get_current_battle_config()
 	assert_true(config.is_boss)
 	assert_true(config.has_score_target)
@@ -167,7 +168,7 @@ func test_boss_battle_requires_score_target():
 	assert_true(run_manager.is_current_battle_score_success(45))
 
 func test_boss_target_scales_by_act():
-	run_manager.current_route_index = 6
+	run_manager.current_route_index = 4
 	run_manager.current_act = 3
 	assert_eq(run_manager.get_current_battle_target_score(), 85)
 

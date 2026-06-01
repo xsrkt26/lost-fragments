@@ -67,6 +67,11 @@
       "type": "dialogue",
       "speaker": "小咪",
       "text": "没关系！一个黑乎乎的东西和带着你的味道说，只要来教你怎么恢复记忆，咪就能再见你一面！"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "用z键来前往下一个地点吧"
     }
   ],
   "进入局内1": [
@@ -78,8 +83,28 @@
     {
       "type": "dialogue",
       "speaker": "小咪",
-      "text": "xxxxx（待）",
+      "text": "左上角是捕梦网，点击它可以让你回忆起一些物品。",
       "note": "教程/规则"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "右侧是背包，背包中的物品会随着捕梦进行产生一些效果，增加你的分数。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "下侧为梦值和分数。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "当梦值归0时，就会从捕梦中醒来。"
+    },
+    {
+      "type": "dialogue",
+      "speaker": "小咪",
+      "text": "有些时候下侧会有目标分数，如果没有达到目标分数，游戏就会失败。"
     },
     {
       "type": "dialogue",

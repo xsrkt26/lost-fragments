@@ -4,11 +4,9 @@ extends RefCounted
 const ToolDataScript = preload("res://src/core/tools/tool_data.gd")
 const WASTE_TAG := "废弃物"
 const MECHANICAL_TAG := "机械"
-const DREAM_SEED_TAG := "梦境之种"
 const FOOD_IDS := ["apple", "roast_chicken"]
-const PAPER_BALL_ID := "paper_ball"
 
-static func apply_tool(tool, target: Dictionary, battle, _run_manager: Node, item_db: Node, _ornament_db: Node = null) -> Dictionary:
+static func apply_tool(tool, target: Dictionary, battle, _run_manager: Node, _item_db: Node, _ornament_db: Node = null) -> Dictionary:
 	var result := {
 		"success": false,
 		"reason": "",
@@ -34,12 +32,6 @@ static func apply_tool(tool, target: Dictionary, battle, _run_manager: Node, ite
 			return _apply_disinfectant_spray(target, battle, result)
 		"corrosive_acid":
 			return _apply_corrosive_acid(target, battle, result)
-		"small_water_drop":
-			return _apply_seed_tool(target, battle, item_db, 1, true, result)
-		"fertilizer_bag":
-			return _apply_seed_tool(target, battle, item_db, 2, true, result)
-		"fast_sprout_agent":
-			return _apply_fast_sprout_agent(target, battle, item_db, result)
 		"extension_hook":
 			return _apply_extension_hook(target, battle, result)
 		"transmission_oil":
@@ -61,7 +53,8 @@ static func make_tool_reward(tool) -> Dictionary:
 		"type": "tool",
 		"id": tool.id,
 		"title": tool.tool_name,
-		"description": tool.effect_text,
+		"description": "进入待放置区，可拖入背包网格或堆叠到同名道具。\n%s" % tool.effect_text,
+		"item_destination": "staging",
 		"rarity": tool.rarity,
 		"amount": 1,
 	}
@@ -73,7 +66,8 @@ static func make_tool_offer(tool) -> Dictionary:
 		"type": "tool",
 		"id": tool.id,
 		"title": tool.tool_name,
-		"description": tool.effect_text,
+		"description": "%s\n购买后进入待放置区，可拖入背包网格或堆叠到同名道具。" % tool.effect_text,
+		"item_destination": "staging",
 		"rarity": tool.rarity,
 		"price": max(1, int(tool.price)),
 		"weight": _tool_weight(tool),
@@ -145,46 +139,6 @@ static func _apply_corrosive_acid(target: Dictionary, battle, result: Dictionary
 	instance.data.price = max(1, old_price - 5)
 	result["pollution_added"] = 2
 	result["value_delta"] = int(instance.data.price) - old_price
-	return _success(result)
-
-static func _apply_seed_tool(target: Dictionary, battle, item_db: Node, seed_levels: int, allow_empty: bool, result: Dictionary) -> Dictionary:
-	if item_db == null:
-		return _fail(result, "missing_item_database")
-	var target_type = str(target.get("type", ""))
-	var backpack = battle.backpack_manager
-	if target_type == ToolDataScript.TARGET_EMPTY_CELL:
-		if not allow_empty:
-			return _fail(result, "invalid_empty_cell_target")
-		var pos = Vector2i(int(target.get("x", -1)), int(target.get("y", -1)))
-		if not _is_empty_usable_cell(backpack, pos):
-			return _fail(result, "invalid_empty_cell_target")
-		var sown = backpack.sow_seed_at(pos, item_db, 1)
-		if sown == null:
-			return _fail(result, "seed_sow_failed")
-		result["seed_sown"] = true
-		return _success(result)
-
-	var instance = _target_instance(target)
-	if not _is_instance_in_grid(battle, instance) or not _is_seed(instance):
-		return _fail(result, "invalid_seed_target")
-	var old_stage = _seed_stage(instance)
-	var upgraded = backpack.upgrade_seed(instance, item_db, seed_levels)
-	result["seed_upgraded"] = true
-	result["seed_grew"] = upgraded != null and _seed_stage(upgraded) > old_stage
-	return _success(result)
-
-static func _apply_fast_sprout_agent(target: Dictionary, battle, item_db: Node, result: Dictionary) -> Dictionary:
-	var instance = _target_instance(target)
-	if item_db == null or not _is_instance_in_grid(battle, instance) or not _is_seed(instance):
-		return _fail(result, "invalid_seed_target")
-	var old_stage = _seed_stage(instance)
-	var upgraded = battle.backpack_manager.upgrade_seed(instance, item_db, 3)
-	var grew = upgraded != null and _seed_stage(upgraded) > old_stage
-	if grew:
-		_add_score(battle, 8)
-	result["seed_upgraded"] = true
-	result["seed_grew"] = grew
-	result["score"] = 8 if grew else 0
 	return _success(result)
 
 static func _apply_extension_hook(target: Dictionary, _battle, result: Dictionary) -> Dictionary:
@@ -282,9 +236,6 @@ static func _add_score(battle, amount: int) -> void:
 	if battle != null and battle.context != null:
 		battle.context.add_score(amount)
 
-static func _is_empty_usable_cell(backpack, pos: Vector2i) -> bool:
-	return backpack != null and pos.x >= 0 and pos.y >= 0 and not backpack.grid.has(pos) and backpack.is_pos_usable(pos)
-
 static func _target_instance(target: Dictionary):
 	return target.get("instance", null)
 
@@ -303,17 +254,6 @@ static func _is_waste(item_data: ItemData) -> bool:
 
 static func _is_food(item_data: ItemData) -> bool:
 	return item_data != null and (item_data.tags.has("食物") or FOOD_IDS.has(item_data.id))
-
-static func _is_seed(instance) -> bool:
-	return instance != null and instance.data != null and instance.data.tags.has(DREAM_SEED_TAG)
-
-static func _seed_stage(instance) -> int:
-	if instance == null or instance.data == null:
-		return 0
-	for stage in range(1, 5):
-		if instance.data.id == "dream_seed_%dx%d" % [stage, stage]:
-			return stage
-	return 1 if _is_seed(instance) else 0
 
 static func _tool_weight(tool) -> float:
 	match tool.rarity:

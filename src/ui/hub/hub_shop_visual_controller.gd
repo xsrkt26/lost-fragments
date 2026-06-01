@@ -1,4 +1,4 @@
-extends RefCounted
+﻿extends RefCounted
 
 const BackpackUIScene = preload("res://src/ui/backpack/backpack_ui.tscn")
 const ItemUIScene = preload("res://src/ui/item/item_ui.tscn")
@@ -257,7 +257,7 @@ func _create_backpack_overlay(owner_node: Node) -> void:
 
 	var pending_label := Label.new()
 	pending_label.name = "PendingItemLabel"
-	pending_label.text = "待放置商品"
+	pending_label.text = "寰呮斁缃晢鍝?
 	pending_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	pending_label.add_theme_font_size_override("font_size", 20)
 	pending_label.add_theme_color_override("font_color", Color(0.1, 0.07, 0.04, 1.0))
@@ -533,9 +533,9 @@ func _on_offer_button_pressed(button: Button, offer: Dictionary, run_manager: No
 	if button == null or run_manager == null or item_db == null:
 		return
 	var purchase_offer: Dictionary = offer.duplicate(true)
-	if str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_ITEM:
-		purchase_offer["item_destination"] = "backpack"
-		purchase_offer["destination"] = "backpack"
+	if str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_ITEM or str(purchase_offer.get("type", "")) == ShopGenerator.TYPE_TOOL:
+		purchase_offer["item_destination"] = "staging"
+		purchase_offer["destination"] = "staging"
 	if run_manager.has_method("buy_shop_offer") and bool(run_manager.buy_shop_offer(purchase_offer, item_db)):
 		button.set_meta("purchased", true)
 		button.disabled = true
@@ -566,6 +566,25 @@ func _get_current_offers(run_manager: Node, item_db: Node, ornament_db: Node) ->
 	if run_manager == null or item_db == null or not run_manager.has_method("generate_current_shop_offers"):
 		return []
 	return Array(run_manager.generate_current_shop_offers(item_db, ornament_db, ShopGenerator.DEFAULT_OFFER_COUNT))
+
+
+func _format_offer_text(offer: Dictionary, run_manager: Node) -> String:
+	var title := str(offer.get("title", "鍟嗗搧"))
+	var price := _get_offer_price(offer, run_manager)
+	var kind_text := _get_offer_kind_text(offer)
+	return "%s\n%d 纰庣墖\n%s" % [title, price, kind_text]
+
+
+func _get_offer_kind_text(offer: Dictionary) -> String:
+	match str(offer.get("type", "")):
+		ShopGenerator.TYPE_ITEM:
+			return "璐拱鍚庢嫋鍏ヨ儗鍖?
+		ShopGenerator.TYPE_ORNAMENT:
+			return "楗板搧"
+		ShopGenerator.TYPE_TOOL:
+			return "閬撳叿/寰呮斁缃?
+	return "鍟嗗搧"
+
 
 
 func _get_offer_price(offer: Dictionary, run_manager: Node) -> int:
@@ -615,6 +634,7 @@ func _show_offer_tooltip(offer: Dictionary, item_db: Node, ornament_db: Node, to
 			GlobalTooltip.hide()
 
 
+
 func _hide_offer_tooltip() -> void:
 	GlobalTooltip.hide()
 
@@ -632,7 +652,7 @@ func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool
 
 	_add_offer_visual(visual_area, offer, item_db, tool_db)
 
-	var title_label := _make_offer_label("TitleLabel", str(offer.get("title", "商品")), 18, OFFER_TEXT_COLOR)
+	var title_label := _make_offer_label("TitleLabel", str(offer.get("title", "鍟嗗搧")), 18, OFFER_TEXT_COLOR)
 	title_label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	title_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	title_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
@@ -650,7 +670,7 @@ func _build_offer_content(button: Button, offer: Dictionary, item_db: Node, tool
 	sold_overlay.visible = false
 	button.add_child(sold_overlay)
 
-	var sold_label := _make_offer_label("SoldLabel", "已购买", 24, Color(1.0, 0.93, 0.72, 1.0))
+	var sold_label := _make_offer_label("SoldLabel", "宸茶喘涔?, 24, Color(1.0, 0.93, 0.72, 1.0))
 	sold_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	sold_label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	sold_overlay.add_child(sold_label)
@@ -673,7 +693,7 @@ func _add_offer_visual(visual_area: Control, offer: Dictionary, item_db: Node, t
 func _add_item_offer_visual(visual_area: Control, offer: Dictionary, item_db: Node) -> void:
 	var item_data = item_db.get_item_by_id(str(offer.get("id", ""))) if item_db != null and item_db.has_method("get_item_by_id") else null
 	if item_data == null or item_data.icon == null:
-		_add_text_offer_visual(visual_area, "物")
+		_add_text_offer_visual(visual_area, "鐗?)
 		return
 	var icon := TextureRect.new()
 	icon.name = "OfferItemIcon"
@@ -687,7 +707,7 @@ func _add_item_offer_visual(visual_area: Control, offer: Dictionary, item_db: No
 func _add_tool_offer_visual(visual_area: Control, offer: Dictionary, tool_db: Node) -> void:
 	var tool = tool_db.get_tool_by_id(str(offer.get("id", ""))) if tool_db != null and tool_db.has_method("get_tool_by_id") else null
 	if tool == null or tool.icon == null:
-		_add_text_offer_visual(visual_area, "具")
+		_add_text_offer_visual(visual_area, "鍏?)
 		return
 	var icon := TextureRect.new()
 	icon.name = "OfferToolIcon"
@@ -705,7 +725,7 @@ func _add_ornament_offer_visual(visual_area: Control, offer: Dictionary) -> void
 	_apply_ornament_tag_style(tag, str(offer.get("rarity", "")))
 	visual_area.add_child(tag)
 
-	var label := _make_offer_label("OrnamentGlyph", "饰", 28, Color(0.2, 0.09, 0.04, 1.0))
+	var label := _make_offer_label("OrnamentGlyph", "楗?, 28, Color(0.2, 0.09, 0.04, 1.0))
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	tag.add_child(label)
@@ -738,17 +758,17 @@ func _update_offer_content(button: Button, offer: Dictionary, run_manager: Node,
 		return
 	var title_label := content.get_node_or_null("TitleLabel") as Label
 	if title_label != null:
-		title_label.text = str(offer.get("title", "商品"))
+		title_label.text = str(offer.get("title", "鍟嗗搧"))
 	var price_label := content.get_node_or_null("PriceLabel") as Label
 	if price_label != null:
-		price_label.text = "%d元" % _get_offer_price(offer, run_manager)
+		price_label.text = "%d鍏? % _get_offer_price(offer, run_manager)
 	content.modulate.a = 0.5 if button.disabled and not is_purchased else 1.0
 	var sold_overlay := button.get_node_or_null("SoldOverlay") as ColorRect
 	if sold_overlay != null:
 		sold_overlay.visible = is_purchased
 		var sold_label := sold_overlay.get_node_or_null("SoldLabel") as Label
 		if sold_label != null:
-			sold_label.text = "已购买"
+			sold_label.text = "宸茶喘涔?
 
 
 func _layout_offer_content(button: Button) -> void:
@@ -883,10 +903,10 @@ func _tooltip_body_without_repeated_title(title: String, body: String) -> String
 func _apply_ornament_tag_style(panel: PanelContainer, rarity: String) -> void:
 	var style := StyleBoxFlat.new()
 	match rarity:
-		"稀有":
+		"绋€鏈?:
 			style.bg_color = Color(0.62, 0.48, 0.84, 0.46)
 			style.border_color = Color(0.32, 0.18, 0.48, 0.5)
-		"进阶":
+		"杩涢樁":
 			style.bg_color = Color(0.54, 0.72, 0.6, 0.44)
 			style.border_color = Color(0.18, 0.36, 0.22, 0.48)
 		_:
@@ -903,7 +923,7 @@ func _update_shards_label(run_manager: Node) -> void:
 	var current_shards := 0
 	if run_manager != null:
 		current_shards = int(run_manager.get("current_shards"))
-	_shards_label.text = "碎片: %d" % current_shards
+	_shards_label.text = "纰庣墖: %d" % current_shards
 
 
 func _layout_all(viewport_size: Vector2, place_backpack_at_start: bool) -> void:
@@ -976,7 +996,7 @@ func _create_buyback_button(owner_node: Node) -> void:
 		return
 	_buyback_button = Button.new()
 	_buyback_button.name = "ShopBuybackButton"
-	_buyback_button.text = "回购"
+	_buyback_button.text = "鍥炶喘"
 	_buyback_button.flat = true
 	_buyback_button.focus_mode = Control.FOCUS_NONE
 	_buyback_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1200,7 +1220,7 @@ func _create_exit_button(owner_node: Node) -> void:
 		return
 	_exit_button = Button.new()
 	_exit_button.name = "ShopExitButton"
-	_exit_button.text = "退出"
+	_exit_button.text = "閫€鍑?
 	_exit_button.flat = true
 	_exit_button.focus_mode = Control.FOCUS_NONE
 	_exit_button.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -1285,3 +1305,4 @@ func _get_tool_database() -> Node:
 	if _owner_node == null:
 		return null
 	return _owner_node.get_node_or_null("/root/ToolDatabase")
+

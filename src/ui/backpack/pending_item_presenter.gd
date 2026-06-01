@@ -25,6 +25,8 @@ static func render(
 		var item_data = item_db.get_item_by_id(str(entry.get("id", ""))) if item_db.has_method("get_item_by_id") else null
 		if item_data == null:
 			continue
+		if entry.has("stack_count"):
+			item_data.set_meta("stack_count", max(1, int(entry.get("stack_count", 1))))
 		var card := ItemUIScene.instantiate() as Control
 		if card == null:
 			continue

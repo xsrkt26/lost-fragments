@@ -83,16 +83,16 @@
         "blocked_cells": []
       },
       "boss": {
-        "mechanics": ["score_target", "seed_growth_check"],
+        "mechanics": ["score_target"],
         "score_target": {"enabled": true, "value": 85}
       },
       "reward_weight_modifiers": {
         "types": {"item": 1.0, "ornament": 1.05, "tool": 1.08},
-        "tags": {"梦境之种": 1.25, "播种": 1.2, "升级": 1.2}
+        "tags": {}
       },
       "shop_weight_modifiers": {
         "types": {"item": 1.0, "ornament": 1.05, "tool": 1.1},
-        "tags": {"梦境之种": 1.25, "播种": 1.2, "升级": 1.2}
+        "tags": {}
       }
     },
     "4": {

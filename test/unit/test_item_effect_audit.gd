@@ -420,7 +420,7 @@ func test_special_hit_items_transform_or_copy_effects():
 
 func test_insurance_contract_recovers_failed_target_run_once():
 	var manager = await _make_manager()
-	rm.current_route_index = 6
+	rm.current_route_index = 4
 	rm.current_act = 1
 	gs.current_score = 0
 	gs.current_sanity = 1

@@ -1,6 +1,7 @@
 extends Node
 
 const ITEM_DATA_DIR := "res://data/items/"
+const TOOL_TAG := "道具"
 
 var items: Dictionary = {}
 var drawable_items: Array[ItemData] = []
@@ -41,6 +42,9 @@ func get_random_item() -> ItemData:
 func get_item_by_id(item_id: String) -> ItemData:
 	if items.has(item_id):
 		return items[item_id].duplicate(true)
+	var tool_item := _make_tool_item_data(item_id)
+	if tool_item != null:
+		return tool_item
 	return null
 
 
@@ -77,3 +81,48 @@ func _load_item_table(path: String) -> Dictionary:
 		"items": loaded_items,
 		"drawable_items": loaded_drawable,
 	}
+
+func _make_tool_item_data(tool_id: String) -> ItemData:
+	if tool_id == "":
+		return null
+	var tool_db := _get_tool_database()
+	if tool_db == null or not tool_db.has_method("get_tool_by_id"):
+		return null
+	var tool = tool_db.get_tool_by_id(tool_id)
+	if tool == null:
+		return null
+	var item := ItemData.new()
+	item.id = str(tool.id)
+	item.item_name = str(tool.tool_name)
+	item.description = str(tool.effect_text)
+	item.tags = _tool_tags(tool)
+	item.price = max(1, int(tool.price))
+	item.base_cost = -1
+	item.can_draw = true
+	item.can_rotate = false
+	item.shape = [Vector2i.ZERO] as Array[Vector2i]
+	item.direction = ItemData.Direction.RIGHT
+	item.transmission_mode = ItemData.TransmissionMode.NONE
+	item.set_meta("is_tool", true)
+	item.set_meta("tool_id", str(tool.id))
+	item.set_meta("tool_rarity", str(tool.rarity))
+	item.set_meta("tool_target_type", str(tool.target_type))
+	return item
+
+func _tool_tags(tool) -> Array[String]:
+	var result: Array[String] = []
+	for tag_value in Array(tool.tags):
+		var tag := str(tag_value)
+		if tag != "" and not result.has(tag):
+			result.append(tag)
+	if not result.has(TOOL_TAG):
+		result.push_front(TOOL_TAG)
+	return result
+
+func _get_tool_database() -> Node:
+	if is_inside_tree():
+		return get_node_or_null("/root/ToolDatabase")
+	var tree := Engine.get_main_loop() as SceneTree
+	if tree != null and tree.root != null:
+		return tree.root.get_node_or_null("ToolDatabase")
+	return null

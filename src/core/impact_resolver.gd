@@ -281,7 +281,7 @@ func _find_next_item(pos: Vector2i, _dir: ItemData.Direction, filters: Array[Str
 
 	if backpack.grid.has(pos):
 		var found = backpack.grid[pos]
-		if found != exclude:
+		if found != exclude and not _is_tool_instance(found):
 			if filters.is_empty():
 				return pos
 			for tag in found.data.tags:
@@ -289,6 +289,9 @@ func _find_next_item(pos: Vector2i, _dir: ItemData.Direction, filters: Array[Str
 					return pos
 
 	return Vector2i(-1, -1)
+
+func _is_tool_instance(instance: BackpackManager.ItemInstance) -> bool:
+	return instance != null and instance.data != null and (instance.data.tags.has("道具") or bool(instance.data.get_meta("is_tool", false)))
 
 func _direction_to_step(dir: ItemData.Direction) -> Vector2i:
 	match dir:

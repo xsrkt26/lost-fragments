@@ -5,7 +5,6 @@ const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
-	"gardening_toolkit",
 	"recycling_hook",
 	"calibration_screwdriver",
 	"universal_toolbox",
@@ -98,7 +97,10 @@ func test_apply_reward_updates_long_term_state_and_blocks_duplicate_ornaments():
 	assert_eq(rm.current_ornaments, ["old_pocket_watch"])
 
 	assert_true(rm.apply_reward({"type": "tool", "id": "small_patch", "amount": 2}))
-	assert_eq(rm.get_tool_count("small_patch"), 2)
+	assert_true(rm.current_tools.is_empty())
+	assert_eq(rm.pending_item_rewards.size(), 1)
+	assert_eq(str(rm.pending_item_rewards[0].get("id", "")), "small_patch")
+	assert_eq(int(rm.pending_item_rewards[0].get("stack_count", 0)), 2)
 
 func _reward_keys(options: Array[Dictionary]) -> Array[String]:
 	var keys: Array[String] = []

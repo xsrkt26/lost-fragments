@@ -23,6 +23,8 @@ enum TransmissionMode { NORMAL, OMNI, NONE, MECHANICAL_LEFT, MECHANICAL_RIGHT, M
 @export var hit_filter_tags: Array[String] = [] # 仅能撞击包含这些标签的物品 (为空则撞击所有)
 @export var effects: Array[ItemEffect] = [] # 物品携带的效果列表
 
+const TOOL_TAG := "道具"
+
 ## 模拟计算旋转后某个局部偏移量的新位置
 func get_rotated_offset(old_offset: Vector2i) -> Vector2i:
 	if not can_rotate: return old_offset
@@ -54,9 +56,17 @@ func get_rotated_offset(old_offset: Vector2i) -> Vector2i:
 ## 获取用于悬浮窗显示的富文本/详细信息 (预留动态计算空间)
 func get_tooltip_text(_instance = null) -> String:
 	var text = ""
+	var stack_count := _get_stack_count(_instance)
+	if _is_tool():
+		var rarity := str(get_meta("tool_rarity", "道具"))
+		if rarity != "":
+			text += "[color=#ffaa55]" + rarity + "[/color]\n"
+		text += "堆叠数量: " + str(stack_count) + "\n\n"
 	
 	# 1. 动态生成基础属性信息
-	if base_cost == -1:
+	if _is_tool():
+		pass
+	elif base_cost == -1:
 		text += "[color=#ffaa55]捕梦消耗: 阶梯递增[/color]\n\n"
 	elif base_cost != 0:
 		text += "[color=#ff5555]捕梦消耗: " + str(abs(base_cost)) + " 梦值[/color]\n\n"
@@ -72,6 +82,18 @@ func get_tooltip_text(_instance = null) -> String:
 	# 		text += "\n" + effect.get_dynamic_desc(instance)
 			
 	return text.strip_edges()
+
+func _is_tool() -> bool:
+	return bool(get_meta("is_tool", false)) or tags.has(TOOL_TAG)
+
+func _get_stack_count(instance) -> int:
+	if instance != null:
+		var value = instance.get("stack_count")
+		if value != null:
+			return max(1, int(value))
+	if has_meta("stack_count"):
+		return max(1, int(get_meta("stack_count")))
+	return 1
 
 ## 获取该物品当前形状的包围盒 (Rect2i)
 func get_bounding_rect() -> Rect2i:

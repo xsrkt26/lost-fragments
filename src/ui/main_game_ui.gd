@@ -1068,9 +1068,7 @@ func _ensure_tool_panel() -> void:
 		push_warning("[MainGameUI] ToolPanel/ToolSlots missing from main_game_ui.tscn.")
 
 func _connect_tool_inventory_signal() -> void:
-	var rm = _get_run_manager()
-	if rm != null and rm.has_signal("tools_changed") and not rm.tools_changed.is_connected(_on_tools_changed):
-		rm.tools_changed.connect(_on_tools_changed)
+	pass
 
 func _on_tools_changed(_current_tools: Dictionary) -> void:
 	_render_tools()
@@ -1079,15 +1077,9 @@ func _render_tools() -> void:
 	_ensure_tool_panel()
 	if tool_panel == null or tool_slot_area == null:
 		return
-	var rm = _get_run_manager()
-	var tool_db = _get_tool_database()
-	if rm == null or tool_db == null or not rm.has_method("get_tool_inventory_entries"):
-		ToolPanelPresenter.clear(tool_panel, tool_slot_area)
-		return
-	var entries = rm.get_tool_inventory_entries(tool_db)
-	if entries.is_empty():
-		_selected_tool_id = ""
-	ToolPanelPresenter.render(tool_panel, tool_slot_area, entries, tool_db, _selected_tool_id, Callable(self, "_on_tool_button_gui_input"))
+	_selected_tool_id = ""
+	_dragged_tool_id = ""
+	ToolPanelPresenter.clear(tool_panel, tool_slot_area)
 	_layout_current_scene()
 
 func _set_selected_tool(tool_id: String) -> void:
@@ -1128,7 +1120,7 @@ func _try_use_tool_at_mouse(tool_id: String, mouse_pos: Vector2) -> bool:
 		_render_tools()
 	return used
 
-func _make_tool_target_at(mouse_pos: Vector2) -> Dictionary:
+func _make_tool_target_at(mouse_pos: Vector2, source_instance: BackpackManager.ItemInstance = null) -> Dictionary:
 	if dreamcatcher_panel != null and dreamcatcher_panel.get_global_rect().has_point(mouse_pos):
 		return {"type": "dreamcatcher"}
 	if ornaments_area != null and ornaments_area.get_global_rect().has_point(mouse_pos):
@@ -1142,14 +1134,34 @@ func _make_tool_target_at(mouse_pos: Vector2) -> Dictionary:
 		var grid_pos = _get_backpack_grid_pos_at(mouse_pos)
 		if grid_pos != Vector2i(-1, -1):
 			if battle_manager.backpack_manager.grid.has(grid_pos):
+				var target_instance = battle_manager.backpack_manager.grid[grid_pos]
+				if target_instance == source_instance:
+					return {}
 				return {
 					"type": "item",
-					"instance": battle_manager.backpack_manager.grid[grid_pos],
+					"instance": target_instance,
 					"x": grid_pos.x,
 					"y": grid_pos.y,
 				}
 			return {"type": "empty_cell", "x": grid_pos.x, "y": grid_pos.y}
 	return {}
+
+func _try_use_tool_item_at_mouse(item_ui: Control, mouse_pos: Vector2) -> bool:
+	if battle_manager == null or not battle_manager.has_method("request_use_tool_item"):
+		return false
+	var item_data = item_ui.get("item_data") as ItemData
+	if not _is_tool_item_data(item_data):
+		return false
+	var source_instance = item_ui.get("item_instance") as BackpackManager.ItemInstance
+	if source_instance == null:
+		return false
+	var target = _make_tool_target_at(mouse_pos, source_instance)
+	if target.is_empty():
+		return false
+	return battle_manager.request_use_tool_item(item_ui, target)
+
+func _is_tool_item_data(item_data: ItemData) -> bool:
+	return item_data != null and (item_data.tags.has("道具") or bool(item_data.get_meta("is_tool", false)))
 
 func _is_point_in_tool_panel(point: Vector2) -> bool:
 	return tool_panel != null and tool_panel.visible and tool_panel.get_global_rect().has_point(point)
@@ -1188,6 +1200,10 @@ func _handle_item_rotation_requested(item_ui: Control, mouse_global_pos: Vector2
 func _handle_item_dropped(item_ui: Control, mouse_pos: Vector2, item_pivot_offset: Vector2i):
 	_reset_drag_highlight_tracking()
 	_update_backpack_slot_visuals() # 清除高亮
+
+	if _try_use_tool_item_at_mouse(item_ui, mouse_pos):
+		_set_trash_bin_drag_hover(false)
+		return
 
 	# 1. 检查是否掉落在垃圾桶
 	if _is_point_in_trash_drop_area(mouse_pos):

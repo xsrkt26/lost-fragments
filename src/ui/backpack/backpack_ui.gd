@@ -237,6 +237,8 @@ func highlight_placement(root_pos: Vector2i, item_data: ItemData):
 	if manager == null or item_data == null or root_pos == Vector2i(-1, -1):
 		return
 	var can_place_delta = manager.can_place_item(item_data, root_pos)
+	if not can_place_delta and manager.has_method("can_stack_item") and manager.can_stack_item(item_data, root_pos):
+		can_place_delta = true
 	var highlight_color_delta = COLOR_VALID if can_place_delta else COLOR_INVALID
 	for offset_delta in item_data.shape:
 		var target_pos_delta = root_pos + offset_delta

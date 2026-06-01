@@ -6,7 +6,6 @@ const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
-	"gardening_toolkit",
 	"recycling_hook",
 	"calibration_screwdriver",
 	"universal_toolbox",
@@ -132,7 +131,10 @@ func test_buy_shop_offer_spends_shards_and_updates_long_term_state():
 
 	assert_true(rm.buy_shop_offer({"type": "tool", "id": "small_patch", "price": 8}))
 	assert_eq(rm.current_shards, 40)
-	assert_eq(rm.get_tool_count("small_patch"), 1)
+	assert_true(rm.current_tools.is_empty())
+	assert_eq(rm.pending_item_rewards.size(), 1)
+	assert_eq(str(rm.pending_item_rewards[0].get("id", "")), "small_patch")
+	assert_eq(int(rm.pending_item_rewards[0].get("stack_count", 1)), 1)
 
 func test_sell_backpack_item_removes_item_and_grants_sell_value():
 	var rm = _make_run_manager(1)

@@ -176,34 +176,6 @@
 		]
 	},
 	{
-		"id": "seedbed_nursery",
-		"title": "温室育苗床",
-		"description": "一排梦境之种在玻璃罩下缓慢发光。你可以带走培育工具，或把旧物变成种子资源。",
-		"earliest_act": 3,
-		"weight": 0.85,
-		"risk": 0.25,
-		"reward": 0.8,
-		"tags": ["梦境之种", "播种", "升级", "道具"],
-		"choices": [
-			{
-				"id": "take_water_drop",
-				"title": "带走小水滴",
-				"description": "获得 1 个道具“小水滴”。",
-				"effects": [
-					{"type": "tool", "id": "small_water_drop", "amount": 1}
-				]
-			},
-			{
-				"id": "take_gardener_gloves",
-				"title": "整理园艺手套",
-				"description": "获得饰品“园丁手套”。",
-				"effects": [
-					{"type": "ornament", "id": "gardener_gloves"}
-				]
-			}
-		]
-	},
-	{
 		"id": "gearwork_bench",
 		"title": "失控工作台",
 		"description": "工作台上的齿轮仍在空转。它能提供机械道具，但需要你冒着被卷入传动链的风险。",
