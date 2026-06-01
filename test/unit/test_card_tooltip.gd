@@ -50,6 +50,38 @@ func test_item_ui_uses_configured_grid_cell_size_for_shape_size():
 	assert_eq(ui.size, Vector2(160.0, 144.0))
 
 
+func test_item_ui_direction_badge_uses_top_right_corner_without_label_marker():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+	ui.set_cell_size(Vector2(100.0, 70.0))
+
+	var radius: float = ui.call("_get_direction_badge_radius")
+	var center: Vector2 = ui.call("_get_direction_badge_center", radius)
+	assert_false(ui.direction_icon.visible)
+	assert_true(center.x > ui.size.x * 0.7)
+	assert_true(center.y < ui.size.y * 0.45)
+	assert_true(center.x + radius > ui.size.x)
+	assert_true(center.y - radius < 1.0)
+
+
+func test_item_ui_direction_badge_flashes_when_direction_changes():
+	var item = _make_item_data()
+	var ui = add_child_autofree(ItemUIScene.instantiate())
+	await get_tree().process_frame
+
+	ui.setup(item)
+	assert_eq(ui.get("_direction_flash"), 0.0)
+
+	item.direction = ItemData.Direction.DOWN
+	ui.call("_sync_visuals")
+
+	var flash: float = ui.get("_direction_flash")
+	assert_true(flash > 0.0)
+
+
 func test_item_ui_processes_only_while_dragging():
 	var item = _make_item_data()
 	var ui = add_child_autofree(ItemUIScene.instantiate())

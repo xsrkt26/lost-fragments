@@ -11,6 +11,7 @@ const DEFAULT_SEQUENCE_ID := "beginning"
 
 var _started := false
 var _finishing := false
+var scene_manager_override: Node = null
 
 
 func _ready() -> void:
@@ -61,12 +62,35 @@ func _start_configured_sequence() -> void:
 
 
 func _preload_next_scene() -> void:
-	var scene_manager := get_node_or_null("/root/GlobalScene")
+	var scene_manager: Node = _get_scene_manager()
 	if scene_manager != null and scene_manager.has_method("preload_scene"):
 		scene_manager.call("preload_scene", next_scene_type)
 
 
 func _transition_to_next_scene() -> void:
-	var scene_manager := get_node_or_null("/root/GlobalScene")
-	if scene_manager != null and scene_manager.has_method("transition_to"):
+	var scene_manager: Node = _get_scene_manager()
+	if scene_manager == null:
+		return
+	if next_scene_type == GlobalScene.SceneType.HUB:
+		if scene_manager.has_method("transition_to_direct"):
+			if scene_manager.has_method("request_story_book_return_transition"):
+				scene_manager.call("request_story_book_return_transition", _get_story_page_display_state())
+			scene_manager.call("transition_to_direct", next_scene_type, false)
+			return
+	if scene_manager.has_method("transition_to"):
 		scene_manager.call("transition_to", next_scene_type, false)
+
+
+func _get_scene_manager() -> Node:
+	if scene_manager_override != null:
+		return scene_manager_override
+	return get_node_or_null("/root/GlobalScene")
+
+
+func _get_story_page_display_state() -> Dictionary:
+	if story_page == null or not story_page.has_method("get_story_display_state"):
+		return {}
+	var state = story_page.call("get_story_display_state")
+	if typeof(state) == TYPE_DICTIONARY:
+		return Dictionary(state)
+	return {}

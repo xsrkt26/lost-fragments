@@ -153,6 +153,7 @@ var _is_shop_visual_state_active := false
 var _is_shop_intro_sequence_running := false
 var _pending_merchant_shop_open := false
 var _merchant_shop_sequence_running := false
+var _story_book_return_transition_running := false
 var _xiaomi_anchor: Node2D = null
 var _story_bubble_controller: Control = null
 var _battle_controller = HubBattleController.new()
@@ -218,8 +219,14 @@ func _ready() -> void:
 		book_background.call("set_active_page_id", BookBackgroundConfig.PAGE_HUB)
 	if book_page_navigator != null and book_page_navigator.has_method("configure"):
 		book_page_navigator.configure(self)
+	var should_play_story_return := _consume_story_book_return_transition_request()
+	if should_play_story_return:
+		should_play_story_return = _prepare_story_book_return_transition()
 	_sync_xiaomi_anchor_for_current_act()
-	_try_play_pending_hub_story_on_ready()
+	if should_play_story_return:
+		call_deferred("_play_story_book_return_transition")
+	else:
+		_try_play_pending_hub_story_on_ready()
 	_update_merchant_state()
 	_update_dreamcatcher_state()
 	_start_hub_dreamcatcher_idle_swing()
@@ -1886,10 +1893,43 @@ func play_story_book_page(sequence_id: String) -> bool:
 
 
 func can_play_pending_story_sequence() -> bool:
-	return not _is_hub_battle_session_active \
+	return not _story_book_return_transition_running \
+		and not _is_hub_battle_session_active \
 		and not _is_shop_visual_state_active \
 		and not _is_shop_intro_sequence_running \
 		and not _merchant_shop_sequence_running
+
+
+func _consume_story_book_return_transition_request() -> bool:
+	var scene_manager := get_node_or_null("/root/GlobalScene")
+	if scene_manager == null or not scene_manager.has_method("consume_story_book_return_transition_request"):
+		return false
+	return bool(scene_manager.call("consume_story_book_return_transition_request"))
+
+
+func _prepare_story_book_return_transition() -> bool:
+	if book_page_navigator == null or not book_page_navigator.has_method("prepare_story_return_page"):
+		return false
+	var prepared := bool(book_page_navigator.call("prepare_story_return_page", _consume_story_book_return_page_state()))
+	_story_book_return_transition_running = prepared
+	return prepared
+
+
+func _consume_story_book_return_page_state() -> Dictionary:
+	var scene_manager := get_node_or_null("/root/GlobalScene")
+	if scene_manager == null or not scene_manager.has_method("consume_story_book_return_page_state"):
+		return {}
+	var page_state: Variant = scene_manager.call("consume_story_book_return_page_state")
+	if page_state is Dictionary:
+		return Dictionary(page_state)
+	return {}
+
+
+func _play_story_book_return_transition() -> void:
+	if book_page_navigator != null and book_page_navigator.has_method("play_story_return_to_hub"):
+		await book_page_navigator.call("play_story_return_to_hub")
+	_story_book_return_transition_running = false
+	_try_play_pending_hub_story_on_ready()
 
 
 func play_story_bubble_dialogue(sequence_id: String) -> bool:

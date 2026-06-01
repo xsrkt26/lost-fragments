@@ -50,6 +50,20 @@ func show_item(item_data: ItemData, instance_data: Variant = null):
 		_current_request = {"name": item_data.item_name, "desc": processed_desc, "inst": instance_data}
 		_delay_timer.start(_display_delay)
 
+func show_text(title: String, body: String, instance_data: Variant = null) -> void:
+	if title == "" and body == "":
+		hide()
+		return
+	if _tooltip_instance == null:
+		return
+	_delay_timer.stop()
+	var processed_desc = _process_text(body)
+	if _tooltip_instance.is_panel_visible():
+		_tooltip_instance.show_tooltip(title, processed_desc, instance_data)
+	else:
+		_current_request = {"name": title, "desc": processed_desc, "inst": instance_data}
+		_delay_timer.start(_display_delay)
+
 ## 隐藏提示
 func hide():
 	_delay_timer.stop()

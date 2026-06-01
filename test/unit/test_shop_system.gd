@@ -3,7 +3,6 @@ extends GutTest
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const ShopGeneratorScript = preload("res://src/core/rewards/shop_generator.gd")
 const HubShopVisualControllerScript = preload("res://src/ui/hub/hub_shop_visual_controller.gd")
-const ShopScene = preload("res://src/ui/shop/shop_scene.tscn")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
@@ -15,14 +14,18 @@ const TOOL_ORNAMENT_IDS := [
 
 var item_db
 var ornament_db
+var tool_db
 
 func before_each():
 	item_db = get_node_or_null("/root/ItemDatabase")
 	ornament_db = get_node_or_null("/root/OrnamentDatabase")
+	tool_db = get_node_or_null("/root/ToolDatabase")
 	if item_db and item_db.items.is_empty():
 		item_db.load_all_items()
 	if ornament_db and ornament_db.ornaments.is_empty():
 		ornament_db.load_all_ornaments()
+	if tool_db and tool_db.tools.is_empty():
+		tool_db.load_all_tools()
 
 func after_each():
 	GlobalTooltip.hide()
@@ -211,11 +214,72 @@ func test_visual_shop_skull_overlay_matches_reference_pixels():
 		assert_eq(skull.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
 
 
-func test_shop_item_offer_uses_card_tooltip():
-	var shop = add_child_autofree(ShopScene.instantiate())
+func test_visual_shop_offer_slots_use_reference_layout_and_product_content():
+	var owner := Control.new()
+	add_child_autofree(owner)
+	owner.size = BookBackgroundConfig.DESIGN_SIZE
+	var rm = _make_run_manager(2)
+	var controller = HubShopVisualControllerScript.new()
+	controller._owner_node = owner
+	controller._last_viewport_size = BookBackgroundConfig.DESIGN_SIZE
+
+	controller._render_offer_buttons(rm, item_db, ornament_db)
 	await get_tree().process_frame
 
-	shop._show_offer_tooltip({"type": "item", "id": "paper_ball"})
+	assert_eq(controller._offer_buttons.size(), ShopGeneratorScript.DEFAULT_OFFER_COUNT)
+	for index in range(controller._offer_buttons.size()):
+		var button: Button = controller._offer_buttons[index]
+		assert_eq(button.text, "")
+		assert_eq(button.tooltip_text, "")
+		assert_not_null(button.get_node_or_null("OfferContent/VisualArea"))
+		assert_not_null(button.get_node_or_null("OfferContent/TitleLabel"))
+		var price_label := button.get_node_or_null("OfferContent/PriceLabel") as Label
+		assert_not_null(price_label)
+		assert_true(price_label.text.ends_with("元"))
+		if index < 4:
+			assert_true(button.position.y < 360.0)
+		else:
+			assert_true(button.position.y > 460.0)
+
+
+func test_visual_shop_offer_content_renders_item_tool_and_ornament_visuals():
+	var owner := Control.new()
+	add_child_autofree(owner)
+	var rm = _make_run_manager(2)
+	var controller = HubShopVisualControllerScript.new()
+
+	var item_button := Button.new()
+	owner.add_child(item_button)
+	item_button.size = Vector2(160, 190)
+	controller._build_offer_content(item_button, {"type": "item", "id": "paper_ball", "title": "纸团", "price": 10}, item_db, tool_db, rm)
+	controller._layout_offer_content(item_button)
+	var item_icon := item_button.get_node_or_null("OfferContent/VisualArea/OfferItemIcon") as TextureRect
+	assert_not_null(item_icon)
+	assert_true(item_icon.texture is Texture2D)
+	assert_almost_eq(item_icon.size.x, item_icon.size.y, 0.001)
+
+	var tool_button := Button.new()
+	owner.add_child(tool_button)
+	tool_button.size = Vector2(160, 190)
+	controller._build_offer_content(tool_button, {"type": "tool", "id": "small_patch", "title": "小补丁", "price": 10}, item_db, tool_db, rm)
+	controller._layout_offer_content(tool_button)
+	var tool_icon := tool_button.get_node_or_null("OfferContent/VisualArea/OfferToolIcon") as TextureRect
+	assert_not_null(tool_icon)
+	assert_true(tool_icon.texture is Texture2D)
+	assert_almost_eq(tool_icon.size.x, tool_icon.size.y, 0.001)
+
+	var ornament_button := Button.new()
+	owner.add_child(ornament_button)
+	ornament_button.size = Vector2(160, 190)
+	controller._build_offer_content(ornament_button, {"type": "ornament", "id": "old_pocket_watch", "title": "旧怀表", "rarity": "普通", "price": 10}, item_db, tool_db, rm)
+	controller._layout_offer_content(ornament_button)
+	assert_not_null(ornament_button.get_node_or_null("OfferContent/VisualArea/OfferOrnamentTag"))
+
+
+func test_hub_shop_offers_use_card_tooltips_for_all_types():
+	var controller = HubShopVisualControllerScript.new()
+
+	controller._show_offer_tooltip({"type": "item", "id": "paper_ball"}, item_db, ornament_db, tool_db)
 	await get_tree().create_timer(0.25).timeout
 
 	var tooltip = GlobalTooltip._tooltip_instance
@@ -225,6 +289,14 @@ func test_shop_item_offer_uses_card_tooltip():
 	var expected_item = item_db.get_item_by_id("paper_ball")
 	var title_label = tooltip.get_node("PanelContainer/MarginContainer/VBoxContainer/TitleLabel")
 	assert_eq(title_label.text, expected_item.item_name)
+
+	controller._show_offer_tooltip({"type": "ornament", "id": "old_pocket_watch"}, item_db, ornament_db, tool_db)
+	await get_tree().create_timer(0.25).timeout
+	assert_eq(title_label.text, "旧怀表")
+
+	controller._show_offer_tooltip({"type": "tool", "id": "small_patch"}, item_db, ornament_db, tool_db)
+	await get_tree().create_timer(0.25).timeout
+	assert_eq(title_label.text, "小补丁")
 
 func _offer_keys(offers: Array[Dictionary]) -> Array[String]:
 	var keys: Array[String] = []

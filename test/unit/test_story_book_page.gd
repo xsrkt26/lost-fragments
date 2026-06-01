@@ -6,6 +6,33 @@ const BookPageNavigator = preload("res://src/ui/book/book_page_navigator.gd")
 const BookBackgroundConfig = preload("res://src/ui/book/book_background_config.gd")
 
 
+class FakeSceneManager:
+	extends Node
+
+	var preload_calls := []
+	var transition_calls := []
+	var direct_transition_calls := []
+	var story_return_requested := false
+
+	func preload_scene(scene_type: int) -> void:
+		preload_calls.append(scene_type)
+
+	func transition_to(scene_type: int, push_to_history: bool = true) -> void:
+		transition_calls.append({
+			"scene_type": scene_type,
+			"push_to_history": push_to_history,
+		})
+
+	func transition_to_direct(scene_type: int, push_to_history: bool = true) -> void:
+		direct_transition_calls.append({
+			"scene_type": scene_type,
+			"push_to_history": push_to_history,
+		})
+
+	func request_story_book_return_transition(_page_state: Dictionary) -> void:
+		story_return_requested = true
+
+
 func test_story_book_page_shows_pinned_disabled_left_bookmarks() -> void:
 	var page := add_child_autofree(StoryBookPage.instantiate()) as Control
 	await get_tree().process_frame
@@ -71,6 +98,52 @@ func test_standalone_story_book_scene_hosts_existing_story_page() -> void:
 	assert_eq(page.scene_file_path, "res://src/ui/story/story_book_page.tscn")
 	assert_true(scene.call("play_story_book_page", "beginning"))
 	assert_eq(str(page.get("_sequence_id")), "beginning")
+
+
+func test_standalone_story_book_returns_to_hub_with_book_return_request() -> void:
+	var scene := StoryBookScene.instantiate() as Control
+	var fake_scene_manager := FakeSceneManager.new()
+	add_child_autofree(fake_scene_manager)
+	scene.set("auto_start_sequence", false)
+	scene.set("scene_manager_override", fake_scene_manager)
+	add_child_autofree(scene)
+	await get_tree().process_frame
+
+	scene.call("_transition_to_next_scene")
+
+	assert_true(fake_scene_manager.story_return_requested)
+	assert_eq(fake_scene_manager.direct_transition_calls.size(), 1)
+	assert_eq(fake_scene_manager.direct_transition_calls[0]["scene_type"], GlobalScene.SceneType.HUB)
+	assert_false(bool(fake_scene_manager.direct_transition_calls[0]["push_to_history"]))
+	assert_eq(fake_scene_manager.transition_calls.size(), 0)
+
+
+func test_story_to_hub_has_book_stack_transition_record() -> void:
+	var navigator := BookPageNavigator.new() as Control
+	for page_id in [
+		BookBackgroundConfig.PAGE_HUB,
+		BookBackgroundConfig.PAGE_BACKPACK,
+		BookBackgroundConfig.PAGE_GALLERY,
+		BookBackgroundConfig.PAGE_SETTINGS,
+	]:
+		var button := Button.new()
+		button.name = "%sTabButton" % str(page_id).capitalize()
+		navigator.add_child(button)
+	add_child_autofree(navigator)
+	await get_tree().process_frame
+
+	navigator.call("_prepare_transition_page_stack", BookBackgroundConfig.PAGE_STORY, BookBackgroundConfig.PAGE_HUB)
+
+	var records: Array = navigator.get("_transition_stack_records")
+	assert_false(records.is_empty())
+	var story_record := {}
+	for record in records:
+		if str(Dictionary(record).get("page_id", "")) == BookBackgroundConfig.PAGE_STORY:
+			story_record = Dictionary(record)
+			break
+	assert_false(story_record.is_empty())
+	assert_almost_eq(float(story_record.get("start_progress", -1.0)), 0.0, 0.001)
+	assert_almost_eq(float(story_record.get("end_progress", -1.0)), 1.0, 0.001)
 
 
 func test_story_page_bookmark_hotspots_stay_disabled() -> void:

@@ -58,6 +58,33 @@ func start_story_sequence(sequence_id: String) -> void:
 			_frames = Array(raw_frames)
 
 
+func get_story_display_state() -> Dictionary:
+	var state := {
+		"sequence_id": _sequence_id,
+		"current_frame_idx": _current_frame_idx,
+		"waiting_for_first_click": _waiting_for_first_click,
+	}
+	if content_label != null:
+		state["content_text"] = content_label.text
+		state["visible_characters"] = content_label.visible_characters
+	return state
+
+
+func apply_story_display_state(state: Dictionary) -> void:
+	_sequence_id = str(state.get("sequence_id", _sequence_id))
+	_current_frame_idx = int(state.get("current_frame_idx", _current_frame_idx))
+	_waiting_for_first_click = bool(state.get("waiting_for_first_click", false))
+	_is_typing = false
+	_type_timer = 0.0
+	_finishing = true
+	set_process(false)
+	set_process_input(false)
+	if content_label == null:
+		return
+	content_label.text = str(state.get("content_text", content_label.text))
+	content_label.visible_characters = int(state.get("visible_characters", content_label.get_total_character_count()))
+
+
 func _layout_page() -> void:
 	if design_root == null:
 		return

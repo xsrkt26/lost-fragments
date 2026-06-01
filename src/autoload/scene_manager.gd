@@ -54,6 +54,8 @@ var _is_transitioning := false
 var _page_turn_progress := 0.0
 var _preloaded_scenes: Dictionary = {}
 var _pending_preload_targets: Dictionary = {}
+var _pending_story_book_return_transition := false
+var _pending_story_book_return_page_state: Dictionary = {}
 
 func _ready():
 	_setup_transition_ui()
@@ -158,6 +160,24 @@ func preload_scene(target: SceneType) -> void:
 		_pending_preload_targets[target] = scene_path
 		return
 	push_warning("[SceneManager] Failed to preload scene: %s" % scene_path)
+
+
+func request_story_book_return_transition(page_state: Dictionary) -> void:
+	_pending_story_book_return_transition = true
+	_pending_story_book_return_page_state = page_state.duplicate(true)
+
+
+func consume_story_book_return_transition_request() -> bool:
+	if not _pending_story_book_return_transition:
+		return false
+	_pending_story_book_return_transition = false
+	return true
+
+
+func consume_story_book_return_page_state() -> Dictionary:
+	var page_state := _pending_story_book_return_page_state.duplicate(true)
+	_pending_story_book_return_page_state.clear()
+	return page_state
 
 ## 核心跳转方法：带有淡入淡出动画
 func transition_to(target: SceneType, push_to_history: bool = true):

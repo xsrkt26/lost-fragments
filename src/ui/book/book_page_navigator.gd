@@ -40,6 +40,13 @@ const TRANSITION_PAGE_ORDER := [
 	PAGE_BACKPACK,
 	PAGE_SETTINGS,
 ]
+const STORY_TRANSITION_PAGE_ORDER := [
+	PAGE_STORY,
+	PAGE_HUB,
+	PAGE_GALLERY,
+	PAGE_BACKPACK,
+	PAGE_SETTINGS,
+]
 const BOOK_BASE_ART_NODE_NAMES := [
 	"WoodFloor",
 	"RedBookCover",
@@ -306,6 +313,28 @@ func finish_story_sequence(sequence_id: String) -> void:
 	var active_sequence: Variant = story_manager.get("current_playing_sequence")
 	if sequence_id == "" or str(active_sequence) == sequence_id:
 		story_manager.call("finish_current_sequence")
+
+
+func prepare_story_return_page(page_state: Dictionary) -> bool:
+	var page := _ensure_page(PAGE_STORY)
+	if page == null:
+		return false
+	if not page_state.is_empty() and page.has_method("apply_story_display_state"):
+		page.call("apply_story_display_state", page_state)
+	_is_turning = false
+	current_page_id = PAGE_STORY
+	_hide_compressed_page_stack()
+	_sync_page_visibility()
+	GlobalInput.set_context(GlobalInput.Context.LOCKED)
+	return true
+
+
+func play_story_return_to_hub() -> void:
+	if current_page_id != PAGE_STORY and not prepare_story_return_page({}):
+		return
+	await get_tree().process_frame
+	if current_page_id == PAGE_STORY:
+		await go_to_page(PAGE_HUB)
 
 
 func activate_tab_at_position(pointer_global_position: Vector2) -> bool:
@@ -672,15 +701,16 @@ func _prepare_transition_page_stack(previous_page_id: String, target_page_id: St
 	root.visible = true
 	_layout_transition_stack_root(_get_transition_viewport_size())
 	_add_transition_book_base_art(root)
-	var previous_index := _get_page_stack_index(previous_page_id)
-	var target_index := _get_page_stack_index(target_page_id)
+	var page_order := _get_transition_page_order(previous_page_id, target_page_id)
+	var previous_index := page_order.find(BookBackgroundConfig.normalize_page_id(previous_page_id))
+	var target_index := page_order.find(BookBackgroundConfig.normalize_page_id(target_page_id))
 	if previous_index < 0 or target_index < 0:
 		return
-	for index in range(TRANSITION_PAGE_ORDER.size() - 1, -1, -1):
-		var page_id := str(TRANSITION_PAGE_ORDER[index])
+	for index in range(page_order.size() - 1, -1, -1):
+		var page_id := str(page_order[index])
 		var start_progress := 1.0 if index < previous_index else 0.0
 		var end_progress := 1.0 if index < target_index else 0.0
-		var page_z_index := _get_transition_page_layer_z_index(index)
+		var page_z_index := _get_transition_page_layer_z_index(index, page_order.size())
 		var sheet_layer := _create_transition_sheet_layer(page_z_index + TRANSITION_SHEET_LOCAL_Z)
 		root.add_child(sheet_layer)
 		_add_transition_page_sheet(sheet_layer, page_id)
@@ -706,6 +736,12 @@ func _prepare_transition_page_stack(previous_page_id: String, target_page_id: St
 	_add_transition_back_tab(root)
 
 
+func _get_transition_page_order(previous_page_id: String, target_page_id: String) -> Array:
+	if previous_page_id == PAGE_STORY or target_page_id == PAGE_STORY:
+		return STORY_TRANSITION_PAGE_ORDER
+	return TRANSITION_PAGE_ORDER
+
+
 func _create_transition_global_layer_root(parent: Control, layer_name: String, layer_z_index: int) -> Control:
 	var root := Control.new()
 	root.name = "Transition%sRoot" % layer_name
@@ -718,8 +754,9 @@ func _create_transition_global_layer_root(parent: Control, layer_name: String, l
 	return root
 
 
-func _get_transition_page_layer_z_index(stack_index: int) -> int:
-	return (TRANSITION_PAGE_ORDER.size() - stack_index) * TRANSITION_PAGE_Z_STEP
+func _get_transition_page_layer_z_index(stack_index: int, page_count: int = -1) -> int:
+	var count := TRANSITION_PAGE_ORDER.size() if page_count < 0 else page_count
+	return (count - stack_index) * TRANSITION_PAGE_Z_STEP
 
 
 func _create_transition_page_layer(page_id: String, stack_index: int) -> Control:
