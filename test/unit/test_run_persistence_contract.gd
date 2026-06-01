@@ -76,6 +76,19 @@ func test_deserialize_run_accepts_legacy_tool_entry_arrays():
 	assert_eq(str(run_manager.pending_item_rewards[0].get("id", "")), "small_patch")
 	assert_eq(int(run_manager.pending_item_rewards[0].get("stack_count", 0)), 3)
 
+func test_deserialize_run_migrates_eventful_route_progress_to_eventless_route():
+	run_manager.deserialize_run({
+		"schema_version": 1,
+		"is_active": true,
+		"act": 1,
+		"route_index": 4,
+		"completed_route_nodes": [0, 1, 2, 3],
+	})
+
+	assert_eq(run_manager.current_route_index, 3)
+	assert_eq(run_manager.completed_route_nodes, [0, 1, 2] as Array[int])
+	assert_eq(run_manager.get_current_route_node().get("id"), "shop_2")
+
 func test_serialize_run_includes_current_schema_version():
 	var serialized = run_manager.serialize_run()
 

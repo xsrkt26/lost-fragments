@@ -7,7 +7,6 @@ const ShopScene = preload("res://src/ui/shop/shop_scene.tscn")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
-	"gardening_toolkit",
 	"recycling_hook",
 	"calibration_screwdriver",
 	"universal_toolbox",

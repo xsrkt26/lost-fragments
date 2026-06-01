@@ -5,10 +5,23 @@ const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
-	"gardening_toolkit",
 	"recycling_hook",
 	"calibration_screwdriver",
 	"universal_toolbox",
+]
+
+const REMOVED_SEED_ORNAMENT_IDS := [
+	"gardener_gloves",
+	"moon_dew_bottle",
+	"compost_bag",
+	"honey_spoon",
+	"greenhouse_glass",
+	"root_bell",
+	"seed_insurance",
+	"apple_wooden_tag",
+	"harvest_basket",
+	"rejuvenation_talisman",
+	"gardening_toolkit",
 ]
 
 var rm
@@ -88,7 +101,7 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 	var ornament_db = get_node_or_null("/root/OrnamentDatabase")
 	assert_not_null(ornament_db)
 	var all_ornaments = ornament_db.get_all_ornaments()
-	assert_eq(all_ornaments.size(), 56)
+	assert_eq(all_ornaments.size(), 45)
 	assert_not_null(ornament_db.get_ornament_by_id("old_pocket_watch"))
 	var enabled_count := 0
 	for ornament in all_ornaments:
@@ -102,6 +115,8 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 		assert_not_null(ornament)
 		assert_true(ornament.enabled)
 		assert_eq(ornament.effect_id, ornament_id)
+	for ornament_id in REMOVED_SEED_ORNAMENT_IDS:
+		assert_null(ornament_db.get_ornament_by_id(ornament_id))
 
 	var act_one = ornament_db.get_available_ornaments(1, ["old_pocket_watch"] as Array[String])
 	for ornament in act_one:
@@ -256,110 +271,6 @@ func test_discard_ornaments_apply_once_and_count_discards():
 	assert_eq(gs.current_score, 10)
 	assert_eq(gs.current_sanity, 82)
 
-func test_seed_upgrade_ornaments_score_and_restore_sanity():
-	var manager = await _make_manager(["greenhouse_glass", "rejuvenation_talisman"] as Array[String])
-	gs.current_sanity = 80
-	var seed = item_db.get_item_by_id("dream_seed_4x4")
-	manager.backpack_manager.place_item(seed, Vector2i(1, 1))
-	var instance = manager.backpack_manager.grid[Vector2i(1, 1)]
-
-	manager._on_ornament_seed_upgraded(instance, 29, 30)
-
-	assert_eq(gs.current_score, 9)
-	assert_eq(gs.current_sanity, 83)
-
-	manager._on_ornament_seed_upgraded(instance, 30, 31)
-
-	assert_eq(gs.current_score, 10)
-	assert_eq(gs.current_sanity, 83)
-
-func test_greenhouse_glass_scores_when_upgrade_crosses_seed_threshold():
-	var manager = await _make_manager(["greenhouse_glass"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_2x2")
-	manager.backpack_manager.place_item(seed, Vector2i(1, 1))
-	var instance = manager.backpack_manager.grid[Vector2i(1, 1)]
-
-	manager._on_ornament_seed_upgraded(instance, 9, 11)
-
-	assert_eq(gs.current_score, 9)
-
-func test_gardener_gloves_scores_first_seed_sown_only():
-	var manager = await _make_manager(["gardener_gloves"] as Array[String])
-	var first_source = _place_runtime_item(manager, "source_a", Vector2i(1, 1), [] as Array[String], 0, ItemData.Direction.RIGHT)
-	var second_source = _place_runtime_item(manager, "source_b", Vector2i(1, 2), [] as Array[String], 0, ItemData.Direction.RIGHT)
-
-	manager.backpack_manager.sow_seed(first_source, ItemData.Direction.RIGHT, item_db, 1)
-	manager.backpack_manager.sow_seed(second_source, ItemData.Direction.RIGHT, item_db, 1)
-
-	assert_eq(gs.current_score, 3)
-
-func test_moon_dew_bottle_upgrades_first_seed_every_four_draws():
-	var manager = await _make_manager(["moon_dew_bottle"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_1x1")
-	manager.backpack_manager.place_item(seed, Vector2i(1, 1))
-	var instance = manager.backpack_manager.grid[Vector2i(1, 1)]
-	var old_level = instance.dream_seed_level
-
-	manager.draw_count = 4
-	manager._apply_ornament_item_drawn(_make_draw_item(0))
-
-	assert_eq(instance.dream_seed_level, old_level + 1)
-
-func test_compost_bag_upgrades_seed_at_most_twice_per_draw():
-	var manager = await _make_manager(["compost_bag"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_1x1")
-	manager.backpack_manager.place_item(seed, Vector2i(1, 1))
-	var instance = manager.backpack_manager.grid[Vector2i(1, 1)]
-	var old_level = instance.dream_seed_level
-	var discarded = _make_draw_item(0)
-
-	manager._apply_ornament_item_discarded(discarded, null, false)
-	manager._apply_ornament_item_discarded(discarded, null, false)
-	manager._apply_ornament_item_discarded(discarded, null, false)
-
-	assert_eq(instance.dream_seed_level, old_level + 2)
-
-func test_root_bell_upgrades_adjacent_seed_when_seed_is_hit():
-	var manager = await _make_manager(["root_bell"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_1x1")
-	manager.backpack_manager.place_item(seed, Vector2i(2, 2))
-	var hit_seed = manager.backpack_manager.grid[Vector2i(2, 2)]
-	manager.backpack_manager.place_item(seed, Vector2i(3, 2))
-	var neighbor = manager.backpack_manager.grid[Vector2i(3, 2)]
-	var old_level = neighbor.dream_seed_level
-
-	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(hit_seed)] as Array[GameAction])
-
-	assert_eq(neighbor.dream_seed_level, old_level + 1)
-
-func test_apple_wooden_tag_sows_from_discard_and_scores_core_transformation():
-	var manager = await _make_manager(["apple_wooden_tag"] as Array[String])
-	var apple = item_db.get_item_by_id("apple")
-	apple.direction = ItemData.Direction.RIGHT
-	manager.backpack_manager.place_item(apple, Vector2i(1, 1))
-	var apple_instance = manager.backpack_manager.grid[Vector2i(1, 1)]
-
-	manager._apply_ornament_item_discarded(apple_instance.data, apple_instance, true)
-	assert_true(manager.backpack_manager.grid.has(Vector2i(2, 1)))
-	assert_eq(manager.backpack_manager.grid[Vector2i(2, 1)].data.id, "dream_seed_1x1")
-
-	var apple_core = item_db.get_item_by_id("apple_core")
-	manager.backpack_manager.place_item(apple_core, Vector2i(3, 3))
-	var core_instance = manager.backpack_manager.grid[Vector2i(3, 3)]
-	assert_true(manager.backpack_manager.replace_item_data(core_instance.root_pos, apple))
-	assert_eq(manager.backpack_manager.grid[Vector2i(3, 3)].data.id, "apple")
-	assert_eq(gs.current_score, 4)
-
-func test_harvest_basket_scores_once_when_4x4_seed_resolves():
-	var manager = await _make_manager(["harvest_basket"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_4x4")
-	var instance = BackpackManager.ItemInstance.new(seed, Vector2i(1, 1))
-
-	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(instance)] as Array[GameAction])
-	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(instance)] as Array[GameAction])
-
-	assert_eq(gs.current_score, 25)
-
 func test_chain_end_ornaments_score_from_hit_count_thresholds():
 	var manager = await _make_manager(["chain_counter", "terminal_pressure_gauge"] as Array[String])
 	var actions: Array[GameAction] = []
@@ -490,36 +401,12 @@ func test_overload_lamp_scores_on_consecutive_impact_draws():
 
 func test_mixed_chain_ornaments_score_tags_waste_value_and_neighbors():
 	var manager = await _make_manager(["kaleidoscope", "black_market_stamp", "fusion_badge"] as Array[String])
-	var target = _place_runtime_item(manager, "mixed_waste", Vector2i(2, 2), ["机械", "废弃物", "梦境之种"] as Array[String], 7)
+	var target = _place_runtime_item(manager, "mixed_waste", Vector2i(2, 2), ["机械", "废弃物", "污染"] as Array[String], 7)
 	_place_runtime_item(manager, "same_tag_neighbor", Vector2i(3, 2), ["机械"] as Array[String])
 
 	manager._apply_ornament_impact_chain_resolved(null, [_impact_action(target)] as Array[GameAction])
 
 	assert_eq(gs.current_score, 20)
-
-func test_honey_spoon_only_counts_official_food_items():
-	var manager = await _make_manager(["honey_spoon"] as Array[String])
-	var leftover = item_db.get_item_by_id("leftover_box")
-	var apple = item_db.get_item_by_id("apple")
-
-	manager._apply_ornament_item_discarded(leftover, null, false)
-	assert_eq(gs.current_score, 0)
-
-	manager._apply_ornament_item_discarded(apple, null, false)
-	assert_eq(gs.current_score, 4)
-
-func test_seed_insurance_scores_when_seed_growth_cannot_fit():
-	var manager = await _make_manager(["seed_insurance"] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_1x1")
-	manager.backpack_manager.place_item(seed, Vector2i(5, 5))
-	var instance = manager.backpack_manager.grid[Vector2i(5, 5)]
-	instance.dream_seed_level = 9
-	instance.data.set_meta("dream_seed_level", 9)
-
-	manager.backpack_manager.upgrade_seed(instance, item_db, 1)
-
-	assert_eq(gs.current_score, 8)
-	assert_false(manager.backpack_manager.grid.has(Vector2i(5, 5)))
 
 func _impact_count(actions: Array[GameAction]) -> int:
 	var count = 0
@@ -571,20 +458,16 @@ func test_recycling_coupon_discounts_next_item_after_first_item_purchase():
 	assert_eq(manager.get_current_shop_offer_price(offer), 10)
 
 func test_tool_linked_score_ornaments_react_to_tool_usage():
-	var manager = await _make_manager(["tool_belt", "specimen_pin_case", "gardening_toolkit", "recycling_hook"] as Array[String])
+	var manager = await _make_manager(["tool_belt", "specimen_pin_case", "recycling_hook"] as Array[String])
 	var waste = _make_instance("paper_ball", ["废弃物"] as Array[String], 1)
 	var pollution_tool = _make_tool("black_ink_drop", ["污染"] as Array[String])
 
 	manager._apply_ornament_tool_used(pollution_tool, {"type": "item", "instance": waste}, {"success": true})
 	assert_eq(gs.current_score, 9)
 
-	var seed_tool = _make_tool("fertilizer_bag", ["梦境之种"] as Array[String])
-	manager._apply_ornament_tool_used(seed_tool, {"type": "item"}, {"success": true, "seed_sown": true, "seed_grew": true})
-	assert_eq(gs.current_score, 21)
-
 	var discard_tool = _make_tool("recycling_clip", ["丢弃"] as Array[String])
 	manager._apply_ornament_tool_used(discard_tool, {"type": "discard"}, {"success": true})
-	assert_eq(gs.current_score, 33)
+	assert_eq(gs.current_score, 13)
 
 	gs.current_sanity = 50
 	var discarded_waste = _make_runtime_item("paper_ball", ["废弃物"] as Array[String], 1)
@@ -632,7 +515,7 @@ func test_universal_toolbox_rewards_once_after_three_target_types():
 	var tool = _make_tool("small_patch", [] as Array[String])
 
 	manager._apply_ornament_tool_used(tool, {"type": "item"}, {"success": true})
-	manager._apply_ornament_tool_used(tool, {"type": "empty_cell"}, {"success": true})
+	manager._apply_ornament_tool_used(tool, {"type": "discard"}, {"success": true})
 	assert_eq(gs.current_score, 0)
 
 	manager._apply_ornament_tool_used(tool, {"type": "dreamcatcher"}, {"success": true})
@@ -663,21 +546,18 @@ func test_collection_cabinet_scores_for_category_diversity_on_battle_start():
 		"collection_cabinet",
 		"old_pocket_watch",
 		"sealed_bottle",
-		"greenhouse_glass",
+		"recycling_hook",
 		"gear_oil"
 	] as Array[String])
 
 	assert_eq(gs.current_score, 12)
 	assert_eq(manager.active_ornaments.size(), 5)
 
-func test_tri_phase_crown_requires_pollution_seed_and_large_chain_once():
+func test_tri_phase_crown_requires_pollution_tool_and_large_chain_once():
 	var manager = await _make_manager(["tri_phase_crown"] as Array[String])
 	var polluted = _place_runtime_item(manager, "polluted", Vector2i(1, 1), [] as Array[String])
-	var seed = item_db.get_item_by_id("dream_seed_1x1")
-	manager.backpack_manager.place_item(seed, Vector2i(2, 1))
-	var seed_instance = manager.backpack_manager.grid[Vector2i(2, 1)]
 	manager._on_ornament_pollution_changed(polluted, 0, 1)
-	manager._on_ornament_seed_sown(seed_instance)
+	manager._apply_ornament_tool_used(_make_tool("black_ink_drop", ["污染"] as Array[String]), {"type": "item"}, {"success": true})
 	var actions: Array[GameAction] = []
 	for index in range(5):
 		actions.append(_impact_action(_make_instance("hit_%d" % index, [] as Array[String])))
@@ -693,7 +573,7 @@ func test_empty_dream_trophy_bonus_requires_target_and_score_margin():
 	var old_act = rm.current_act
 
 	rm.current_ornaments = ["empty_dream_trophy"] as Array[String]
-	rm.current_route_index = 6
+	rm.current_route_index = 4
 	rm.current_act = 1
 	assert_false(rm.has_empty_dream_trophy_reward_bonus(95))
 	assert_true(rm.has_empty_dream_trophy_reward_bonus(96))

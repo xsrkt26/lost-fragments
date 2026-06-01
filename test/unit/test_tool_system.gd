@@ -33,7 +33,7 @@ func test_tool_database_loads_official_pool():
 	var tools = tool_db.get_all_tools()
 	var ids = tools.map(func(tool): return tool.id)
 
-	assert_eq(tools.size(), 15)
+	assert_eq(tools.size(), 12)
 	assert_true(ids.has("small_patch"))
 	assert_true(ids.has("dream_value_candy"))
 	assert_true(ids.has("blank_talisman"))
@@ -75,9 +75,9 @@ func test_reward_shop_and_event_can_grant_tools():
 	assert_true(rm.apply_reward({"type": "tool", "id": "black_ink_drop", "amount": 2}))
 	assert_eq(_pending_stack_count(rm, "black_ink_drop"), 2)
 
-	assert_true(rm.buy_shop_offer({"type": "tool", "id": "small_water_drop", "price": 7}))
+	assert_true(rm.buy_shop_offer({"type": "tool", "id": "extension_hook", "price": 7}))
 	assert_eq(rm.current_shards, 43)
-	assert_eq(_pending_stack_count(rm, "small_water_drop"), 1)
+	assert_eq(_pending_stack_count(rm, "extension_hook"), 1)
 
 	assert_true(rm.apply_event_choice({
 		"effects": [{"type": "tool", "id": "dream_value_candy", "amount": 1}]
@@ -97,16 +97,11 @@ func test_tool_use_consumes_only_on_legal_target():
 	assert_eq(root_rm.get_tool_count("black_ink_drop"), 0)
 	assert_eq(paper.current_pollution, 2)
 
-func test_seed_tool_sows_empty_cell_and_disinfectant_scores():
+func test_disinfectant_scores_by_purified_pollution():
 	var battle = add_child_autofree(BattleManagerScript.new())
 	await get_tree().process_frame
 	battle.backpack_manager.grid.clear()
-	root_rm.current_tools = {"small_water_drop": 1, "disinfectant_spray": 1}
-
-	assert_true(battle.request_use_tool("small_water_drop", {"type": "empty_cell", "x": 2, "y": 2}))
-	assert_eq(root_rm.get_tool_count("small_water_drop"), 0)
-	assert_true(battle.backpack_manager.grid.has(Vector2i(2, 2)))
-	assert_eq(battle.backpack_manager.grid[Vector2i(2, 2)].data.id, "dream_seed_1x1")
+	root_rm.current_tools = {"disinfectant_spray": 1}
 
 	var paper = _place_item(battle, "paper_ball", Vector2i(4, 2))
 	paper.current_pollution = 3

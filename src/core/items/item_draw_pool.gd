@@ -3,7 +3,6 @@ extends RefCounted
 
 const CATEGORY_GENERAL := "general"
 const CATEGORY_POLLUTION := "pollution"
-const CATEGORY_DREAM_SEED := "dream_seed"
 const CATEGORY_MECHANICAL := "mechanical"
 
 const ROLE_STARTER := "starter"
@@ -13,12 +12,12 @@ const ROLE_LATE := "late"
 const DEFAULT_DECK_SIZE := 60
 
 const CATEGORY_WEIGHTS := {
-	1: {CATEGORY_GENERAL: 100.0, CATEGORY_POLLUTION: 0.0, CATEGORY_DREAM_SEED: 0.0, CATEGORY_MECHANICAL: 0.0},
-	2: {CATEGORY_GENERAL: 40.0, CATEGORY_POLLUTION: 20.0, CATEGORY_DREAM_SEED: 20.0, CATEGORY_MECHANICAL: 20.0},
-	3: {CATEGORY_GENERAL: 28.0, CATEGORY_POLLUTION: 24.0, CATEGORY_DREAM_SEED: 24.0, CATEGORY_MECHANICAL: 24.0},
-	4: {CATEGORY_GENERAL: 22.0, CATEGORY_POLLUTION: 26.0, CATEGORY_DREAM_SEED: 26.0, CATEGORY_MECHANICAL: 26.0},
-	5: {CATEGORY_GENERAL: 18.0, CATEGORY_POLLUTION: 27.33, CATEGORY_DREAM_SEED: 27.33, CATEGORY_MECHANICAL: 27.33},
-	6: {CATEGORY_GENERAL: 15.0, CATEGORY_POLLUTION: 28.33, CATEGORY_DREAM_SEED: 28.33, CATEGORY_MECHANICAL: 28.33},
+	1: {CATEGORY_GENERAL: 100.0, CATEGORY_POLLUTION: 0.0, CATEGORY_MECHANICAL: 0.0},
+	2: {CATEGORY_GENERAL: 40.0, CATEGORY_POLLUTION: 30.0, CATEGORY_MECHANICAL: 30.0},
+	3: {CATEGORY_GENERAL: 28.0, CATEGORY_POLLUTION: 36.0, CATEGORY_MECHANICAL: 36.0},
+	4: {CATEGORY_GENERAL: 22.0, CATEGORY_POLLUTION: 39.0, CATEGORY_MECHANICAL: 39.0},
+	5: {CATEGORY_GENERAL: 18.0, CATEGORY_POLLUTION: 41.0, CATEGORY_MECHANICAL: 41.0},
+	6: {CATEGORY_GENERAL: 15.0, CATEGORY_POLLUTION: 42.5, CATEGORY_MECHANICAL: 42.5},
 }
 
 const ROLE_WEIGHTS := {
@@ -132,7 +131,6 @@ static func get_unlocked_items_by_category(item_db: Node, act: int) -> Dictionar
 	var result := {
 		CATEGORY_GENERAL: [],
 		CATEGORY_POLLUTION: [],
-		CATEGORY_DREAM_SEED: [],
 		CATEGORY_MECHANICAL: [],
 	}
 	if item_db == null or not item_db.has_method("get_item_by_id"):
@@ -170,7 +168,7 @@ static func get_role_weights(act: int) -> Dictionary:
 static func _build_category_candidates(act: int, by_category: Dictionary) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var weights := get_category_weights(act)
-	for category in [CATEGORY_GENERAL, CATEGORY_POLLUTION, CATEGORY_DREAM_SEED, CATEGORY_MECHANICAL]:
+	for category in [CATEGORY_GENERAL, CATEGORY_POLLUTION, CATEGORY_MECHANICAL]:
 		var items := Array(by_category.get(category, []))
 		if items.is_empty():
 			continue
@@ -209,12 +207,11 @@ static func _filter_unlocked_items_by_cell_count(by_category: Dictionary, item_d
 	var result := {
 		CATEGORY_GENERAL: [],
 		CATEGORY_POLLUTION: [],
-		CATEGORY_DREAM_SEED: [],
 		CATEGORY_MECHANICAL: [],
 	}
 	if item_db == null or not item_db.has_method("get_item_by_id"):
 		return result
-	for category in [CATEGORY_GENERAL, CATEGORY_POLLUTION, CATEGORY_DREAM_SEED, CATEGORY_MECHANICAL]:
+	for category in [CATEGORY_GENERAL, CATEGORY_POLLUTION, CATEGORY_MECHANICAL]:
 		var entries: Array = []
 		for entry in Array(by_category.get(category, [])):
 			if not (entry is Dictionary):

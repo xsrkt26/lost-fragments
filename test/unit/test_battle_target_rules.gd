@@ -36,7 +36,7 @@ func test_boss_target_reached_requests_battle_finish():
 	assert_not_null(rm)
 	rm.is_run_active = true
 	rm.current_act = 1
-	rm.current_route_index = 6
+	rm.current_route_index = 4
 
 	var manager = autofree(BattleManagerScript.new())
 	manager.battle_state = BattleManager.BattleState.INTERACTIVE

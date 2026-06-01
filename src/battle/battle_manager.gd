@@ -974,10 +974,6 @@ func _apply_tool_item_discarded(item_data: ItemData, old_instance: BackpackManag
 	if old_instance != null and old_instance.data != null and old_instance.data.has_meta("tool_apple_wax"):
 		if context != null:
 			context.change_sanity(2)
-		if item_data != null and item_data.id == "apple":
-			var item_db = _get_item_database()
-			if item_db != null:
-				backpack_manager.sow_seed(old_instance, old_instance.data.direction, item_db, 1)
 
 	if _tool_recycling_clip_pending > 0 and _is_waste_item(item_data):
 		_tool_recycling_clip_pending -= 1

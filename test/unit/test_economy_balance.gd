@@ -74,7 +74,7 @@ func test_economy_config_cache_returns_defensive_copies():
 
 func test_reward_shards_use_economy_config_for_normal_and_boss_nodes():
 	var normal_run = _make_run_manager(3, 0)
-	var boss_run = _make_run_manager(3, 6)
+	var boss_run = _make_run_manager(3, 4)
 
 	var normal_reward = RewardGeneratorScript.generate_options(normal_run, null, null, 1)[0]
 	var boss_reward = RewardGeneratorScript.generate_options(boss_run, null, null, 1)[0]

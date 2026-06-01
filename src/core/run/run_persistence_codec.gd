@@ -1,8 +1,25 @@
 class_name RunPersistenceCodec
 extends RefCounted
 
-const SAVE_SCHEMA_VERSION := 1
+const SAVE_SCHEMA_VERSION := 2
 const LEGACY_SCHEMA_VERSION := 0
+const EVENTLESS_ROUTE_SCHEMA_VERSION := 2
+const EVENTLESS_ROUTE_INDEX_MAP := {
+	0: 0,
+	1: 1,
+	2: 2,
+	3: 2,
+	4: 3,
+	5: 4,
+	6: 4,
+}
+const EVENTLESS_COMPLETED_ROUTE_INDEX_MAP := {
+	0: 0,
+	1: 1,
+	3: 2,
+	4: 3,
+	6: 4,
+}
 const STATE_MARKER_KEYS := [
 	"is_active",
 	"shards",
@@ -87,8 +104,25 @@ static func migrate_save_data(data: Dictionary) -> Dictionary:
 	if schema_version < LEGACY_SCHEMA_VERSION:
 		push_warning("[RunPersistenceCodec] Unsupported save schema: %d." % schema_version)
 		return {}
+	if schema_version < EVENTLESS_ROUTE_SCHEMA_VERSION:
+		_migrate_eventless_route_progress(migrated)
 	migrated["schema_version"] = SAVE_SCHEMA_VERSION
 	return migrated
+
+static func _migrate_eventless_route_progress(migrated: Dictionary) -> void:
+	if migrated.has("route_index"):
+		var old_route_index := int(migrated.get("route_index", 0))
+		migrated["route_index"] = int(EVENTLESS_ROUTE_INDEX_MAP.get(old_route_index, old_route_index))
+	if migrated.has("completed_route_nodes"):
+		var completed_nodes := []
+		for old_index in Array(migrated.get("completed_route_nodes", [])):
+			var old_completed_index := int(old_index)
+			if not EVENTLESS_COMPLETED_ROUTE_INDEX_MAP.has(old_completed_index):
+				continue
+			var mapped_index := int(EVENTLESS_COMPLETED_ROUTE_INDEX_MAP[old_completed_index])
+			if not completed_nodes.has(mapped_index):
+				completed_nodes.append(mapped_index)
+		migrated["completed_route_nodes"] = completed_nodes
 
 static func is_save_data_compatible(data: Dictionary) -> bool:
 	if data.is_empty():

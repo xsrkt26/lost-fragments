@@ -5,55 +5,43 @@
     "default": [
       {"id": "battle_1", "type": "battle", "label": "局内游戏 1", "scene": "battle"},
       {"id": "shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "battle_2", "type": "battle", "label": "局内游戏 2", "scene": "battle"},
       {"id": "shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "boss_1", "type": "boss_battle", "label": "Boss 局内游戏", "scene": "battle", "score_target": {"enabled": true, "value": 45}}
     ],
     "act_2_pollution": [
       {"id": "pollution_battle_1", "type": "battle", "label": "污染试炼 1", "scene": "battle"},
       {"id": "pollution_shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "pollution_event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "pollution_battle_2", "type": "battle", "label": "污染试炼 2", "scene": "battle"},
       {"id": "pollution_shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "pollution_event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "pollution_boss", "type": "boss_battle", "label": "污染 Boss", "scene": "battle", "score_target": {"enabled": true, "value": 65}}
     ],
     "act_3_grove": [
       {"id": "grove_battle_1", "type": "battle", "label": "成长试炼 1", "scene": "battle"},
       {"id": "grove_shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "grove_event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "grove_battle_2", "type": "battle", "label": "成长试炼 2", "scene": "battle"},
       {"id": "grove_shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "grove_event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "grove_boss", "type": "boss_battle", "label": "成长 Boss", "scene": "battle", "score_target": {"enabled": true, "value": 85}}
     ],
     "act_4_gearworks": [
       {"id": "gear_battle_1", "type": "battle", "label": "齿轮试炼 1", "scene": "battle"},
       {"id": "gear_shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "gear_event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "gear_battle_2", "type": "battle", "label": "齿轮试炼 2", "scene": "battle"},
       {"id": "gear_shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "gear_event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "gear_boss", "type": "boss_battle", "label": "齿轮 Boss", "scene": "battle", "score_target": {"enabled": true, "value": 110}}
     ],
     "act_5_rift": [
       {"id": "rift_battle_1", "type": "battle", "label": "裂隙试炼 1", "scene": "battle"},
       {"id": "rift_shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "rift_event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "rift_battle_2", "type": "battle", "label": "裂隙试炼 2", "scene": "battle"},
       {"id": "rift_shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "rift_event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "rift_boss", "type": "boss_battle", "label": "裂隙 Boss", "scene": "battle", "score_target": {"enabled": true, "value": 135}}
     ],
     "act_6_finale": [
       {"id": "finale_battle_1", "type": "battle", "label": "终局试炼 1", "scene": "battle"},
       {"id": "finale_shop_1", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "finale_event_1", "type": "event", "label": "事件", "scene": "event"},
       {"id": "finale_battle_2", "type": "battle", "label": "终局试炼 2", "scene": "battle"},
       {"id": "finale_shop_2", "type": "shop", "label": "商店", "scene": "shop"},
-      {"id": "finale_event_2", "type": "event", "label": "事件", "scene": "event"},
       {"id": "finale_boss", "type": "boss_battle", "label": "终局 Boss", "scene": "battle", "score_target": {"enabled": true, "value": 165}}
     ]
   }

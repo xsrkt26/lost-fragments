@@ -5,7 +5,6 @@ const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const TOOL_ORNAMENT_IDS := [
 	"tool_belt",
 	"specimen_pin_case",
-	"gardening_toolkit",
 	"recycling_hook",
 	"calibration_screwdriver",
 	"universal_toolbox",

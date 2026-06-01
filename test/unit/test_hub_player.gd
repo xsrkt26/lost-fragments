@@ -1015,21 +1015,23 @@ func test_hub_route_tab_no_longer_drives_route_progression():
 	assert_false(hub_player.has_move_target)
 
 
-func test_hub_z_shortcut_skips_unimplemented_event_node():
+func test_hub_z_shortcut_enters_second_battle_without_skipping_nodes():
 	var rm = get_node_or_null("/root/RunManager")
 	assert_not_null(rm)
 	rm.is_run_active = true
 	rm.current_act = 1
 	rm.current_route_index = 2
 	rm.completed_route_nodes = [] as Array[int]
+	GlobalInput.set_context(GlobalInput.Context.WORLD)
 
 	var hub = HubScene.instantiate()
 	add_child_autofree(hub)
 	await get_tree().create_timer(0.2).timeout
 
+	assert_eq(rm.get_current_route_node().get("id"), "battle_2")
 	assert_true(hub._advance_current_route_by_shortcut())
-	assert_eq(rm.current_route_index, 3)
-	assert_true(rm.completed_route_nodes.has(2))
+	assert_eq(rm.current_route_index, 2)
+	assert_false(rm.completed_route_nodes.has(2))
 
 
 func test_hub_back_tab_is_visible_low_layer_and_returns_to_main_menu():

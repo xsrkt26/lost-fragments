@@ -22,10 +22,8 @@ const FALLBACK_ROUTES := {
 	DEFAULT_ROUTE_ID: [
 		{"id": "battle_1", "type": NODE_BATTLE, "label": "局内游戏", "scene": SCENE_BATTLE},
 		{"id": "shop_1", "type": NODE_SHOP, "label": "商店", "scene": SCENE_SHOP},
-		{"id": "event_1", "type": NODE_EVENT, "label": "事件", "scene": SCENE_EVENT},
 		{"id": "battle_2", "type": NODE_BATTLE, "label": "局内游戏", "scene": SCENE_BATTLE},
 		{"id": "shop_2", "type": NODE_SHOP, "label": "商店", "scene": SCENE_SHOP},
-		{"id": "event_2", "type": NODE_EVENT, "label": "事件", "scene": SCENE_EVENT},
 		{"id": "boss_1", "type": NODE_BOSS_BATTLE, "label": "Boss局内游戏", "scene": SCENE_BATTLE, "score_target": {"enabled": true, "value": 45}},
 	]
 }

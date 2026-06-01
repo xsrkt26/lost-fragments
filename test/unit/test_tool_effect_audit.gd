@@ -10,9 +10,6 @@ const TOOL_IDS := [
 	"black_ink_drop",
 	"disinfectant_spray",
 	"corrosive_acid",
-	"small_water_drop",
-	"fertilizer_bag",
-	"fast_sprout_agent",
 	"extension_hook",
 	"transmission_oil",
 	"apple_wax",
@@ -28,9 +25,6 @@ const TOOL_DIRECT_ASSERTIONS := {
 	"black_ink_drop": "test_pollution_tools_apply_pollution_cleanse_and_value_loss",
 	"disinfectant_spray": "test_pollution_tools_apply_pollution_cleanse_and_value_loss",
 	"corrosive_acid": "test_pollution_tools_apply_pollution_cleanse_and_value_loss",
-	"small_water_drop": "test_seed_tools_sow_upgrade_and_score_growth",
-	"fertilizer_bag": "test_seed_tools_sow_upgrade_and_score_growth",
-	"fast_sprout_agent": "test_seed_tools_sow_upgrade_and_score_growth",
 	"extension_hook": "test_mechanical_tools_extend_and_bonus_successful_transmission",
 	"transmission_oil": "test_mechanical_tools_extend_and_bonus_successful_transmission",
 	"apple_wax": "test_discard_tools_apply_food_wax_and_recycling_clip",
@@ -98,7 +92,7 @@ func test_tool_database_loads_full_official_tool_pool():
 	var all_tools = tool_db.get_all_tools()
 	var ids = all_tools.map(func(tool): return tool.id)
 
-	assert_eq(all_tools.size(), 15)
+	assert_eq(all_tools.size(), 12)
 	for tool_id in TOOL_IDS:
 		assert_true(ids.has(tool_id), "Missing tool id: %s" % tool_id)
 
@@ -151,30 +145,6 @@ func test_pollution_tools_apply_pollution_cleanse_and_value_loss():
 	assert_eq(waste.current_pollution, 2)
 	assert_eq(waste.data.price, price_before - 5)
 
-func test_seed_tools_sow_upgrade_and_score_growth():
-	var manager = await _make_manager()
-	rm.current_tools = {
-		"small_water_drop": 1,
-		"fertilizer_bag": 1,
-		"fast_sprout_agent": 1,
-	}
-
-	assert_true(manager.request_use_tool("small_water_drop", {"type": "empty_cell", "x": 2, "y": 2}))
-	var seed = manager.backpack_manager.grid[Vector2i(2, 2)]
-	assert_eq(seed.data.id, "dream_seed_1x1")
-
-	assert_true(manager.request_use_tool("fertilizer_bag", {"type": "item", "instance": seed}))
-	assert_eq(seed.dream_seed_level, 3)
-
-	seed.dream_seed_level = 9
-	seed.data.set_meta("dream_seed_level", 9)
-	var score_before = gs.current_score
-	assert_true(manager.request_use_tool("fast_sprout_agent", {"type": "item", "instance": seed}))
-	var upgraded = manager.backpack_manager.grid[Vector2i(2, 2)]
-	assert_eq(upgraded.data.id, "dream_seed_2x2")
-	assert_eq(upgraded.dream_seed_level, 12)
-	assert_eq(gs.current_score, score_before + 8)
-
 func test_mechanical_tools_extend_and_bonus_successful_transmission():
 	var manager = await _make_manager()
 	var hooked = _place(manager, "paper_ball", Vector2i(2, 2), ItemData.Direction.RIGHT)
@@ -207,7 +177,7 @@ func test_discard_tools_apply_food_wax_and_recycling_clip():
 	gs.current_sanity = 50
 	manager._apply_tool_item_discarded(apple.data, apple, true)
 	assert_eq(gs.current_sanity, 52)
-	assert_eq(manager.backpack_manager.grid[Vector2i(3, 2)].data.id, "dream_seed_1x1")
+	assert_false(manager.backpack_manager.grid.has(Vector2i(3, 2)))
 
 	var waste = item_db.get_item_by_id("paper_ball")
 	var score_before = gs.current_score

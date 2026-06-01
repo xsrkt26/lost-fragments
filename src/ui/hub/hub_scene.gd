@@ -1107,12 +1107,6 @@ func _advance_current_route_by_shortcut() -> bool:
 	if node_type == RouteConfig.NODE_SHOP:
 		_enter_current_route_node()
 		return true
-	if node_type == RouteConfig.NODE_EVENT:
-		var skipped_node: Dictionary = rm.advance_route_node()
-		if skipped_node.is_empty():
-			return false
-		print("[Hub] 事件节点暂未实现，已跳过: ", skipped_node.get("id", ""))
-		return true
 	return false
 
 
