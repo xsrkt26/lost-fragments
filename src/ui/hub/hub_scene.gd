@@ -152,6 +152,9 @@ var _hub_focus_layer_base_transforms: Dictionary = {}
 var _shop_visual_overlay_canvas: CanvasLayer = null
 var _is_shop_visual_state_active := false
 var _is_shop_intro_sequence_running := false
+var _shop_route_entry_token := 0
+var _hub_dreamcatcher_swing_token := 0
+var _shop_intro_overlay_token := 0
 var _pending_merchant_shop_open := false
 var _merchant_shop_sequence_running := false
 var _story_book_return_transition_running := false
@@ -414,7 +417,22 @@ func _on_merchant_open_shop_requested() -> void:
 	if _interaction_flow_controller != null:
 		_interaction_flow_controller.mark_transitioning()
 	GlobalInput.set_context(GlobalInput.Context.LOCKED)
-	_shop_visual_overlay_canvas = await _play_shop_intro_overlay(true)
+	_shop_intro_overlay_token += 1
+	var overlay_token := _shop_intro_overlay_token
+	var overlay_state := _play_shop_intro_overlay(true)
+	if overlay_state is GDScriptFunctionState and overlay_state.is_valid():
+		overlay_state.connect("completed", _on_shop_intro_overlay_completed.bind(overlay_token), Object.CONNECT_ONE_SHOT)
+		return
+	_on_shop_intro_overlay_completed(overlay_token, overlay_state)
+
+
+func _on_shop_intro_overlay_completed(token: int, overlay_canvas: Variant = null, _result = null) -> void:
+	if token != _shop_intro_overlay_token:
+		return
+	if overlay_canvas is CanvasLayer:
+		_shop_visual_overlay_canvas = overlay_canvas
+	else:
+		_shop_visual_overlay_canvas = null
 	_is_shop_intro_sequence_running = false
 	_enter_shop_visual_state()
 
@@ -432,7 +450,10 @@ func _try_start_pending_merchant_shop_sequence() -> void:
 	if _player_controller != null and _player_controller.has_method("clear_move_target"):
 		_player_controller.clear_move_target()
 	_merchant_controller.is_player_at_merchant = true
-	await _merchant_controller.complete_interaction(_get_run_manager(), false)
+	_merchant_controller.complete_interaction(_get_run_manager(), false, Callable(self, "_on_pending_merchant_shop_sequence_completed"))
+
+
+func _on_pending_merchant_shop_sequence_completed() -> void:
 	_merchant_shop_sequence_running = false
 
 
@@ -643,8 +664,15 @@ func _play_hub_dreamcatcher_start_swing() -> void:
 	tween.tween_property(dreamcatcher_net, "rotation", _dreamcatcher_net_base_rotation + 0.065, 0.18)
 	tween.tween_property(dreamcatcher_net, "rotation", _dreamcatcher_net_base_rotation - 0.035, 0.14)
 	tween.tween_property(dreamcatcher_net, "rotation", _dreamcatcher_net_base_rotation, 0.12)
-	await tween.finished
-	if not is_inside_tree():
+	_hub_dreamcatcher_swing_token += 1
+	var swing_token := _hub_dreamcatcher_swing_token
+	tween.finished.connect(_on_hub_dreamcatcher_swing_finished.bind(swing_token), Object.CONNECT_ONE_SHOT)
+
+
+func _on_hub_dreamcatcher_swing_finished(token: int, _result = null) -> void:
+	if token != _hub_dreamcatcher_swing_token:
+		return
+	if dreamcatcher_net == null or not is_inside_tree():
 		return
 	dreamcatcher_net.position = _dreamcatcher_net_base_position
 	dreamcatcher_net.rotation = _dreamcatcher_net_base_rotation
@@ -1320,7 +1348,7 @@ func _queue_auto_interaction(interaction: String, target_x: float) -> void:
 func _on_player_move_target_reached(interaction: String, target_x: float) -> void:
 	if _interaction_flow_controller == null:
 		return
-	await _interaction_flow_controller.complete_player_arrival(
+	_interaction_flow_controller.complete_player_arrival(
 		interaction,
 		target_x,
 		_get_run_manager(),
@@ -1399,13 +1427,22 @@ func _enter_current_shop_route_visual() -> void:
 	if _is_shop_visual_state_active or _is_shop_intro_sequence_running:
 		return
 	_clear_pending_auto_interaction()
+	_shop_route_entry_token += 1
+	var route_token := _shop_route_entry_token
 	if _merchant_controller != null:
 		_update_merchant_state()
 		_merchant_controller.is_player_at_merchant = true
 		_merchant_controller.shop_click_ready = false
 		var played_arrival := _merchant_controller.play_arrival_animation()
 		if played_arrival and merchant_sprite != null and merchant_sprite.is_playing():
-			await merchant_sprite.animation_finished
+			merchant_sprite.animation_finished.connect(_on_shop_route_entered_animation_finished.bind(route_token), Object.CONNECT_ONE_SHOT)
+			return
+	_on_shop_route_entered_animation_finished(route_token)
+
+
+func _on_shop_route_entered_animation_finished(token: int, _result = null) -> void:
+	if token != _shop_route_entry_token:
+		return
 	_on_merchant_open_shop_requested()
 
 
@@ -1829,7 +1866,11 @@ func _on_route_button_pressed() -> void:
 func _on_dreamcatcher_button_pressed() -> void:
 	if _interaction_flow_controller == null:
 		return
-	await _interaction_flow_controller.request_battle_start(_get_run_manager(), _is_book_hub_current(), Callable(self, "_play_hub_dreamcatcher_start_swing"))
+	_interaction_flow_controller.request_battle_start(
+		_get_run_manager(),
+		_is_book_hub_current(),
+		Callable(self, "_play_hub_dreamcatcher_start_swing")
+	)
 
 func _on_merchant_button_pressed() -> void:
 	if _interaction_flow_controller != null:

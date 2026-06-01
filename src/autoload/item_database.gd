@@ -95,6 +95,9 @@ func _make_tool_item_data(tool_id: String) -> ItemData:
 	item.id = str(tool.id)
 	item.item_name = str(tool.tool_name)
 	item.description = str(tool.effect_text)
+	item.icon = tool.icon
+	if item.icon == null and str(tool.icon_path).strip_edges() != "":
+		item.icon = load(str(tool.icon_path)) as Texture2D
 	item.tags = _tool_tags(tool)
 	item.price = max(1, int(tool.price))
 	item.base_cost = -1
