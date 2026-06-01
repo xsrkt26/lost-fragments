@@ -3,6 +3,8 @@ extends RefCounted
 const SELECTED_MODULATE := Color(1.0, 0.92, 0.55)
 const DEFAULT_MODULATE := Color.WHITE
 const TOOL_BUTTON_SIZE := Vector2(72, 56)
+const TOOL_ICON_MARGIN := Vector2(8, 4)
+const COUNT_LABEL_COLOR := Color(0.10, 0.07, 0.04, 0.96)
 
 static func render(
 	tool_panel: Control,
@@ -45,10 +47,52 @@ static func _create_tool_button(entry: Dictionary, tool_db: Node, tool_id: Strin
 	var button := Button.new()
 	button.custom_minimum_size = TOOL_BUTTON_SIZE
 	button.focus_mode = Control.FOCUS_NONE
-	button.text = "%s\nx%d" % [str(entry.get("title", tool_id)).substr(0, 4), int(entry.get("count", 0))]
+	button.text = ""
 	button.tooltip_text = tool.get_tooltip_text(int(entry.get("count", 0))) if tool != null else str(entry.get("description", ""))
 	button.set_meta("tool_id", tool_id)
+	if tool != null and tool.icon != null:
+		_add_icon(button, tool.icon)
+		_add_count_label(button, int(entry.get("count", 0)))
+	else:
+		button.text = "%s\nx%d" % [str(entry.get("title", tool_id)).substr(0, 4), int(entry.get("count", 0))]
 	return button
+
+static func _add_icon(button: Button, icon_texture: Texture2D) -> void:
+	var icon := TextureRect.new()
+	icon.name = "ToolIcon"
+	icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	icon.texture = icon_texture
+	icon.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+	icon.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+	icon.anchor_right = 1.0
+	icon.anchor_bottom = 1.0
+	icon.offset_left = TOOL_ICON_MARGIN.x
+	icon.offset_top = TOOL_ICON_MARGIN.y
+	icon.offset_right = -TOOL_ICON_MARGIN.x
+	icon.offset_bottom = -TOOL_ICON_MARGIN.y
+	button.add_child(icon)
+
+static func _add_count_label(button: Button, count: int) -> void:
+	var count_label := Label.new()
+	count_label.name = "CountLabel"
+	count_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	count_label.text = "x%d" % count
+	count_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	count_label.vertical_alignment = VERTICAL_ALIGNMENT_BOTTOM
+	count_label.anchor_left = 0.5
+	count_label.anchor_top = 0.52
+	count_label.anchor_right = 1.0
+	count_label.anchor_bottom = 1.0
+	count_label.offset_left = 0.0
+	count_label.offset_top = 0.0
+	count_label.offset_right = -6.0
+	count_label.offset_bottom = -4.0
+	count_label.add_theme_color_override("font_color", COUNT_LABEL_COLOR)
+	count_label.add_theme_color_override("font_shadow_color", Color(1, 1, 1, 0.7))
+	count_label.add_theme_constant_override("shadow_offset_x", 1)
+	count_label.add_theme_constant_override("shadow_offset_y", 1)
+	count_label.add_theme_font_size_override("font_size", 13)
+	button.add_child(count_label)
 
 static func _clear_slots(slot_area: Control) -> void:
 	for child in slot_area.get_children():

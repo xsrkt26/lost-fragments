@@ -1,6 +1,7 @@
 [
   {
     "id": "small_patch",
+    "icon_path": "res://assets/ui/tools/small_patch.png",
     "name": "小补丁",
     "category": "通用",
     "rarity": "道具",
@@ -15,6 +16,7 @@
   },
   {
     "id": "dream_value_candy",
+    "icon_path": "res://assets/ui/tools/dream_value_candy.png",
     "name": "梦值糖",
     "category": "通用",
     "rarity": "道具",
@@ -30,6 +32,7 @@
   },
   {
     "id": "turning_screw",
+    "icon_path": "res://assets/ui/tools/turning_screw.png",
     "name": "转向螺丝",
     "category": "通用",
     "rarity": "道具",
@@ -45,6 +48,7 @@
   },
   {
     "id": "cracked_marble",
+    "icon_path": "res://assets/ui/tools/cracked_marble.png",
     "name": "破弹珠",
     "category": "通用",
     "rarity": "道具",
@@ -60,6 +64,7 @@
   },
   {
     "id": "black_ink_drop",
+    "icon_path": "res://assets/ui/tools/black_ink_drop.png",
     "name": "黑墨滴",
     "category": "污染",
     "rarity": "罕见道具",
@@ -74,6 +79,7 @@
   },
   {
     "id": "disinfectant_spray",
+    "icon_path": "res://assets/ui/tools/disinfectant_spray.png",
     "name": "消毒喷雾",
     "category": "污染",
     "rarity": "罕见道具",
@@ -89,6 +95,7 @@
   },
   {
     "id": "corrosive_acid",
+    "icon_path": "res://assets/ui/tools/corrosive_acid.png",
     "name": "腐蚀酸",
     "category": "污染",
     "rarity": "稀有道具",
@@ -103,6 +110,7 @@
   },
   {
     "id": "small_water_drop",
+    "icon_path": "res://assets/ui/tools/small_water_drop.png",
     "name": "小水滴",
     "category": "梦境之种",
     "rarity": "道具",
@@ -119,6 +127,7 @@
   },
   {
     "id": "fertilizer_bag",
+    "icon_path": "res://assets/ui/tools/fertilizer_bag.png",
     "name": "肥料包",
     "category": "梦境之种",
     "rarity": "罕见道具",
@@ -135,6 +144,7 @@
   },
   {
     "id": "fast_sprout_agent",
+    "icon_path": "res://assets/ui/tools/fast_sprout_agent.png",
     "name": "快速发芽剂",
     "category": "梦境之种",
     "rarity": "稀有道具",
@@ -150,6 +160,7 @@
   },
   {
     "id": "extension_hook",
+    "icon_path": "res://assets/ui/tools/extension_hook.png",
     "name": "延长钩",
     "category": "机械",
     "rarity": "罕见道具",
@@ -165,6 +176,7 @@
   },
   {
     "id": "transmission_oil",
+    "icon_path": "res://assets/ui/tools/transmission_oil.png",
     "name": "传动油",
     "category": "机械",
     "rarity": "稀有道具",
@@ -180,6 +192,7 @@
   },
   {
     "id": "apple_wax",
+    "icon_path": "res://assets/ui/tools/apple_wax.png",
     "name": "苹果蜡",
     "category": "丢弃/食物",
     "rarity": "罕见道具",
@@ -195,6 +208,7 @@
   },
   {
     "id": "recycling_clip",
+    "icon_path": "res://assets/ui/tools/recycling_clip.png",
     "name": "回收夹",
     "category": "丢弃/食物",
     "rarity": "稀有道具",
@@ -210,6 +224,7 @@
   },
   {
     "id": "blank_talisman",
+    "icon_path": "res://assets/ui/tools/blank_talisman.png",
     "name": "空白符纸",
     "category": "饰品联动",
     "rarity": "稀有道具",

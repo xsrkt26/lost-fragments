@@ -3,6 +3,7 @@ extends GutTest
 const RunManagerScript = preload("res://src/autoload/run_manager.gd")
 const BattleManagerScript = preload("res://src/battle/battle_manager.gd")
 const MainGameUIScript = preload("res://src/ui/main_game_ui.gd")
+const ToolPanelPresenter = preload("res://src/ui/battle/tool_panel_presenter.gd")
 
 var item_db
 var tool_db
@@ -35,6 +36,16 @@ func test_tool_database_loads_official_pool():
 	assert_true(ids.has("small_patch"))
 	assert_true(ids.has("dream_value_candy"))
 	assert_true(ids.has("blank_talisman"))
+
+func test_tool_database_loads_official_icons():
+	for tool in tool_db.get_all_tools():
+		assert_true(tool.icon_path.begins_with("res://assets/ui/tools/"), "Unexpected tool icon path: %s" % tool.icon_path)
+		assert_false(tool.icon_path.contains("sourceImage"), "Tool icon should not load from sourceImage: %s" % tool.icon_path)
+		assert_not_null(tool.icon, "Missing tool icon for %s" % tool.id)
+		if tool.icon != null:
+			assert_eq(tool.icon.resource_path, tool.icon_path)
+			assert_eq(tool.icon.get_width(), 256)
+			assert_eq(tool.icon.get_height(), 256)
 
 func test_run_manager_stacks_consumes_and_restores_tools():
 	var rm = autofree(RunManagerScript.new())
@@ -121,6 +132,34 @@ func test_tool_button_click_toggles_selected_tool():
 	ui._on_tool_button_gui_input(down, "small_patch", button)
 	ui._on_tool_button_gui_input(up, "small_patch", button)
 	assert_eq(ui._selected_tool_id, "")
+
+func test_tool_panel_renders_loaded_icon_and_count():
+	var panel = autofree(Control.new())
+	var slots = autofree(HBoxContainer.new())
+
+	ToolPanelPresenter.render(
+		panel,
+		slots,
+		[{"id": "small_patch", "title": "small_patch", "count": 2}],
+		tool_db,
+		"",
+		Callable()
+	)
+
+	assert_true(panel.visible)
+	assert_eq(slots.get_child_count(), 1)
+	var button := slots.get_child(0) as Button
+	assert_not_null(button)
+	assert_eq(button.text, "")
+	var icon := button.get_node_or_null("ToolIcon") as TextureRect
+	assert_not_null(icon)
+	assert_not_null(icon.texture)
+	if icon.texture != null:
+		assert_eq(icon.texture.resource_path, "res://assets/ui/tools/small_patch.png")
+		assert_eq(icon.stretch_mode, TextureRect.STRETCH_KEEP_ASPECT_CENTERED)
+	var count_label := button.get_node_or_null("CountLabel") as Label
+	assert_not_null(count_label)
+	assert_eq(count_label.text, "x2")
 
 func _place_item(battle: BattleManager, item_id: String, pos: Vector2i):
 	var item = item_db.get_item_by_id(item_id)

@@ -78,6 +78,8 @@ func _create_tool_data(entry: Dictionary):
 	var data = ToolDataScript.new()
 	data.id = str(entry.get("id", ""))
 	data.tool_name = str(entry.get("name", ""))
+	data.icon_path = str(entry.get("icon_path", ""))
+	data.icon = _load_icon(data.icon_path)
 	data.category = str(entry.get("category", ""))
 	data.rarity = str(entry.get("rarity", "道具"))
 	data.earliest_act = int(entry.get("earliest_act", 1))
@@ -87,6 +89,13 @@ func _create_tool_data(entry: Dictionary):
 	data.effect_text = str(entry.get("effect_text", ""))
 	data.enabled = bool(entry.get("enabled", true))
 	return data
+
+
+func _load_icon(icon_path: String) -> Texture2D:
+	if icon_path == "":
+		return null
+	var resource := load(icon_path)
+	return resource if resource is Texture2D else null
 
 
 func _to_string_array(value: Variant) -> Array[String]:

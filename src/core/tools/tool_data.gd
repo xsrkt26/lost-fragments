@@ -11,6 +11,8 @@ const TARGET_ORNAMENT := "ornament"
 
 @export var id: String = ""
 @export var tool_name: String = ""
+@export var icon_path: String = ""
+@export var icon: Texture2D = null
 @export var category: String = ""
 @export var rarity: String = "道具"
 @export var earliest_act: int = 1
