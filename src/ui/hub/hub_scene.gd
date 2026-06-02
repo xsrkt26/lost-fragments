@@ -1088,7 +1088,7 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 
-	if _is_route_advance_shortcut(event) and not _has_overlay_backpack_content():
+	if GlobalInput.is_context(GlobalInput.Context.WORLD) and _is_route_advance_shortcut(event) and not _has_overlay_backpack_content():
 		if _advance_current_route_by_shortcut():
 			get_viewport().set_input_as_handled()
 		return
