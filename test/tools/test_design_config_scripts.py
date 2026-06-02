@@ -19,9 +19,10 @@ class DesignConfigScriptTests(unittest.TestCase):
 
         self.assertEqual(result.error_count, 0, [message.message for message in result.messages])
         self.assertGreaterEqual(result.summary.get("items", 0), 1)
-        self.assertEqual(result.summary.get("tools", 0), 15)
-        self.assertEqual(result.summary.get("ornaments", 0), 56)
-        self.assertEqual(result.summary.get("stages", 0), 6)
+        self.assertEqual(result.summary.get("tools", 0), len(load_json_file(REPO_ROOT / "data/tools/tools.json")))
+        self.assertEqual(result.summary.get("ornaments", 0), len(load_json_file(REPO_ROOT / "data/ornaments/ornaments.json")))
+        stages = load_json_file(REPO_ROOT / "data/stages/stages.json").get("stages", {})
+        self.assertEqual(result.summary.get("stages", 0), len(stages))
 
     def test_item_catalog_export_reads_godot_resources(self) -> None:
         catalog = parse_item_catalog(REPO_ROOT)
