@@ -131,6 +131,8 @@ func play_current_battle_intro() -> bool:
 	if not RouteConfig.is_battle_node_type(str(rm.call("get_current_route_node_type"))):
 		return false
 	var act: int = max(1, int(rm.get("current_act")))
+	if act != 1 or int(rm.get("current_route_index")) != 0:
+		return false
 	return _play_first_available_sequence(_get_battle_intro_sequence_ids(act))
 
 

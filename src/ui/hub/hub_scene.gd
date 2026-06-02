@@ -469,6 +469,11 @@ func _try_start_pending_merchant_shop_sequence() -> void:
 
 func _on_pending_merchant_shop_sequence_completed() -> void:
 	_merchant_shop_sequence_running = false
+	if _is_shop_visual_state_active or _is_shop_intro_sequence_running:
+		return
+	if _merchant_controller == null or not _merchant_controller.can_open_shop(_get_run_manager()):
+		return
+	_on_merchant_open_shop_requested()
 
 
 func _apply_stage_hub_background() -> void:
@@ -1067,6 +1072,10 @@ func _input(event: InputEvent) -> void:
 	if Engine.is_editor_hint():
 		return
 	if _is_shop_visual_state_active:
+		if _is_route_advance_shortcut(event):
+			_close_shop_visual_state()
+			get_viewport().set_input_as_handled()
+			return
 		if event.is_action_pressed("ui_cancel") or Input.is_key_pressed(KEY_ESCAPE):
 			_close_shop_visual_state()
 			get_viewport().set_input_as_handled()
@@ -1077,6 +1086,11 @@ func _input(event: InputEvent) -> void:
 		return
 	if _handle_hub_debug_shortcuts(event):
 		get_viewport().set_input_as_handled()
+		return
+
+	if _is_route_advance_shortcut(event) and not _has_overlay_backpack_content():
+		if _advance_current_route_by_shortcut():
+			get_viewport().set_input_as_handled()
 		return
 
 	if not _is_book_hub_current():
@@ -1105,10 +1119,6 @@ func _input(event: InputEvent) -> void:
 	if GlobalInput.is_context(GlobalInput.Context.WORLD):
 		if _is_next_route_node_shortcut(event):
 			if _advance_to_next_route_node_by_shortcut():
-				get_viewport().set_input_as_handled()
-			return
-		if _is_route_advance_shortcut(event):
-			if _advance_current_route_by_shortcut():
 				get_viewport().set_input_as_handled()
 			return
 		if event.is_action_pressed("ui_accept") or Input.is_key_pressed(KEY_E):
@@ -1306,8 +1316,8 @@ func _should_auto_enter_after_route_skip(rm: Node, skipped_node: Dictionary) -> 
 
 
 func _advance_current_route_by_shortcut() -> bool:
-	if _has_pending_auto_interaction() or _is_dreamcatcher_transition_pending():
-		return false
+	if _has_pending_auto_interaction():
+		_clear_pending_auto_interaction()
 	var rm = _get_run_manager()
 	if rm == null or not bool(rm.get("is_run_active")):
 		return false
@@ -1319,11 +1329,18 @@ func _advance_current_route_by_shortcut() -> bool:
 
 	var node_type: String = rm.get_current_route_node_type() if rm.has_method("get_current_route_node_type") else ""
 	if RouteConfig.is_battle_node_type(node_type):
+		if _is_dreamcatcher_transition_pending():
+			if _battle_controller != null:
+				_battle_controller.return_to_ready_state(rm, _is_book_hub_current() and not _is_route_entry_temporarily_blocked())
+			if _is_dreamcatcher_transition_pending():
+				return false
 		if _is_route_entry_temporarily_blocked():
 			return false
 		_on_dreamcatcher_button_pressed()
 		return true
 	if node_type == RouteConfig.NODE_SHOP:
+		if _is_dreamcatcher_transition_pending() and _battle_controller != null:
+			_battle_controller.return_to_ready_state(rm, _is_book_hub_current())
 		if _is_route_entry_temporarily_blocked():
 			return false
 		_enter_current_route_node()
@@ -1558,10 +1575,7 @@ func _enter_current_shop_route_visual() -> void:
 		_update_merchant_state()
 		_merchant_controller.is_player_at_merchant = true
 		_merchant_controller.shop_click_ready = false
-		var played_arrival := _merchant_controller.play_arrival_animation()
-		if played_arrival and merchant_sprite != null and merchant_sprite.is_playing():
-			merchant_sprite.animation_finished.connect(_on_shop_route_entered_animation_finished.bind(route_token), Object.CONNECT_ONE_SHOT)
-			return
+		_merchant_controller.play_arrival_animation()
 	_on_shop_route_entered_animation_finished(route_token)
 
 
