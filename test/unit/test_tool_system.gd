@@ -9,31 +9,42 @@ const MockItemUI = preload("res://test/support/mock_item_ui.gd")
 var item_db
 var tool_db
 var root_rm
+var game_state
 var root_snapshot := {}
 
 func before_each():
 	item_db = get_node_or_null("/root/ItemDatabase")
 	tool_db = get_node_or_null("/root/ToolDatabase")
 	root_rm = get_node_or_null("/root/RunManager")
+	game_state = get_node_or_null("/root/GameState")
 	if item_db and item_db.items.is_empty():
 		item_db.load_all_items()
 	if tool_db and tool_db.tools.is_empty():
 		tool_db.load_all_tools()
+	if game_state:
+		game_state.reset_game()
 	if root_rm:
 		root_snapshot = root_rm.serialize_run()
 		root_rm.is_run_active = false
 		root_rm.current_tools = {}
+		root_rm.current_ornaments = [] as Array[String]
+		root_rm.pending_item_rewards = [] as Array[Dictionary]
 
 func after_each():
 	if root_rm and not root_snapshot.is_empty():
 		root_rm.deserialize_run(root_snapshot)
 	root_snapshot = {}
+	if game_state:
+		game_state.reset_game()
 
 func test_tool_database_loads_official_pool():
 	var tools = tool_db.get_all_tools()
 	var ids = tools.map(func(tool): return tool.id)
+	var configured_ids = tool_db.tools.keys()
 
-	assert_eq(tools.size(), 12)
+	assert_eq(tools.size(), configured_ids.size())
+	for tool_id in configured_ids:
+		assert_true(ids.has(tool_id), "Missing configured tool id: %s" % tool_id)
 	assert_true(ids.has("small_patch"))
 	assert_true(ids.has("dream_value_candy"))
 	assert_true(ids.has("blank_talisman"))

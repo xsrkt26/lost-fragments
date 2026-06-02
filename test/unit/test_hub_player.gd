@@ -13,9 +13,11 @@ const AssetPaths = preload("res://src/core/assets/asset_paths.gd")
 const BATTLE_BAG_FINAL_FRAME_PATH := "res://assets/ui/battle/intro_bag_reveal/bag_reveal_05.png"
 const BATTLE_BAG_SOURCE_SIZE := Vector2(825.0, 1008.0)
 const BATTLE_BAG_GRID_SOURCE_RECT := Rect2(122.0, 380.0, 590.0, 527.0)
+const BATTLE_TUTORIAL_SEQUENCE_IDS := ["进入局内1", "进入局内"]
 
 var player
 var rm_snapshot := {}
+var story_snapshot := {}
 
 
 class ReturnNavigatorStub:
@@ -77,6 +79,9 @@ func before_each():
 		rm.debug_hub_page_request = ""
 		rm.debug_hub_advance_next_node_request = false
 		rm.auto_enter_next_node_request = false
+	var story_manager = get_node_or_null("/root/StoryManager")
+	story_snapshot = _snapshot_story_manager(story_manager)
+	_clear_story_manager_for_tests(story_manager)
 
 
 func after_each():
@@ -88,6 +93,48 @@ func after_each():
 		rm.debug_hub_advance_next_node_request = false
 		rm.auto_enter_next_node_request = false
 	rm_snapshot = {}
+	_restore_story_manager_from_snapshot(get_node_or_null("/root/StoryManager"), story_snapshot)
+	story_snapshot = {}
+
+
+func _snapshot_story_manager(story_manager: Node) -> Dictionary:
+	if story_manager == null:
+		return {}
+	return {
+		"played_flags": story_manager.get_played_flags() if story_manager.has_method("get_played_flags") else {},
+		"completion_actions": Dictionary(story_manager.get("_completion_actions")).duplicate(true),
+		"sequence_queue": Array(story_manager.get("_sequence_queue")).duplicate(),
+		"pending_hub_sequences": Array(story_manager.get("_pending_hub_sequences")).duplicate(),
+		"previous_input_context": int(story_manager.get("_previous_input_context")),
+		"current_playing_sequence": str(story_manager.get("current_playing_sequence")),
+	}
+
+
+func _clear_story_manager_for_tests(story_manager: Node) -> void:
+	if story_manager == null:
+		return
+	story_manager.set("current_playing_sequence", "")
+	story_manager.set("_completion_actions", {})
+	story_manager.set("_sequence_queue", [] as Array[String])
+	story_manager.set("_pending_hub_sequences", [] as Array[String])
+	story_manager.set("_previous_input_context", -1)
+	if story_manager.has_method("get_played_flags") and story_manager.has_method("set_played_flags"):
+		var flags := Dictionary(story_manager.get_played_flags()).duplicate(true)
+		for sequence_id in BATTLE_TUTORIAL_SEQUENCE_IDS:
+			flags[sequence_id] = true
+		story_manager.set_played_flags(flags)
+
+
+func _restore_story_manager_from_snapshot(story_manager: Node, snapshot: Dictionary) -> void:
+	if story_manager == null or snapshot.is_empty():
+		return
+	if story_manager.has_method("set_played_flags"):
+		story_manager.set_played_flags(Dictionary(snapshot.get("played_flags", {})))
+	story_manager.set("_completion_actions", Dictionary(snapshot.get("completion_actions", {})).duplicate(true))
+	story_manager.set("_sequence_queue", Array(snapshot.get("sequence_queue", [])).duplicate())
+	story_manager.set("_pending_hub_sequences", Array(snapshot.get("pending_hub_sequences", [])).duplicate())
+	story_manager.set("_previous_input_context", int(snapshot.get("previous_input_context", -1)))
+	story_manager.set("current_playing_sequence", str(snapshot.get("current_playing_sequence", "")))
 
 
 func _assert_dreamcatcher_net_centered_on_cloud(panel: TextureRect, net: Sprite2D) -> void:

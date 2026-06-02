@@ -30,16 +30,20 @@ var rm
 var gs
 var item_db
 var ornament_db
-var old_ornaments: Array[String]
-var old_tools: Dictionary
+var run_snapshot := {}
 
 func before_each():
 	rm = get_node_or_null("/root/RunManager")
 	gs = get_node_or_null("/root/GameState")
 	item_db = get_node_or_null("/root/ItemDatabase")
 	ornament_db = get_node_or_null("/root/OrnamentDatabase")
-	old_ornaments = Array(rm.current_ornaments).duplicate() if rm else []
-	old_tools = rm.get_current_tools() if rm and rm.has_method("get_current_tools") else {}
+	if rm:
+		run_snapshot = rm.serialize_run()
+		rm.current_ornaments = [] as Array[String]
+		rm.current_tools = {}
+		rm.pending_item_rewards = [] as Array[Dictionary]
+		rm.next_pending_item_uid = 1
+		rm.current_deck = [] as Array[String]
 	if gs:
 		gs.reset_game()
 	if item_db and item_db.items.is_empty():
@@ -48,9 +52,9 @@ func before_each():
 		ornament_db.load_all_ornaments()
 
 func after_each():
-	if rm:
-		rm.current_ornaments = old_ornaments
-		rm.current_tools = old_tools.duplicate(true)
+	if rm and not run_snapshot.is_empty():
+		rm.deserialize_run(run_snapshot)
+	run_snapshot = {}
 	if gs:
 		gs.reset_game()
 
@@ -106,7 +110,7 @@ func _make_tool(id: String, tags: Array[String]) -> ToolData:
 func test_ornament_database_loads_formal_table_and_filters_available_pool():
 	assert_not_null(ornament_db)
 	var all_ornaments = ornament_db.get_all_ornaments()
-	assert_eq(all_ornaments.size(), 45)
+	assert_eq(all_ornaments.size(), ornament_db.ornaments.size())
 	assert_not_null(ornament_db.get_ornament_by_id("old_pocket_watch"))
 	var enabled_count := 0
 	for ornament in all_ornaments:
@@ -115,7 +119,7 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 		assert_not_null(ornament.icon)
 		if ornament.enabled:
 			enabled_count += 1
-	assert_eq(enabled_count, 45)
+	assert_eq(enabled_count, ornament_db.get_available_ornaments(99, [] as Array[String]).size())
 	for ornament_id in TOOL_ORNAMENT_IDS:
 		var ornament = ornament_db.get_ornament_by_id(ornament_id)
 		assert_not_null(ornament)

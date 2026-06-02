@@ -50,6 +50,8 @@ func before_each():
 	if rm:
 		run_snapshot = rm.serialize_run()
 		rm.current_tools = {}
+		rm.current_ornaments = [] as Array[String]
+		rm.pending_item_rewards = [] as Array[Dictionary]
 	if gs:
 		gs.reset_game()
 
@@ -92,7 +94,7 @@ func test_tool_database_loads_full_official_tool_pool():
 	var all_tools = tool_db.get_all_tools()
 	var ids = all_tools.map(func(tool): return tool.id)
 
-	assert_eq(all_tools.size(), 12)
+	assert_eq(all_tools.size(), TOOL_IDS.size())
 	for tool_id in TOOL_IDS:
 		assert_true(ids.has(tool_id), "Missing tool id: %s" % tool_id)
 
@@ -201,7 +203,10 @@ func test_blank_talisman_refreshes_once_per_ornament():
 	assert_eq(rm.get_tool_count("blank_talisman"), 1)
 
 func test_every_tool_has_direct_behavior_assertion_in_this_file():
+	var configured_ids = tool_db.tools.keys()
 	assert_eq(TOOL_DIRECT_ASSERTIONS.size(), TOOL_IDS.size())
+	assert_eq(TOOL_IDS.size(), configured_ids.size())
 	for tool_id in TOOL_IDS:
+		assert_true(configured_ids.has(tool_id), "Tool id is no longer configured: %s" % tool_id)
 		assert_true(TOOL_DIRECT_ASSERTIONS.has(tool_id), "Tool id has no direct behavior assertion: %s" % tool_id)
 	assert_eq(_total_tool_count(), 0)

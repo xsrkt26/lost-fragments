@@ -96,8 +96,9 @@ func _backpack_has_item(item_id: String) -> bool:
 func _fill_usable_backpack_with_single_cell_items() -> void:
 	run_manager.current_backpack_items = [] as Array[Dictionary]
 	var runtime_id := 1000
-	for y in range(1, 6):
-		for x in range(1, 6):
+	var bounds := _usable_backpack_bounds()
+	for y in range(int(bounds.start_y), int(bounds.start_y) + int(bounds.height)):
+		for x in range(int(bounds.start_x), int(bounds.start_x) + int(bounds.width)):
 			run_manager.current_backpack_items.append({
 				"id": "paper_ball",
 				"x": x,
@@ -107,6 +108,17 @@ func _fill_usable_backpack_with_single_cell_items() -> void:
 				"runtime_id": runtime_id,
 			})
 			runtime_id += 1
+
+func _usable_backpack_bounds() -> Dictionary:
+	var config = run_manager.get_backpack_grid_config()
+	var width := int(config.get("usable_width", RunManagerScript.INITIAL_BACKPACK_USABLE_WIDTH))
+	var height := int(config.get("usable_height", RunManagerScript.INITIAL_BACKPACK_USABLE_HEIGHT))
+	return {
+		"start_x": floori((RunManagerScript.BACKPACK_GRID_WIDTH - width) / 2.0),
+		"start_y": floori((RunManagerScript.BACKPACK_GRID_HEIGHT - height) / 2.0),
+		"width": width,
+		"height": height,
+	}
 
 func _find_item_offer(offers: Array[Dictionary]) -> Dictionary:
 	for offer in offers:

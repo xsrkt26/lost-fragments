@@ -154,7 +154,7 @@ func test_backpack_lock_cells_moves_occupying_items_and_persists():
 
 func test_backpack_lock_rolls_back_when_items_cannot_move():
 	var rm = _make_run_manager(2, 2)
-	rm.current_backpack_items = _filled_usable_backpack_entries()
+	rm.current_backpack_items = _filled_usable_backpack_entries(rm)
 	var before_items = rm.current_backpack_items.duplicate(true)
 
 	assert_false(rm.apply_event_choice({
@@ -232,14 +232,26 @@ func _make_backpack_entry(item_id: String, x: int, y: int, shape: Array, runtime
 		"runtime_id": runtime_id,
 	}
 
-func _filled_usable_backpack_entries() -> Array[Dictionary]:
+func _filled_usable_backpack_entries(run_manager) -> Array[Dictionary]:
 	var result: Array[Dictionary] = []
 	var runtime_id := 1000
-	for y in range(1, 6):
-		for x in range(1, 6):
+	var bounds := _usable_backpack_bounds(run_manager)
+	for y in range(int(bounds.start_y), int(bounds.start_y) + int(bounds.height)):
+		for x in range(int(bounds.start_x), int(bounds.start_x) + int(bounds.width)):
 			result.append(_make_backpack_entry("paper_ball", x, y, [{"x": 0, "y": 0}], runtime_id))
 			runtime_id += 1
 	return result
+
+func _usable_backpack_bounds(run_manager) -> Dictionary:
+	var config = run_manager.get_backpack_grid_config()
+	var width := int(config.get("usable_width", RunManagerScript.INITIAL_BACKPACK_USABLE_WIDTH))
+	var height := int(config.get("usable_height", RunManagerScript.INITIAL_BACKPACK_USABLE_HEIGHT))
+	return {
+		"start_x": floori((RunManagerScript.BACKPACK_GRID_WIDTH - width) / 2.0),
+		"start_y": floori((RunManagerScript.BACKPACK_GRID_HEIGHT - height) / 2.0),
+		"width": width,
+		"height": height,
+	}
 
 func _cells_have(cells: Array, pos: Vector2i) -> bool:
 	for cell in cells:
