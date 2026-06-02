@@ -124,6 +124,11 @@ func test_ornament_database_loads_formal_table_and_filters_available_pool():
 	for ornament_id in REMOVED_SEED_ORNAMENT_IDS:
 		assert_null(ornament_db.get_ornament_by_id(ornament_id))
 
+func test_ornament_database_maps_exported_import_entries_to_source_texture_paths():
+	assert_eq(ornament_db._get_texture_source_file_name("Thurisaz.png"), "Thurisaz.png")
+	assert_eq(ornament_db._get_texture_source_file_name("Thurisaz.png.import"), "Thurisaz.png")
+	assert_eq(ornament_db._get_texture_source_file_name("Thurisaz.ctex"), "")
+
 func test_ornament_slot_bar_aligns_to_playable_bag_rings():
 	assert_not_null(ornament_db)
 	var container := Control.new()

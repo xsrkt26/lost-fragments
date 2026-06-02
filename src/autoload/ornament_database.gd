@@ -113,12 +113,23 @@ func _get_rune_icon_path_lookup() -> Dictionary:
 	dir.list_dir_begin()
 	var file_name := dir.get_next()
 	while file_name != "":
-		if not dir.current_is_dir() and file_name.get_extension().to_lower() == "png":
-			var key := _normalize_ornament_name(file_name.get_basename())
-			_rune_icon_path_by_name[key] = "%s/%s" % [RUNE_ICON_DIR, file_name]
+		if not dir.current_is_dir():
+			var source_file_name := _get_texture_source_file_name(file_name)
+			if source_file_name != "":
+				var key := _normalize_ornament_name(source_file_name.get_basename())
+				_rune_icon_path_by_name[key] = "%s/%s" % [RUNE_ICON_DIR, source_file_name]
 		file_name = dir.get_next()
 	dir.list_dir_end()
 	return _rune_icon_path_by_name
+
+
+func _get_texture_source_file_name(file_name: String) -> String:
+	var lowered := file_name.to_lower()
+	if lowered.ends_with(".png"):
+		return file_name
+	if lowered.ends_with(".png.import"):
+		return file_name.substr(0, file_name.length() - ".import".length())
+	return ""
 
 
 func _normalize_ornament_name(name: String) -> String:
